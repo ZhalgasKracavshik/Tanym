@@ -22,6 +22,7 @@ const TEXT: Dict<{
   achievements: string;
   archive: string;
   events: string;
+  marketplace: string;
   mentor: string;
   teacher: string;
   start: string;
@@ -36,6 +37,7 @@ const TEXT: Dict<{
     achievements: 'Достижения',
     archive: 'Архив',
     events: 'Афиша',
+    marketplace: 'Возможности',
     mentor: 'Наставник',
     teacher: 'Учителю',
     start: 'Начать',
@@ -50,6 +52,7 @@ const TEXT: Dict<{
     achievements: 'Жетістіктер',
     archive: 'Мұрағат',
     events: 'Афиша',
+    marketplace: 'Мүмкіндіктер',
     mentor: 'Тәлімгер',
     teacher: 'Мұғалімге',
     start: 'Бастау',
@@ -64,6 +67,7 @@ const TEXT: Dict<{
     achievements: 'Achievements',
     archive: 'Archive',
     events: 'Events',
+    marketplace: 'Opportunities',
     mentor: 'Mentor',
     teacher: 'For teachers',
     start: 'Start',
@@ -87,6 +91,7 @@ export function SiteHeader() {
     { href: '/dashboard', label: t.dashboard },
     { href: '/archive', label: t.archive },
     { href: '/events', label: t.events },
+    { href: '/marketplace', label: t.marketplace },
     { href: '/achievements', label: t.achievements },
     { href: '/chat', label: t.mentor },
     { href: '/teacher', label: t.teacher },

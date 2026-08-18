@@ -30,6 +30,7 @@ import type {
   TaskAttempt,
   Topic,
 } from '@/lib/types';
+import type { Listing } from '@/lib/listings';
 
 interface StoreValue {
   state: AppState;
@@ -41,6 +42,8 @@ interface StoreValue {
   recordAttempt: (attempt: Omit<TaskAttempt, 'at'>, topicTaskCount: number) => void;
   markAchievementsSeen: (ids: string[]) => void;
   toggleEventRegistration: (eventId: string) => void;
+  addListing: (listing: Listing) => void;
+  removeListing: (listingId: string) => void;
   addCustomTopic: (topic: Topic) => void;
   removeCustomTopic: (topicId: string) => void;
   cachePlan: (plan: CachedPlan) => void;
@@ -146,6 +149,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
+  const addListing = useCallback((listing: Listing) => {
+    setState((previous) => ({ ...previous, myListings: [...previous.myListings, listing] }));
+  }, []);
+
+  const removeListing = useCallback((listingId: string) => {
+    setState((previous) => ({
+      ...previous,
+      myListings: previous.myListings.filter((item) => item.id !== listingId),
+    }));
+  }, []);
+
   const addCustomTopic = useCallback((topic: Topic) => {
     setState((previous) => ({ ...previous, customTopics: [...previous.customTopics, topic] }));
   }, []);
@@ -185,6 +199,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       recordAttempt,
       markAchievementsSeen,
       toggleEventRegistration,
+      addListing,
+      removeListing,
       addCustomTopic,
       removeCustomTopic,
       cachePlan,
@@ -202,6 +218,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       recordAttempt,
       markAchievementsSeen,
       toggleEventRegistration,
+      addListing,
+      removeListing,
       addCustomTopic,
       removeCustomTopic,
       cachePlan,

@@ -9,6 +9,8 @@
  * импортировать и на сервере (API-роуты), и на клиенте (страницы).
  */
 
+import type { Listing } from './listings';
+
 /** Язык интерфейса. Объявлен здесь, а не в i18n.ts, чтобы не было кольца импортов. */
 export type Language = 'ru' | 'kk' | 'en';
 
@@ -275,6 +277,8 @@ export interface AppState {
   seenAchievements: string[];
   /** События афиши, на которые ученик записался. */
   eventRegistrations: string[];
+  /** Объявления маркетплейса, размещённые самим пользователем. */
+  myListings: Listing[];
   /** Темы, добавленные учителем через панель управления. */
   customTopics: Topic[];
   plans: Record<SubjectId, CachedPlan>;
