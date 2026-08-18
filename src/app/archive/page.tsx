@@ -15,6 +15,7 @@ import type { ArchiveCategory } from '@/lib/archive';
 import type { Difficulty } from '@/lib/types';
 import type { Dict } from '@/lib/i18n';
 import { useStore } from '@/components/StoreProvider';
+import { Icon } from '@/components/Icon';
 import { Badge, ButtonLink, Card, EmptyState } from '@/components/ui';
 
 const TEXT: Dict<{
@@ -31,7 +32,7 @@ const TEXT: Dict<{
 }> = {
   ru: {
     title: 'Архив заданий',
-    subtitle: 'Задания прошлых лет и подготовка к экзаменам — с наставником, который не даёт ответ.',
+    subtitle: 'Задания прошлых лет и подготовка к экзаменам с наставником, который не даёт ответ.',
     all: 'Все',
     tasks: (n) => `${n} заданий`,
     open: 'Разобрать',
@@ -44,7 +45,7 @@ const TEXT: Dict<{
   },
   kk: {
     title: 'Тапсырмалар мұрағаты',
-    subtitle: 'Өткен жылдардың тапсырмалары және емтиханға дайындық — жауап бермейтін тәлімгермен.',
+    subtitle: 'Өткен жылдардың тапсырмалары және емтиханға дайындық, жауап бермейтін тәлімгермен.',
     all: 'Барлығы',
     tasks: (n) => `${n} тапсырма`,
     open: 'Талдау',
@@ -57,7 +58,7 @@ const TEXT: Dict<{
   },
   en: {
     title: 'Task archive',
-    subtitle: 'Past papers and exam prep — with a mentor that refuses to hand you the answer.',
+    subtitle: 'Past papers and exam prep with a mentor that refuses to hand you the answer.',
     all: 'All',
     tasks: (n) => `${n} tasks`,
     open: 'Work through it',
@@ -84,9 +85,12 @@ export default function ArchivePage() {
       <p className="mt-2 text-ink-500">{t.subtitle}</p>
 
       {/* Пояснение метода — иначе ученик решит, что наставник сломался */}
-      <div className="mt-5 rounded-2xl border border-brand-200 bg-brand-50 p-4">
-        <p className="font-bold text-brand-800">🏛️ {t.socratic}</p>
-        <p className="mt-1 text-sm text-brand-800">{t.socraticHint}</p>
+      <div className="mt-6 rounded-2xl border border-brand-200 bg-brand-50 p-4">
+        <p className="flex items-center gap-2 font-bold text-brand-800">
+          <Icon name="columns" size={18} />
+          {t.socratic}
+        </p>
+        <p className="mt-3 text-sm text-brand-800">{t.socraticHint}</p>
       </div>
 
       {/* Фильтр по категориям */}
@@ -103,38 +107,43 @@ export default function ArchivePage() {
             onClick={() => setCategory(item.id)}
             className={chip(category === item.id)}
           >
-            <span aria-hidden>{item.icon}</span> {item.title[state.language]}
+            <Icon name={item.icon} size={16} />
+            {item.title[state.language]}
           </button>
         ))}
       </div>
 
       {materials.length === 0 ? (
-        <div className="mt-8">
-          <EmptyState icon="📂" title={t.empty} description="" />
+        <div className="mt-6">
+          <EmptyState title={t.empty} description="" />
         </div>
       ) : (
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
           {materials.map((material) => {
             const meta = ARCHIVE_CATEGORIES.find((item) => item.id === material.category);
             return (
-              <Card key={material.id}>
+              <Card
+                key={material.id}
+                className="transition-all duration-150 hover:border-brand-300 hover:shadow-[var(--shadow-lift)]"
+              >
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge tone="brand">
-                    <span aria-hidden>{meta?.icon}</span> {meta?.title[state.language]}
+                    {meta && <Icon name={meta.icon} size={14} />}
+                    {meta?.title[state.language]}
                   </Badge>
                   <Badge>{t.difficulty[material.difficulty]}</Badge>
-                  <span className="text-xs text-ink-400">
+                  <span className="text-xs tabular-nums text-ink-400">
                     {material.year} {t.year}
                   </span>
                 </div>
 
                 <h2 className="mt-3 font-bold text-ink-900">{material.title}</h2>
-                <p className="mt-1.5 text-sm text-ink-500">{material.description}</p>
+                <p className="mt-3 text-sm text-ink-500">{material.description}</p>
 
                 <p className="mt-3 text-xs text-ink-400">{material.source}</p>
 
-                <div className="mt-4 flex items-center justify-between gap-3">
-                  <span className="text-sm font-semibold text-brand-600">
+                <div className="mt-6 flex items-center justify-between gap-3">
+                  <span className="text-sm font-semibold tabular-nums text-brand-600">
                     {t.tasks(material.tasks.length)}
                   </span>
                   <ButtonLink href={`/archive/${material.id}`} size="sm">
@@ -152,9 +161,9 @@ export default function ArchivePage() {
 
 /** Стиль кнопки-фильтра. Вынесен, чтобы не повторять длинную строку классов. */
 function chip(active: boolean): string {
-  return `rounded-xl border px-4 py-2 text-sm font-semibold transition-colors ${
+  return `inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
     active
       ? 'border-brand-500 bg-brand-50 text-brand-700'
-      : 'border-ink-200 bg-white text-ink-600 hover:border-brand-300'
+      : 'border-ink-200 bg-white text-ink-600 hover:border-brand-300 hover:shadow-[var(--shadow-lift)]'
   }`;
 }

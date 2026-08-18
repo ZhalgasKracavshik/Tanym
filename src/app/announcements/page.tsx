@@ -20,6 +20,7 @@ import {
 import type { Announcement, AnnouncementCategory } from '@/lib/announcements';
 import type { Dict } from '@/lib/i18n';
 import { useStore } from '@/components/StoreProvider';
+import { Icon } from '@/components/Icon';
 import { Badge, Card, EmptyState, Skeleton } from '@/components/ui';
 
 const TEXT: Dict<{
@@ -39,7 +40,7 @@ const TEXT: Dict<{
 }> = {
   ru: {
     title: 'Объявления',
-    subtitle: 'Всё, что объявила школа. Закреплённое и свежее — сверху.',
+    subtitle: 'Всё, что объявила школа. Закреплённое и свежее показано сверху.',
     all: 'Все',
     myGrade: 'Только для моего класса',
     unread: (n) => (n === 1 ? '1 новое объявление' : n < 5 ? `${n} новых объявления` : `${n} новых объявлений`),
@@ -54,7 +55,7 @@ const TEXT: Dict<{
   },
   kk: {
     title: 'Хабарландырулар',
-    subtitle: 'Мектеп әкімшілігі хабарлағанның бәрі. Бекітілгені мен жаңасы — жоғарыда.',
+    subtitle: 'Мектеп әкімшілігі хабарлағанның бәрі. Бекітілгені мен жаңасы жоғарыда тұрады.',
     all: 'Барлығы',
     myGrade: 'Тек менің сыныбыма',
     unread: (n) => `${n} жаңа хабарландыру`,
@@ -173,7 +174,10 @@ export default function AnnouncementsPage() {
       <h1 className="text-2xl font-bold text-ink-900 sm:text-3xl">{t.title}</h1>
       <p className="mt-2 text-ink-500">{t.subtitle}</p>
       {unreadIds.length > 0 && (
-        <p className="mt-2 text-sm font-semibold text-accent-700">🔔 {t.unread(unreadIds.length)}</p>
+        <p className="mt-3 flex items-center gap-2 text-sm font-semibold tabular-nums text-accent-700">
+          <Icon name="bell" size={16} />
+          {t.unread(unreadIds.length)}
+        </p>
       )}
 
       {/* Фильтры */}
@@ -183,7 +187,8 @@ export default function AnnouncementsPage() {
         </button>
         {ANNOUNCEMENT_CATEGORIES.map((item) => (
           <button key={item.id} onClick={() => setCategory(item.id)} className={chip(category === item.id)}>
-            <span aria-hidden>{item.icon}</span> {item.title[state.language]}
+            <Icon name={item.icon} size={16} />
+            {item.title[state.language]}
           </button>
         ))}
         {/* Фильтр по классу — переключатель, а не ещё одна категория: он сужает
@@ -194,14 +199,24 @@ export default function AnnouncementsPage() {
             aria-pressed={onlyMyGrade}
             className={chip(onlyMyGrade)}
           >
-            🎯 {t.myGrade} ({grade})
+            <Icon name="crosshair" size={16} />
+            <span className="tabular-nums">
+              {t.myGrade} ({grade})
+            </span>
           </button>
         )}
       </div>
 
       {sorted.length === 0 ? (
-        <div className="mt-8">
-          <EmptyState icon="📭" title={t.emptyTitle} description={t.emptyText} />
+        <div className="mt-6">
+          {/* Иконка стоит рядом с блоком: проп icon в EmptyState принимает строку,
+              а строкой иконку из набора не передать. */}
+          <div className="mb-3 flex justify-center">
+            <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-ink-200 bg-white text-ink-400">
+              <Icon name="megaphone" size={24} />
+            </span>
+          </div>
+          <EmptyState title={t.emptyTitle} description={t.emptyText} />
         </div>
       ) : (
         <div className="mt-6 space-y-4">
@@ -224,11 +239,13 @@ export default function AnnouncementsPage() {
                 <div className="flex flex-wrap items-center gap-2">
                   {announcement.pinned && (
                     <Badge tone="brand">
-                      <span aria-hidden>📌</span> {t.pinned}
+                      <Icon name="pin" size={14} />
+                      {t.pinned}
                     </Badge>
                   )}
                   <Badge tone={CATEGORY_TONE[announcement.category]}>
-                    <span aria-hidden>{meta?.icon}</span> {meta?.title[state.language]}
+                    {meta && <Icon name={meta.icon} size={14} />}
+                    {meta?.title[state.language]}
                   </Badge>
                   {/* Непрочитанное помечаем и точкой, и словом: одна точка теряется
                       на экране телефона, одно слово теряется среди других плашек. */}
@@ -246,7 +263,7 @@ export default function AnnouncementsPage() {
                   {announcement.body}
                 </p>
 
-                <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-ink-200 pt-3 text-xs text-ink-400">
+                <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-ink-200 pt-3 text-xs tabular-nums text-ink-400">
                   <span className="font-semibold text-ink-600">{announcement.author}</span>
                   <span aria-hidden>·</span>
                   <span>{formatAnnouncementDate(announcement.publishedAt, state.language)}</span>
@@ -275,9 +292,9 @@ export default function AnnouncementsPage() {
 }
 
 function chip(active: boolean): string {
-  return `rounded-xl border px-4 py-2 text-sm font-semibold transition-colors ${
+  return `inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
     active
       ? 'border-brand-500 bg-brand-50 text-brand-700'
-      : 'border-ink-200 bg-white text-ink-600 hover:border-brand-300'
+      : 'border-ink-200 bg-white text-ink-600 hover:border-brand-300 hover:shadow-[var(--shadow-lift)]'
   }`;
 }

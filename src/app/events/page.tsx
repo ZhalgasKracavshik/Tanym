@@ -15,6 +15,7 @@ import { EVENT_TYPES, daysLeftUntil, eventStatus, formatEventDate } from '@/lib/
 import type { EventStatus, EventType, SchoolEvent } from '@/lib/events';
 import type { Dict } from '@/lib/i18n';
 import { useStore } from '@/components/StoreProvider';
+import { Icon } from '@/components/Icon';
 import { Badge, Button, Card, EmptyState } from '@/components/ui';
 
 const TEXT: Dict<{
@@ -43,7 +44,7 @@ const TEXT: Dict<{
 }> = {
   ru: {
     title: 'Афиша',
-    subtitle: 'Олимпиады, конкурсы и события. Главное — не пропустить срок регистрации.',
+    subtitle: 'Олимпиады, конкурсы и события. Главное: не пропустить срок регистрации.',
     all: 'Все',
     myEvents: 'Мои записи',
     register: 'Записаться',
@@ -67,7 +68,7 @@ const TEXT: Dict<{
   },
   kk: {
     title: 'Афиша',
-    subtitle: 'Олимпиадалар, байқаулар және іс-шаралар. Ең бастысы — тіркелу мерзімін өткізіп алмау.',
+    subtitle: 'Олимпиадалар, байқаулар және іс-шаралар. Ең бастысы: тіркелу мерзімін өткізіп алмау.',
     all: 'Барлығы',
     myEvents: 'Менің жазылымдарым',
     register: 'Тіркелу',
@@ -171,18 +172,22 @@ export default function EventsPage() {
         </button>
         {EVENT_TYPES.map((type) => (
           <button key={type.id} onClick={() => setFilter(type.id)} className={chip(filter === type.id)}>
-            <span aria-hidden>{type.icon}</span> {type.title[state.language]}
+            <Icon name={type.icon} size={16} />
+            {type.title[state.language]}
           </button>
         ))}
         <button onClick={() => setFilter('mine')} className={chip(filter === 'mine')}>
-          ⭐ {t.myEvents}
-          {state.eventRegistrations.length > 0 && ` (${state.eventRegistrations.length})`}
+          <Icon name="star" size={16} />
+          <span className="tabular-nums">
+            {t.myEvents}
+            {state.eventRegistrations.length > 0 && ` (${state.eventRegistrations.length})`}
+          </span>
         </button>
       </div>
 
       {sorted.length === 0 ? (
-        <div className="mt-8">
-          <EmptyState icon="📅" title={filter === 'mine' ? t.emptyMine : t.empty} description="" />
+        <div className="mt-6">
+          <EmptyState title={filter === 'mine' ? t.emptyMine : t.empty} description="" />
         </div>
       ) : (
         <div className="mt-6 space-y-4">
@@ -197,7 +202,8 @@ export default function EventsPage() {
               <Card key={event.id} className={status === 'past' ? 'opacity-60' : ''}>
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge tone="brand">
-                    <span aria-hidden>{meta?.icon}</span> {meta?.title[state.language]}
+                    {meta && <Icon name={meta.icon} size={14} />}
+                    {meta?.title[state.language]}
                   </Badge>
                   <Badge tone={STATUS_TONE[status]}>{statusLabel[status]}</Badge>
                   {event.online && <Badge>{t.online}</Badge>}
@@ -210,16 +216,17 @@ export default function EventsPage() {
 
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
                   <div className="rounded-xl bg-ink-50 px-4 py-3">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-ink-400">
+                    <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-ink-400">
+                      <Icon name="calendar" size={14} />
                       {t.deadline}
                     </p>
-                    <p className="mt-1 font-bold text-ink-900">
+                    <p className="mt-1 font-bold tabular-nums text-ink-900">
                       {formatEventDate(event.registrationDeadline, state.language)}
                     </p>
                     {/* Обратный отсчёт — то, ради чего вся страница */}
                     {canRegister && (
                       <p
-                        className={`mt-0.5 text-sm font-semibold ${
+                        className={`mt-0.5 text-sm font-semibold tabular-nums ${
                           status === 'closing-soon' ? 'text-danger-600' : 'text-ink-500'
                         }`}
                       >
@@ -229,11 +236,11 @@ export default function EventsPage() {
                   </div>
 
                   <div className="rounded-xl bg-ink-50 px-4 py-3">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-ink-400">
+                    <p className="text-xs font-semibold uppercase tracking-wide tabular-nums text-ink-400">
                       {formatEventDate(event.startsAt, state.language)}
                     </p>
                     <p className="mt-1 text-sm text-ink-700">{event.location}</p>
-                    <p className="mt-0.5 text-xs text-ink-400">{t.grades(event.grades.join(', '))}</p>
+                    <p className="mt-0.5 text-xs tabular-nums text-ink-400">{t.grades(event.grades.join(', '))}</p>
                   </div>
                 </div>
 
@@ -247,7 +254,10 @@ export default function EventsPage() {
                 <div className="mt-4">
                   {registered ? (
                     <div className="flex flex-wrap items-center gap-3">
-                      <span className="font-semibold text-success-700">✓ {t.registered}</span>
+                      <span className="flex items-center gap-2 font-semibold text-success-700">
+                        <Icon name="check" size={18} />
+                        {t.registered}
+                      </span>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -274,9 +284,9 @@ export default function EventsPage() {
 }
 
 function chip(active: boolean): string {
-  return `rounded-xl border px-4 py-2 text-sm font-semibold transition-colors ${
+  return `inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
     active
       ? 'border-brand-500 bg-brand-50 text-brand-700'
-      : 'border-ink-200 bg-white text-ink-600 hover:border-brand-300'
+      : 'border-ink-200 bg-white text-ink-600 hover:border-brand-300 hover:shadow-[var(--shadow-lift)]'
   }`;
 }

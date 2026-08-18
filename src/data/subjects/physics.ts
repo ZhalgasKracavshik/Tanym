@@ -20,7 +20,7 @@ export const physics: Subject = {
   shortTitle: 'Физика',
   description:
     'Законы движения, силы, энергии и электричества — то, что объясняет, как устроен мир вокруг нас.',
-  icon: '⚛️',
+  icon: 'physics',
   accent: 'var(--color-subject-physics)',
   grades: [7, 8, 9, 10, 11],
 

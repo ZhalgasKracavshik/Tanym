@@ -110,7 +110,10 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-ink-200 bg-white/90 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4 sm:px-6">
-        <Link href="/" className="flex shrink-0 items-center gap-2">
+        <Link
+          href="/"
+          className="flex shrink-0 items-center gap-2 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+        >
           <span
             aria-hidden
             className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-500 text-lg font-black text-white"
@@ -121,16 +124,23 @@ export function SiteHeader() {
         </Link>
 
         {!isLanding && (
+          /*
+           * Пунктов навигации много, и на ноутбуке они не помещаются в строку.
+           * Список не переносится и не режется, а прокручивается по горизонтали:
+           * маршруты остаются на месте, высота шапки не растёт. Полоса прокрутки
+           * скрыта, потому что край списка и так уходит под правый блок и
+           * подсказывает, что дальше есть ещё пункты.
+           */
           <nav aria-label={t.nav} className="min-w-0 flex-1">
-            <ul className="flex items-center gap-1 overflow-x-auto">
+            <ul className="flex items-center gap-1 overflow-x-auto overscroll-x-contain scroll-smooth py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {NAV.map((item) => {
                 const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
                 return (
-                  <li key={item.href}>
+                  <li key={item.href} className="shrink-0">
                     <Link
                       href={item.href}
                       aria-current={active ? 'page' : undefined}
-                      className={`block whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
+                      className={`block whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold outline-none transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
                         active ? 'bg-brand-50 text-brand-700' : 'text-ink-500 hover:bg-ink-50 hover:text-ink-800'
                       }`}
                     >
@@ -152,7 +162,7 @@ export function SiteHeader() {
                 onClick={() => setLanguage(item.id)}
                 title={item.title}
                 aria-pressed={state.language === item.id}
-                className={`rounded-md px-2 py-1 text-xs font-bold transition-colors ${
+                className={`rounded-md px-2 py-1 text-xs font-bold outline-none transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
                   state.language === item.id ? 'bg-brand-500 text-white' : 'text-ink-400 hover:text-ink-700'
                 }`}
               >
@@ -170,7 +180,7 @@ export function SiteHeader() {
             profile && (
               <Link
                 href="/profile"
-                className="flex items-center gap-2 rounded-full border border-ink-200 py-1 pl-1 pr-3 transition-colors hover:bg-ink-50"
+                className="flex items-center gap-2 rounded-full border border-ink-200 py-1 pl-1 pr-3 outline-none transition-all duration-150 hover:border-brand-300 hover:bg-ink-50 hover:shadow-[var(--shadow-lift)] focus-visible:ring-2 focus-visible:ring-brand-500"
                 title={t.settings}
               >
                 <span

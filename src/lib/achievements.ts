@@ -13,11 +13,12 @@
  */
 
 import type { AppState, Language } from './types';
+import type { IconName } from '@/components/Icon';
 import { summarize } from './personalization';
 
 export interface AchievementDefinition {
   id: string;
-  icon: string;
+  icon: IconName;
   title: Record<Language, string>;
   description: Record<Language, string>;
   /**
@@ -59,7 +60,7 @@ function topicsMastered(state: AppState): number {
 export const ACHIEVEMENTS: AchievementDefinition[] = [
   {
     id: 'first-step',
-    icon: '👣',
+    icon: 'steps',
     title: { ru: 'Первый шаг', kk: 'Алғашқы қадам', en: 'First step' },
     description: {
       ru: 'Решить первое задание',
@@ -70,7 +71,7 @@ export const ACHIEVEMENTS: AchievementDefinition[] = [
   },
   {
     id: 'diagnosed',
-    icon: '🧭',
+    icon: 'compass',
     title: { ru: 'Знай себя', kk: 'Өзіңді таны', en: 'Know yourself' },
     description: {
       ru: 'Пройти диагностику по любому предмету',
@@ -84,21 +85,21 @@ export const ACHIEVEMENTS: AchievementDefinition[] = [
   },
   {
     id: 'ten-tasks',
-    icon: '🔟',
+    icon: 'target',
     title: { ru: 'Разогрев', kk: 'Қыздыру', en: 'Warm-up' },
     description: { ru: 'Решить 10 заданий', kk: '10 тапсырма шешу', en: 'Solve 10 tasks' },
     progress: (state) => ({ current: state.attempts.length, target: 10 }),
   },
   {
     id: 'fifty-tasks',
-    icon: '🏋️',
+    icon: 'weight',
     title: { ru: 'Марафонец', kk: 'Марафоншы', en: 'Marathoner' },
     description: { ru: 'Решить 50 заданий', kk: '50 тапсырма шешу', en: 'Solve 50 tasks' },
     progress: (state) => ({ current: state.attempts.length, target: 50 }),
   },
   {
     id: 'streak-3',
-    icon: '🔥',
+    icon: 'flame',
     title: { ru: 'Три дня подряд', kk: 'Үш күн қатарынан', en: 'Three days straight' },
     description: {
       ru: 'Заниматься 3 дня без перерыва',
@@ -109,7 +110,7 @@ export const ACHIEVEMENTS: AchievementDefinition[] = [
   },
   {
     id: 'streak-7',
-    icon: '⚡',
+    icon: 'bolt',
     title: { ru: 'Неделя силы', kk: 'Күш аптасы', en: 'Power week' },
     description: {
       ru: 'Заниматься 7 дней без перерыва',
@@ -120,7 +121,7 @@ export const ACHIEVEMENTS: AchievementDefinition[] = [
   },
   {
     id: 'sniper',
-    icon: '🎯',
+    icon: 'crosshair',
     title: { ru: 'Снайпер', kk: 'Мерген', en: 'Sniper' },
     description: {
       ru: '10 верных ответов подряд',
@@ -131,7 +132,7 @@ export const ACHIEVEMENTS: AchievementDefinition[] = [
   },
   {
     id: 'topic-master',
-    icon: '📗',
+    icon: 'bookCheck',
     title: { ru: 'Тема закрыта', kk: 'Тақырып жабылды', en: 'Topic mastered' },
     description: {
       ru: 'Освоить любую тему на 80%',
@@ -142,7 +143,7 @@ export const ACHIEVEMENTS: AchievementDefinition[] = [
   },
   {
     id: 'polymath',
-    icon: '🧠',
+    icon: 'brain',
     title: { ru: 'Разносторонний', kk: 'Жан-жақты', en: 'Well-rounded' },
     description: {
       ru: 'Решать задания по трём предметам',
@@ -153,7 +154,7 @@ export const ACHIEVEMENTS: AchievementDefinition[] = [
   },
   {
     id: 'thousand-points',
-    icon: '💎',
+    icon: 'gem',
     title: { ru: 'Тысяча', kk: 'Мың', en: 'One thousand' },
     description: { ru: 'Набрать 1000 очков', kk: '1000 ұпай жинау', en: 'Earn 1000 points' },
     progress: (state) => ({ current: summarize(state).points, target: 1000 }),

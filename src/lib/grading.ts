@@ -43,11 +43,11 @@ export function checkAnswer(task: Task, answer: string): boolean {
 export function correctAnswerText(task: Task): string {
   if (task.kind === 'single') {
     if (task.options && task.correctIndex !== undefined) {
-      return task.options[task.correctIndex] ?? '—';
+      return task.options[task.correctIndex] ?? '–';
     }
-    return '—';
+    return '–';
   }
-  return task.correctValue ?? '—';
+  return task.correctValue ?? '–';
 }
 
 /** Как ученик ответил — в читаемом виде (для истории и для промпта AI). */

@@ -17,6 +17,7 @@ import type { Grade, LearningGoal, Profile, Role } from '@/lib/types';
 import type { Dict } from '@/lib/i18n';
 import { SUBJECTS } from '@/data';
 import { Alert, Button, Card } from '@/components/ui';
+import { Icon, type IconName } from '@/components/Icon';
 
 const TOTAL_STEPS = 4;
 
@@ -228,7 +229,7 @@ export default function OnboardingPage() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
       {/* Индикатор прогресса: ученик должен видеть, сколько осталось */}
-      <p className="text-sm font-semibold text-brand-600">{t.stepOf(step, TOTAL_STEPS)}</p>
+      <p className="text-sm font-semibold tabular-nums text-brand-600">{t.stepOf(step, TOTAL_STEPS)}</p>
       <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-ink-200">
         <div
           className="h-full rounded-full bg-brand-500 transition-all duration-300"
@@ -246,7 +247,7 @@ export default function OnboardingPage() {
         {/* Шаг 1: имя и роль */}
         {step === 1 && (
           <div>
-            <h1 className="text-2xl font-bold text-ink-900">{t.nameTitle}</h1>
+            <h1 className="text-2xl font-bold text-ink-900 sm:text-3xl">{t.nameTitle}</h1>
             <p className="mt-2 text-ink-500">{t.nameHint}</p>
 
             <input
@@ -254,7 +255,7 @@ export default function OnboardingPage() {
               value={name}
               onChange={(event) => setName(event.target.value)}
               placeholder={t.namePlaceholder}
-              className="mt-5 w-full rounded-xl border border-ink-200 px-4 py-3 text-ink-900 outline-none focus:border-brand-500"
+              className="mt-6 w-full rounded-xl border border-ink-200 px-4 py-3 text-ink-900 outline-none transition-all duration-150 focus:border-brand-500 focus-visible:ring-2 focus-visible:ring-brand-500"
             />
 
             <p className="mt-6 font-semibold text-ink-800">{t.whoAreYou}</p>
@@ -262,14 +263,14 @@ export default function OnboardingPage() {
               <ChoiceCard
                 selected={role === 'student'}
                 onClick={() => setRole('student')}
-                icon="🎒"
+                icon="backpack"
                 title={t.roleStudent}
                 description={t.roleStudentDesc}
               />
               <ChoiceCard
                 selected={role === 'teacher'}
                 onClick={() => setRole('teacher')}
-                icon="👩‍🏫"
+                icon="presentation"
                 title={t.roleTeacher}
                 description={t.roleTeacherDesc}
               />
@@ -280,18 +281,18 @@ export default function OnboardingPage() {
         {/* Шаг 2: класс */}
         {step === 2 && (
           <div>
-            <h1 className="text-2xl font-bold text-ink-900">{t.gradeTitle}</h1>
+            <h1 className="text-2xl font-bold text-ink-900 sm:text-3xl">{t.gradeTitle}</h1>
             <p className="mt-2 text-ink-500">{t.gradeHint}</p>
 
-            <div className="mt-5 grid grid-cols-3 gap-3 sm:grid-cols-6">
+            <div className="mt-6 grid grid-cols-3 gap-3 sm:grid-cols-6">
               {GRADES.map((item) => (
                 <button
                   key={item}
                   onClick={() => setGrade(item)}
-                  className={`rounded-xl border-2 py-4 text-lg font-bold transition-colors ${
+                  className={`rounded-xl border-2 py-4 text-lg font-bold tabular-nums transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
                     grade === item
                       ? 'border-brand-500 bg-brand-50 text-brand-700'
-                      : 'border-ink-200 bg-white text-ink-700 hover:border-brand-300'
+                      : 'border-ink-200 bg-white text-ink-700 hover:border-brand-300 hover:shadow-[var(--shadow-lift)]'
                   }`}
                 >
                   {item}
@@ -304,10 +305,10 @@ export default function OnboardingPage() {
         {/* Шаг 3: предметы */}
         {step === 3 && (
           <div>
-            <h1 className="text-2xl font-bold text-ink-900">{t.subjectsTitle}</h1>
+            <h1 className="text-2xl font-bold text-ink-900 sm:text-3xl">{t.subjectsTitle}</h1>
             <p className="mt-2 text-ink-500">{t.subjectsHint}</p>
 
-            <div className="mt-5 grid gap-3">
+            <div className="mt-6 grid gap-3">
               {SUBJECTS.map((subject) => (
                 <ChoiceCard
                   key={subject.id}
@@ -325,10 +326,10 @@ export default function OnboardingPage() {
         {/* Шаг 4: цель */}
         {step === 4 && (
           <div>
-            <h1 className="text-2xl font-bold text-ink-900">{t.goalTitle}</h1>
+            <h1 className="text-2xl font-bold text-ink-900 sm:text-3xl">{t.goalTitle}</h1>
             <p className="mt-2 text-ink-500">{t.goalHint}</p>
 
-            <div className="mt-5 grid gap-3">
+            <div className="mt-6 grid gap-3">
               {LEARNING_GOALS.map((item) => (
                 <ChoiceCard
                   key={item.id}
@@ -348,7 +349,7 @@ export default function OnboardingPage() {
                 type="date"
                 value={targetDate}
                 onChange={(event) => setTargetDate(event.target.value)}
-                className="mt-2 w-full rounded-xl border border-ink-200 px-4 py-3 text-ink-900 outline-none focus:border-brand-500"
+                className="mt-2 w-full rounded-xl border border-ink-200 px-4 py-3 tabular-nums text-ink-900 outline-none transition-all duration-150 focus:border-brand-500 focus-visible:ring-2 focus-visible:ring-brand-500"
               />
             </label>
           </div>
@@ -390,7 +391,7 @@ function ChoiceCard({
 }: {
   selected: boolean;
   onClick: () => void;
-  icon: string;
+  icon: IconName;
   title: string;
   description: string;
 }) {
@@ -398,12 +399,18 @@ function ChoiceCard({
     <button
       onClick={onClick}
       aria-pressed={selected}
-      className={`flex items-start gap-3 rounded-xl border-2 p-4 text-left transition-colors ${
-        selected ? 'border-brand-500 bg-brand-50' : 'border-ink-200 bg-white hover:border-brand-300'
+      className={`flex items-start gap-3 rounded-xl border-2 p-4 text-left transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
+        selected
+          ? 'border-brand-500 bg-brand-50'
+          : 'border-ink-200 bg-white hover:border-brand-300 hover:shadow-[var(--shadow-lift)]'
       }`}
     >
-      <span className="text-2xl" aria-hidden>
-        {icon}
+      <span
+        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+          selected ? 'bg-white text-brand-600' : 'bg-brand-50 text-brand-600'
+        }`}
+      >
+        <Icon name={icon} size={20} />
       </span>
       <span>
         <span className="block font-bold text-ink-900">{title}</span>

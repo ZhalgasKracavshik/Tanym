@@ -16,6 +16,7 @@ import type { Difficulty, Grade, Subject, Task, Topic } from '@/lib/types';
 import { GRADES } from '@/lib/types';
 import { useStore } from '@/components/StoreProvider';
 import type { Dict } from '@/lib/i18n';
+import { Icon } from '@/components/Icon';
 import { Alert, Button, Card } from '@/components/ui';
 
 /** Подписи формы на трёх языках. Ключи одинаковые — за этим следит TypeScript. */
@@ -42,8 +43,8 @@ const TEXT: Dict<{
   cancel: string;
 }> = {
   ru: {
-    added: 'Тема добавлена — она уже доступна ученикам.',
-    addTopic: '+ Добавить тему',
+    added: 'Тема добавлена, она уже доступна ученикам.',
+    addTopic: 'Добавить тему',
     formTitle: (subject) => `Новая тема по предмету «${subject}»`,
     titleLabel: 'Название темы',
     titlePlaceholder: 'Например, Формулы сокращённого умножения',
@@ -55,8 +56,8 @@ const TEXT: Dict<{
     minutesLabel: 'Минут на тему',
     taskTitle: 'Задание',
     questionLabel: 'Вопрос',
-    optionsHint: 'Варианты ответа — отметьте правильный',
-    optionCorrect: (n) => `Вариант ${n} — правильный`,
+    optionsHint: 'Варианты ответа: отметьте правильный',
+    optionCorrect: (n) => `Правильный ответ: вариант ${n}`,
     optionPlaceholder: (n) => `Вариант ${n}`,
     explanationLabel: 'Объяснение решения',
     explanationPlaceholder: 'Его увидит ученик после ответа, и на него опирается AI-разбор',
@@ -64,8 +65,8 @@ const TEXT: Dict<{
     cancel: 'Отмена',
   },
   kk: {
-    added: 'Тақырып қосылды — ол оқушыларға қазірден қолжетімді.',
-    addTopic: '+ Тақырып қосу',
+    added: 'Тақырып қосылды, ол оқушыларға қазірден қолжетімді.',
+    addTopic: 'Тақырып қосу',
     formTitle: (subject) => `«${subject}» пәні бойынша жаңа тақырып`,
     titleLabel: 'Тақырып атауы',
     titlePlaceholder: 'Мысалы, Қысқаша көбейту формулалары',
@@ -77,8 +78,8 @@ const TEXT: Dict<{
     minutesLabel: 'Тақырыпқа минут',
     taskTitle: 'Тапсырма',
     questionLabel: 'Сұрақ',
-    optionsHint: 'Жауап нұсқалары — дұрысын белгілеңіз',
-    optionCorrect: (n) => `${n}-нұсқа — дұрыс жауап`,
+    optionsHint: 'Жауап нұсқалары: дұрысын белгілеңіз',
+    optionCorrect: (n) => `Дұрыс жауап: ${n}-нұсқа`,
     optionPlaceholder: (n) => `${n}-нұсқа`,
     explanationLabel: 'Шешімнің түсіндірмесі',
     explanationPlaceholder: 'Оны оқушы жауап бергеннен кейін көреді, AI-талдау да соған сүйенеді',
@@ -86,8 +87,8 @@ const TEXT: Dict<{
     cancel: 'Болдырмау',
   },
   en: {
-    added: 'Topic added — students can already see it.',
-    addTopic: '+ Add topic',
+    added: 'Topic added, students can already see it.',
+    addTopic: 'Add topic',
     formTitle: (subject) => `New topic in “${subject}”`,
     titleLabel: 'Topic title',
     titlePlaceholder: 'For example, Special product formulas',
@@ -99,7 +100,7 @@ const TEXT: Dict<{
     minutesLabel: 'Minutes per topic',
     taskTitle: 'Task',
     questionLabel: 'Question',
-    optionsHint: 'Answer options — mark the correct one',
+    optionsHint: 'Answer options: mark the correct one',
     optionCorrect: (n) => `Option ${n} is correct`,
     optionPlaceholder: (n) => `Option ${n}`,
     explanationLabel: 'Solution explanation',
@@ -199,14 +200,20 @@ export function AddTopicForm({ subject }: { subject: Subject }) {
             <Alert tone="success">{t.added}</Alert>
           </div>
         )}
-        <Button onClick={() => setOpen(true)}>{t.addTopic}</Button>
+        <Button onClick={() => setOpen(true)}>
+          <Icon name="plus" size={18} />
+          {t.addTopic}
+        </Button>
       </div>
     );
   }
 
   return (
     <Card className="space-y-5">
-      <h3 className="font-bold text-ink-900">{t.formTitle(subject.title)}</h3>
+      <h3 className="flex items-center gap-2 font-bold text-ink-900">
+        <Icon name="pencil" size={18} className="text-brand-600" />
+        {t.formTitle(subject.title)}
+      </h3>
 
       <Field label={t.titleLabel}>
         <input
@@ -260,13 +267,16 @@ export function AddTopicForm({ subject }: { subject: Subject }) {
             max={90}
             value={minutes}
             onChange={(event) => setMinutes(Number(event.target.value))}
-            className={INPUT}
+            className={`${INPUT} tabular-nums`}
           />
         </Field>
       </div>
 
       <div className="border-t border-ink-200 pt-5">
-        <h4 className="font-bold text-ink-900">{t.taskTitle}</h4>
+        <h4 className="flex items-center gap-2 font-bold text-ink-900">
+          <Icon name="clipboard" size={18} className="text-ink-400" />
+          {t.taskTitle}
+        </h4>
 
         <Field label={t.questionLabel} className="mt-3">
           <textarea
@@ -313,6 +323,7 @@ export function AddTopicForm({ subject }: { subject: Subject }) {
 
       <div className="flex flex-wrap gap-3">
         <Button onClick={save} disabled={!canSave}>
+          <Icon name="check" size={18} />
           {t.submit}
         </Button>
         <Button variant="secondary" onClick={() => setOpen(false)}>
@@ -324,7 +335,7 @@ export function AddTopicForm({ subject }: { subject: Subject }) {
 }
 
 const INPUT =
-  'w-full rounded-xl border border-ink-200 px-4 py-2.5 text-ink-900 outline-none focus:border-brand-500';
+  'w-full rounded-xl border border-ink-200 px-4 py-2.5 text-ink-900 outline-none transition-all duration-150 hover:border-ink-300 focus:border-brand-500 focus-visible:ring-2 focus-visible:ring-brand-500';
 
 function Field({
   label,

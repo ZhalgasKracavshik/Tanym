@@ -37,7 +37,7 @@ const TEXT: Dict<{
     subtitle: 'Спроси что угодно по школьной программе.',
     noProfileTitle: 'Сначала создайте профиль',
     noProfileText:
-      'Наставник отвечает с учётом класса и цели — без профиля он не знает, на каком уровне объяснять.',
+      'Наставник отвечает с учётом класса и цели. Без профиля он не знает, на каком уровне объяснять.',
     createProfile: 'Создать профиль',
     clearHistory: 'Очистить историю',
     confirmClear: 'Очистить всю историю разговора?',
@@ -58,7 +58,7 @@ const TEXT: Dict<{
     subtitle: 'Мектеп бағдарламасы бойынша кез келген нәрсені сұра.',
     noProfileTitle: 'Алдымен профиль құрыңыз',
     noProfileText:
-      'Тәлімгер сыныбың мен мақсатыңды ескеріп жауап береді — профильсіз ол қандай деңгейде түсіндіру керегін білмейді.',
+      'Тәлімгер сыныбың мен мақсатыңды ескеріп жауап береді. Профильсіз ол қандай деңгейде түсіндіру керегін білмейді.',
     createProfile: 'Профиль құру',
     clearHistory: 'Тарихты тазалау',
     confirmClear: 'Әңгіме тарихы толығымен тазалансын ба?',
@@ -79,7 +79,7 @@ const TEXT: Dict<{
     subtitle: 'Ask anything from the school curriculum.',
     noProfileTitle: 'Create a profile first',
     noProfileText:
-      'The mentor answers based on your grade and goal — without a profile it cannot tell what level to explain at.',
+      'The mentor answers based on your grade and goal. Without a profile it cannot tell what level to explain at.',
     createProfile: 'Create profile',
     clearHistory: 'Clear history',
     confirmClear: 'Clear the entire conversation history?',
@@ -169,7 +169,6 @@ export default function ChatPage() {
     return (
       <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
         <EmptyState
-          icon="💬"
           title={t.noProfileTitle}
           description={t.noProfileText}
           action={<ButtonLink href="/onboarding">{t.createProfile}</ButtonLink>}
@@ -182,11 +181,11 @@ export default function ChatPage() {
   const suggestions = t.suggestions;
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col px-4 py-8 sm:px-6">
+    <div className="mx-auto flex max-w-3xl flex-col px-4 py-10 sm:px-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-ink-900">{t.title}</h1>
-          <p className="mt-1 text-sm text-ink-500">{t.subtitle}</p>
+          <h1 className="text-2xl font-bold text-ink-900 sm:text-3xl">{t.title}</h1>
+          <p className="mt-2 text-ink-500">{t.subtitle}</p>
         </div>
         {state.chat.length > 0 && (
           <Button
@@ -205,12 +204,12 @@ export default function ChatPage() {
         {state.chat.length === 0 && !loading && (
           <Card>
             <p className="text-ink-700">{t.greeting(profile.name.split(' ')[0])}</p>
-            <div className="mt-4 grid gap-2">
+            <div className="mt-6 grid gap-2">
               {suggestions.map((item) => (
                 <button
                   key={item}
                   onClick={() => send(item)}
-                  className="rounded-xl border border-ink-200 p-3 text-left text-sm text-ink-700 transition-colors hover:border-brand-300 hover:bg-brand-50"
+                  className="rounded-xl border border-ink-200 p-3 text-left text-sm text-ink-700 transition-all duration-150 hover:border-brand-300 hover:bg-brand-50 hover:shadow-[var(--shadow-lift)] focus-visible:ring-2 focus-visible:ring-brand-500"
                 >
                   {item}
                 </button>
@@ -249,7 +248,7 @@ export default function ChatPage() {
 
       {/* Поле ввода */}
       <div className="sticky bottom-4 mt-6">
-        <div className="flex items-end gap-2 rounded-2xl border border-ink-200 bg-white p-2 shadow-sm">
+        <div className="flex items-end gap-2 rounded-2xl border border-ink-200 bg-white p-2 shadow-[var(--shadow-rest)] transition-all duration-150 focus-within:border-brand-300 focus-within:shadow-[var(--shadow-lift)]">
           <textarea
             value={question}
             onChange={(event) => setQuestion(event.target.value)}

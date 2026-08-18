@@ -10,6 +10,7 @@
  */
 
 import type { Listing } from './listings';
+import type { IconName } from '@/components/Icon';
 
 /** Язык интерфейса. Объявлен здесь, а не в i18n.ts, чтобы не было кольца импортов. */
 export type Language = 'ru' | 'kk' | 'en';
@@ -22,30 +23,30 @@ export const GRADES: Grade[] = [7, 8, 9, 10, 11, 12];
 /** Цель обучения, которую ученик выбирает при онбординге. */
 export type LearningGoal = 'ent' | 'olympiad' | 'review' | 'catchup';
 
-export const LEARNING_GOALS: { id: LearningGoal; title: string; description: string; icon: string }[] = [
+export const LEARNING_GOALS: { id: LearningGoal; title: string; description: string; icon: IconName }[] = [
   {
     id: 'ent',
     title: 'Подготовка к ЕНТ',
     description: 'Системно закрыть программу и набрать максимум баллов на тестировании',
-    icon: '🎓',
+    icon: 'cap',
   },
   {
     id: 'olympiad',
     title: 'Олимпиада',
     description: 'Задачи повышенной сложности и нестандартные методы решения',
-    icon: '🏅',
+    icon: 'medal',
   },
   {
     id: 'review',
     title: 'Повторение темы',
     description: 'Освежить конкретный раздел перед контрольной или зачётом',
-    icon: '🔁',
+    icon: 'target',
   },
   {
     id: 'catchup',
     title: 'Догнать программу',
     description: 'Закрыть пробелы по темам, которые остались непонятыми',
-    icon: '🪜',
+    icon: 'steps',
   },
 ];
 
@@ -158,8 +159,8 @@ export interface Subject {
   title: string;
   shortTitle: string;
   description: string;
-  /** Эмодзи-иконка предмета. */
-  icon: string;
+  /** Имя иконки из набора Icon. */
+  icon: IconName;
   /** CSS-переменная акцентного цвета предмета (см. globals.css). */
   accent: string;
   grades: Grade[];

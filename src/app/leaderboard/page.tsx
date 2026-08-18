@@ -10,12 +10,23 @@
  */
 
 import { buildSchoolLeaderboard } from '@/data/leaderboard';
-import { medalForRank, pseudonym, rankEntries } from '@/lib/leaderboard';
+import { pseudonym, rankEntries } from '@/lib/leaderboard';
 import type { LeaderboardEntry } from '@/lib/leaderboard';
 import { summarize } from '@/lib/personalization';
 import type { Dict } from '@/lib/i18n';
 import { useStore } from '@/components/StoreProvider';
+import { Icon } from '@/components/Icon';
 import { Badge, ButtonLink, Card, EmptyState, Skeleton } from '@/components/ui';
+
+/**
+ * Цвет медали для первых трёх мест. Место всё равно показано числом, медаль
+ * лишь помогает выхватить тройку взглядом, поэтому дальше третьего места её нет.
+ */
+const MEDAL_TONE: Record<number, string> = {
+  1: 'text-accent-500',
+  2: 'text-ink-400',
+  3: 'text-subject-history',
+};
 
 const TEXT: Dict<{
   title: string;
@@ -39,7 +50,7 @@ const TEXT: Dict<{
 }> = {
   ru: {
     title: 'Рейтинг школы',
-    subtitle: 'Очки начисляются за решённые задания. Быть в списке под именем — необязательно.',
+    subtitle: 'Очки начисляются за решённые задания. Быть в списке под именем необязательно.',
     colRank: 'Место',
     colStudent: 'Ученик',
     colPoints: 'Очки',
@@ -50,18 +61,18 @@ const TEXT: Dict<{
     anonymityTitle: 'Анонимный режим',
     anonymityToggle: 'Скрыть моё имя в рейтинге',
     anonymityHelp:
-      'Одноклассники увидят псевдоним вместо имени. Очки продолжают начисляться, место сохраняется — из рейтинга вы не выпадаете.',
+      'Одноклассники увидят псевдоним вместо имени. Очки продолжают начисляться, место сохраняется, из рейтинга вы не выпадаете.',
     seenAs: (name) => `Сейчас вас видят как «${name}».`,
     noProfileTitle: 'Вы пока вне рейтинга',
-    noProfileText: 'Создайте профиль ученика и решите первые задания — строка появится сама.',
+    noProfileText: 'Создайте профиль ученика и решите первые задания, тогда строка появится сама.',
     createProfile: 'Создать профиль',
     teacherNote: 'Вы вошли как учитель: в ученический рейтинг ваша строка не добавляется.',
     demoNote:
-      'В MVP нет общего сервера, поэтому одноклассники в таблице — демонстрационные данные. Настоящий прогресс считается только у вас.',
+      'В MVP нет общего сервера, поэтому одноклассники в таблице показаны демонстрационными данными. Настоящий прогресс считается только у вас.',
   },
   kk: {
     title: 'Мектеп рейтингі',
-    subtitle: 'Ұпай шешілген тапсырмалар үшін беріледі. Тізімде өз атыңызбен тұру — міндетті емес.',
+    subtitle: 'Ұпай шешілген тапсырмалар үшін беріледі. Тізімде өз атыңызбен тұру міндетті емес.',
     colRank: 'Орын',
     colStudent: 'Оқушы',
     colPoints: 'Ұпай',
@@ -72,14 +83,14 @@ const TEXT: Dict<{
     anonymityTitle: 'Жасырын режим',
     anonymityToggle: 'Рейтингте атымды жасыру',
     anonymityHelp:
-      'Сыныптастар атыңыздың орнына бүркеншік атты көреді. Ұпай бұрынғыдай есептеледі, орныңыз сақталады — рейтингтен шығып қалмайсыз.',
+      'Сыныптастар атыңыздың орнына бүркеншік атты көреді. Ұпай бұрынғыдай есептеледі, орныңыз сақталады, рейтингтен шығып қалмайсыз.',
     seenAs: (name) => `Қазір сізді «${name}» деп көреді.`,
     noProfileTitle: 'Сіз әзірге рейтингте жоқсыз',
-    noProfileText: 'Оқушы профилін құрып, алғашқы тапсырмаларды шешіңіз — жолыңыз өзі пайда болады.',
+    noProfileText: 'Оқушы профилін құрып, алғашқы тапсырмаларды шешіңіз, сонда жолыңыз өзі пайда болады.',
     createProfile: 'Профиль құру',
     teacherNote: 'Сіз мұғалім ретінде кірдіңіз: оқушылар рейтингіне сіздің жолыңыз қосылмайды.',
     demoNote:
-      'MVP-де ортақ сервер жоқ, сондықтан кестедегі сыныптастар — көрсетілім деректері. Нақты прогресс тек сізде есептеледі.',
+      'MVP-де ортақ сервер жоқ, сондықтан кестедегі сыныптастар көрсетілім деректері болып табылады. Нақты прогресс тек сізде есептеледі.',
   },
   en: {
     title: 'School leaderboard',
@@ -94,10 +105,10 @@ const TEXT: Dict<{
     anonymityTitle: 'Anonymous mode',
     anonymityToggle: 'Hide my name in the leaderboard',
     anonymityHelp:
-      'Classmates will see a pseudonym instead of your name. Points keep adding up and your place stays — you do not drop out of the ranking.',
+      'Classmates will see a pseudonym instead of your name. Points keep adding up and your place stays, so you do not drop out of the ranking.',
     seenAs: (name) => `Others currently see you as “${name}”.`,
     noProfileTitle: 'You are not in the ranking yet',
-    noProfileText: 'Create a student profile and solve your first tasks — your row will appear on its own.',
+    noProfileText: 'Create a student profile and solve your first tasks, and your row will appear on its own.',
     createProfile: 'Create profile',
     teacherNote: 'You are signed in as a teacher, so your row is not added to the student ranking.',
     demoNote:
@@ -178,8 +189,15 @@ export default function LeaderboardPage() {
         </div>
       ) : (
         <div className="mt-6">
+          {/* Иконка вынесена рядом: проп icon в EmptyState принимает строку,
+              а строкой иконку из набора не передать. */}
+          <div className="mb-3 flex justify-center">
+            <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-ink-200 bg-white text-ink-400">
+              <Icon name="trophy" size={24} />
+            </span>
+          </div>
           <EmptyState
-            icon="🏁"
+           
             title={t.noProfileTitle}
             description={t.noProfileText}
             action={<ButtonLink href="/onboarding">{t.createProfile}</ButtonLink>}
@@ -189,7 +207,7 @@ export default function LeaderboardPage() {
 
       {/* Таблица прокручивается вбок отдельно от страницы — иначе на телефоне
           пять колонок растянули бы весь макет */}
-      <div className="mt-6 overflow-x-auto rounded-2xl border border-ink-200 bg-white shadow-sm">
+      <div className="mt-6 overflow-x-auto rounded-2xl border border-ink-200 bg-white shadow-[var(--shadow-rest)]">
         <table className="w-full min-w-[36rem] border-collapse text-sm">
           <thead>
             <tr className="border-b border-ink-200 text-left text-xs font-semibold uppercase tracking-wide text-ink-400">
@@ -212,22 +230,18 @@ export default function LeaderboardPage() {
           </thead>
           <tbody>
             {rows.map((entry) => {
-              const medal = medalForRank(entry.rank);
+              const medalTone = MEDAL_TONE[entry.rank];
 
               return (
                 <tr
                   key={entry.id}
-                  className={`border-b border-ink-100 last:border-b-0 ${
-                    entry.isCurrentUser ? 'bg-brand-50' : ''
+                  className={`border-b border-ink-100 transition-colors duration-150 last:border-b-0 ${
+                    entry.isCurrentUser ? 'bg-brand-50' : 'hover:bg-ink-50'
                   }`}
                 >
                   <td className="px-4 py-3">
-                    <span className="flex items-center gap-1.5 font-bold tabular-nums text-ink-900">
-                      {medal && (
-                        <span aria-hidden className="text-base">
-                          {medal}
-                        </span>
-                      )}
+                    <span className="flex items-center gap-2 font-bold tabular-nums text-ink-900">
+                      {medalTone && <Icon name="medal" size={18} className={medalTone} />}
                       {entry.rank}
                     </span>
                   </td>
@@ -244,12 +258,17 @@ export default function LeaderboardPage() {
                         </Badge>
                       )}
                     </span>
-                    <span className="mt-0.5 block text-xs text-ink-400">{t.gradeLabel(entry.grade)}</span>
+                    <span className="mt-0.5 block text-xs tabular-nums text-ink-400">
+                      {t.gradeLabel(entry.grade)}
+                    </span>
                   </td>
                   <td className="px-4 py-3 text-right font-bold tabular-nums text-ink-900">{entry.points}</td>
                   <td className="px-4 py-3 text-right tabular-nums text-ink-600">{entry.topicsMastered}</td>
                   <td className="px-4 py-3 text-right tabular-nums text-ink-600">
-                    <span aria-hidden>🔥</span> {entry.streak}
+                    <span className="flex items-center justify-end gap-2">
+                      <Icon name="flame" size={16} className="text-accent-500" />
+                      {entry.streak}
+                    </span>
                   </td>
                 </tr>
               );

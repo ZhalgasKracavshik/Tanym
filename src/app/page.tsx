@@ -11,6 +11,7 @@
 import Link from 'next/link';
 import { SUBJECTS } from '@/data';
 import { ButtonLink, Card } from '@/components/ui';
+import { Icon, type IconName } from '@/components/Icon';
 import { useLang, type Dict } from '@/lib/i18n';
 
 /** Подписи лендинга на трёх языках. Ключи одинаковые — за этим следит TypeScript. */
@@ -22,7 +23,7 @@ const TEXT: Dict<{
   ctaDiagnostics: string;
   problemsTitle: string;
   /** Проблемы из кейса хакатона — то, ради чего продукт существует. */
-  problems: { icon: string; title: string; text: string }[];
+  problems: { icon: IconName; title: string; text: string }[];
   stepsTitle: string;
   steps: { title: string; text: string }[];
   subjectsTitle: string;
@@ -43,17 +44,17 @@ const TEXT: Dict<{
     problemsTitle: 'Почему это важно',
     problems: [
       {
-        icon: '📍',
+        icon: 'pin',
         title: 'Место решает больше, чем способности',
-        text: 'В областном центре можно нанять репетитора. В ауле — не у кого и не за что.',
+        text: 'В областном центре можно нанять репетитора. В ауле нанимать некого и не за что.',
       },
       {
-        icon: '👩‍🏫',
+        icon: 'presentation',
         title: 'У учителя 30 учеников и один урок',
-        text: 'Найти пробел у каждого физически невозможно — не хватает часов в сутках.',
+        text: 'Найти пробел у каждого физически невозможно: не хватает часов в сутках.',
       },
       {
-        icon: '🧩',
+        icon: 'folder',
         title: 'Материалы есть, системы нет',
         text: 'Сборники и видео разбросаны по источникам и не подстроены под твой уровень.',
       },
@@ -63,15 +64,15 @@ const TEXT: Dict<{
       { title: 'Профиль и цель', text: 'Класс, предметы и зачем ты учишься: ЕНТ, олимпиада или закрыть пробелы.' },
       { title: 'Диагностика', text: '8 заданий, которые показывают твой уровень по каждому навыку отдельно.' },
       { title: 'Персональный план', text: 'Система отбирает темы и объясняет, почему именно они и в таком порядке.' },
-      { title: 'Задания и разбор', text: 'Решаешь — получаешь объяснение своей ошибки, а не просто «неверно».' },
+      { title: 'Задания и разбор', text: 'Решаешь и получаешь объяснение своей ошибки, а не просто «неверно».' },
     ],
     subjectsTitle: 'Что можно изучать',
     counts: (topics, tasks) => `${topics} тем · ${tasks} заданий`,
-    teacherTitle: 'Учителю — карта пробелов всего класса',
+    teacherTitle: 'Учителю: карта пробелов всего класса',
     teacherText:
       'Видно, кто отстал и по какой теме, без проверки тридцати тетрадей. Свои темы и задания добавляются прямо в панели.',
     teacherCta: 'Открыть панель учителя',
-    finalTitle: 'Начни с диагностики — это 7 минут',
+    finalTitle: 'Начни с диагностики, это всего 7 минут',
     finalText: 'План появится сразу после неё.',
   },
   kk: {
@@ -84,17 +85,17 @@ const TEXT: Dict<{
     problemsTitle: 'Бұл неге маңызды',
     problems: [
       {
-        icon: '📍',
+        icon: 'pin',
         title: 'Тұрған жерің қабілеттен де көп нәрсені шешеді',
-        text: 'Облыс орталығында репетитор жалдауға болады. Ауылда — жалдайтын адам да, қаражат та жоқ.',
+        text: 'Облыс орталығында репетитор жалдауға болады. Ауылда жалдайтын адам да, қаражат та жоқ.',
       },
       {
-        icon: '👩‍🏫',
+        icon: 'presentation',
         title: 'Мұғалімде 30 оқушы және бір ғана сабақ',
-        text: 'Әрқайсысының олқылығын табу мүмкін емес — тәулікте сағат жетпейді.',
+        text: 'Әрқайсысының олқылығын табу мүмкін емес: тәулікте сағат жетпейді.',
       },
       {
-        icon: '🧩',
+        icon: 'folder',
         title: 'Материал бар, жүйе жоқ',
         text: 'Жинақтар мен бейнесабақтар әртүрлі дереккөзде шашырап жатыр әрі сенің деңгейіңе бейімделмеген.',
       },
@@ -110,15 +111,15 @@ const TEXT: Dict<{
         title: 'Жеке жоспар',
         text: 'Жүйе тақырыптарды таңдап, неліктен дәл соларды және осы ретпен ұсынғанын түсіндіреді.',
       },
-      { title: 'Тапсырмалар мен талдау', text: 'Шығарасың — жай ғана «қате» емес, қатеңнің түсіндірмесін аласың.' },
+      { title: 'Тапсырмалар мен талдау', text: 'Шығарасың, жай ғана «қате» емес, қатеңнің түсіндірмесін аласың.' },
     ],
     subjectsTitle: 'Нені оқуға болады',
     counts: (topics, tasks) => `${topics} тақырып · ${tasks} тапсырма`,
-    teacherTitle: 'Мұғалімге — бүкіл сыныптың олқылық картасы',
+    teacherTitle: 'Мұғалімге: бүкіл сыныптың олқылық картасы',
     teacherText:
       'Отыз дәптерді тексермей-ақ кімнің қай тақырыптан қалып қойғаны көрініп тұрады. Өз тақырыптарың мен тапсырмаларыңды панельдің өзінде қосасың.',
     teacherCta: 'Мұғалім панелін ашу',
-    finalTitle: 'Диагностикадан баста — бар болғаны 7 минут',
+    finalTitle: 'Диагностикадан баста, бар болғаны 7 минут',
     finalText: 'Жоспар одан кейін бірден пайда болады.',
   },
   en: {
@@ -131,17 +132,17 @@ const TEXT: Dict<{
     problemsTitle: 'Why this matters',
     problems: [
       {
-        icon: '📍',
+        icon: 'pin',
         title: 'Where you live matters more than how able you are',
         text: 'In a regional centre you can hire a tutor. In a village there is no one to hire and no money for it.',
       },
       {
-        icon: '👩‍🏫',
+        icon: 'presentation',
         title: 'One teacher, 30 students, one lesson',
-        text: 'Spotting every gap in every student is physically impossible — there simply are not enough hours.',
+        text: 'Spotting every gap in every student is physically impossible: there simply are not enough hours.',
       },
       {
-        icon: '🧩',
+        icon: 'folder',
         title: 'Plenty of material, no system',
         text: 'Workbooks and videos are scattered across sources and none of them match your level.',
       },
@@ -158,11 +159,11 @@ const TEXT: Dict<{
     ],
     subjectsTitle: 'What you can study',
     counts: (topics, tasks) => `${topics} topics · ${tasks} tasks`,
-    teacherTitle: 'For teachers — a gap map for the whole class',
+    teacherTitle: 'For teachers: a gap map for the whole class',
     teacherText:
       'See who fell behind and on which topic without grading thirty notebooks. Your own topics and tasks are added right in the dashboard.',
     teacherCta: 'Open the teacher dashboard',
-    finalTitle: 'Start with the assessment — it takes 7 minutes',
+    finalTitle: 'Start with the assessment, it takes just 7 minutes',
     finalText: 'Your plan appears right after it.',
   },
 };
@@ -192,14 +193,17 @@ export default function HomePage() {
       <div className="mx-auto max-w-6xl space-y-16 px-4 py-16 sm:px-6">
         {/* Проблема */}
         <section>
-          <h2 className="text-center text-2xl font-bold text-ink-900">{t.problemsTitle}</h2>
-          <div className="mt-8 grid gap-4 sm:grid-cols-3">
+          <h2 className="text-center text-2xl font-bold text-ink-900 sm:text-3xl">{t.problemsTitle}</h2>
+          <div className="mt-6 grid gap-4 sm:grid-cols-3">
             {/* map превращает массив данных в массив карточек.
                 key нужен React, чтобы отличать элементы списка друг от друга. */}
             {t.problems.map((problem) => (
-              <Card key={problem.title}>
-                <span className="text-3xl" aria-hidden>
-                  {problem.icon}
+              <Card
+                key={problem.title}
+                className="transition-all duration-150 hover:border-brand-300 hover:shadow-[var(--shadow-lift)]"
+              >
+                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
+                  <Icon name={problem.icon} size={22} />
                 </span>
                 <h3 className="mt-3 font-bold text-ink-900">{problem.title}</h3>
                 <p className="mt-2 text-sm text-ink-500">{problem.text}</p>
@@ -210,11 +214,14 @@ export default function HomePage() {
 
         {/* Как работает */}
         <section>
-          <h2 className="text-center text-2xl font-bold text-ink-900">{t.stepsTitle}</h2>
-          <ol className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <h2 className="text-center text-2xl font-bold text-ink-900 sm:text-3xl">{t.stepsTitle}</h2>
+          <ol className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {t.steps.map((step, index) => (
-              <li key={step.title} className="rounded-2xl border border-ink-200 bg-white p-5">
-                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-500 font-bold text-white">
+              <li
+                key={step.title}
+                className="rounded-2xl border border-ink-200 bg-white p-5 transition-all duration-150 hover:border-brand-300 hover:shadow-[var(--shadow-lift)]"
+              >
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-500 font-bold tabular-nums text-white">
                   {index + 1}
                 </span>
                 <h3 className="mt-3 font-bold text-ink-900">{step.title}</h3>
@@ -227,16 +234,19 @@ export default function HomePage() {
         {/* Предметы: берём из реестра контента, а не пишем руками —
             добавится предмет, страница обновится сама */}
         <section>
-          <h2 className="text-center text-2xl font-bold text-ink-900">{t.subjectsTitle}</h2>
-          <div className="mt-8 grid gap-4 sm:grid-cols-3">
+          <h2 className="text-center text-2xl font-bold text-ink-900 sm:text-3xl">{t.subjectsTitle}</h2>
+          <div className="mt-6 grid gap-4 sm:grid-cols-3">
             {SUBJECTS.map((subject) => (
-              <Card key={subject.id}>
-                <span className="text-3xl" aria-hidden>
-                  {subject.icon}
+              <Card
+                key={subject.id}
+                className="transition-all duration-150 hover:border-brand-300 hover:shadow-[var(--shadow-lift)]"
+              >
+                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
+                  <Icon name={subject.icon} size={22} />
                 </span>
                 <h3 className="mt-3 font-bold text-ink-900">{subject.title}</h3>
                 <p className="mt-2 text-sm text-ink-500">{subject.description}</p>
-                <p className="mt-3 text-xs font-semibold text-brand-600">
+                <p className="mt-3 text-xs font-semibold tabular-nums text-brand-600">
                   {t.counts(
                     subject.topics.length,
                     subject.topics.reduce((sum, topic) => sum + topic.tasks.length, 0),
@@ -249,19 +259,20 @@ export default function HomePage() {
 
         {/* Блок для учителя */}
         <section className="rounded-2xl bg-ink-900 px-6 py-10 text-center sm:px-12">
-          <h2 className="text-2xl font-bold text-white">{t.teacherTitle}</h2>
+          <h2 className="text-2xl font-bold text-white sm:text-3xl">{t.teacherTitle}</h2>
           <p className="mx-auto mt-3 max-w-2xl text-ink-300">{t.teacherText}</p>
           <Link
             href="/teacher"
-            className="mt-6 inline-block rounded-xl bg-white px-6 py-3 font-semibold text-ink-900 transition-colors hover:bg-ink-100"
+            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3 font-semibold text-ink-900 transition-all duration-150 hover:bg-ink-100 hover:shadow-[var(--shadow-lift)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-900"
           >
+            <Icon name="chart" size={18} />
             {t.teacherCta}
           </Link>
         </section>
 
         {/* Финальный призыв */}
         <section className="text-center">
-          <h2 className="text-2xl font-bold text-ink-900">{t.finalTitle}</h2>
+          <h2 className="text-2xl font-bold text-ink-900 sm:text-3xl">{t.finalTitle}</h2>
           <p className="mt-3 text-ink-500">{t.finalText}</p>
           <ButtonLink href="/onboarding" size="lg" className="mt-6">
             {t.ctaStart}

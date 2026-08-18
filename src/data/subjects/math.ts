@@ -19,7 +19,7 @@ export const math: Subject = {
   shortTitle: 'Математика',
   description:
     'Алгебра школьного курса: уравнения, неравенства, функции и прогрессии — от базовых приёмов до задач уровня ЕНТ.',
-  icon: '📐',
+  icon: 'math',
   accent: 'var(--color-subject-math)',
   grades: [7, 8, 9, 10, 11],
 

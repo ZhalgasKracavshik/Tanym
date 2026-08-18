@@ -16,6 +16,7 @@ import { computeSkillMastery, summarize } from '@/lib/personalization';
 import { useStore } from '@/components/StoreProvider';
 import type { Dict } from '@/lib/i18n';
 import { AddTopicForm } from './AddTopicForm';
+import { Icon } from '@/components/Icon';
 import { Badge, Button, Card, ProgressBar, SectionHeader, Skeleton, Stat } from '@/components/ui';
 
 /** Подписи страницы на трёх языках. Ключи одинаковые — за этим следит TypeScript. */
@@ -45,17 +46,18 @@ const TEXT: Dict<{
   open: string;
   remove: string;
   confirmRemove: (title: string) => string;
+  noData: string;
 }> = {
   ru: {
     title: 'Панель учителя',
-    subtitle: 'Где класс проседает и кому нужна помощь — без проверки тетрадей.',
+    subtitle: 'Видно, где класс проседает и кому нужна помощь. Тетради проверять не нужно.',
     statStudents: 'Учеников',
     statAverage: 'Средний уровень',
     statAtRisk: 'В зоне риска',
     statAtRiskHint: 'уровень ниже 50%',
     statWeakest: 'Слабейшая тема',
     studentsTitle: 'Ученики',
-    studentsDescription: 'Отсортированы по уровню: кому нужна помощь — сверху',
+    studentsDescription: 'Отсортированы по уровню: наверху те, кому нужна помощь',
     colStudent: 'Ученик',
     colLevel: 'Уровень',
     colPoints: 'Очки',
@@ -65,17 +67,18 @@ const TEXT: Dict<{
     today: 'сегодня',
     daysAgo: (n) => `${n} дн. назад`,
     problemTitle: 'Проблемные навыки',
-    problemDescription: 'Средний уровень класса по навыку. Это то, что стоит разобрать на уроке ещё раз.',
+    problemDescription: 'Средний уровень класса по навыку. Эти навыки полезно разобрать на уроке ещё раз.',
     customTitle: 'Свои темы',
     customDescription: 'Добавленная тема сразу появляется у учеников и решается как обычная',
     taskCount: (n) => `${n} заданий`,
     open: 'Открыть',
     remove: 'Удалить',
     confirmRemove: (title) => `Удалить тему «${title}»?`,
+    noData: 'нет данных',
   },
   kk: {
     title: 'Мұғалім панелі',
-    subtitle: 'Сынып қай жерде қиналады және кімге көмек керек — дәптер тексермей-ақ.',
+    subtitle: 'Сынып қай жерде қиналатыны және кімге көмек керегі дәптер тексермей-ақ көрінеді.',
     statStudents: 'Оқушы',
     statAverage: 'Орташа деңгей',
     statAtRisk: 'Тәуекел аймағында',
@@ -99,10 +102,11 @@ const TEXT: Dict<{
     open: 'Ашу',
     remove: 'Жою',
     confirmRemove: (title) => `«${title}» тақырыбы жойылсын ба?`,
+    noData: 'дерек жоқ',
   },
   en: {
     title: 'Teacher dashboard',
-    subtitle: 'See where the class falls behind and who needs help — no notebooks to grade.',
+    subtitle: 'See where the class falls behind and who needs help, without grading a single notebook.',
     statStudents: 'Students',
     statAverage: 'Average level',
     statAtRisk: 'At risk',
@@ -126,6 +130,7 @@ const TEXT: Dict<{
     open: 'Open',
     remove: 'Delete',
     confirmRemove: (title) => `Delete the topic “${title}”?`,
+    noData: 'no data',
   },
 };
 
@@ -197,18 +202,20 @@ export default function TeacherPage() {
       <p className="mt-2 text-ink-500">{t.subtitle}</p>
 
       {/* Выбор предмета */}
-      <div className="mt-5 flex flex-wrap gap-2">
+      <div className="mt-6 flex flex-wrap gap-2">
         {SUBJECTS.map((item) => (
           <button
             key={item.id}
             onClick={() => setSubjectId(item.id)}
-            className={`rounded-xl border px-4 py-2 text-sm font-semibold transition-colors ${
+            aria-pressed={item.id === subjectId}
+            className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold outline-none transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
               item.id === subjectId
                 ? 'border-brand-500 bg-brand-50 text-brand-700'
-                : 'border-ink-200 bg-white text-ink-600 hover:border-brand-300'
+                : 'border-ink-200 bg-white text-ink-600 hover:border-brand-300 hover:shadow-[var(--shadow-lift)]'
             }`}
           >
-            <span aria-hidden>{item.icon}</span> {item.title}
+            <Icon name={item.icon} size={18} />
+            {item.title}
           </button>
         ))}
       </div>
@@ -218,10 +225,13 @@ export default function TeacherPage() {
         <Stat label={t.statStudents} value={rows.length} />
         <Stat label={t.statAverage} value={`${Math.round(classAverage * 100)}%`} />
         <Stat label={t.statAtRisk} value={atRisk} hint={t.statAtRiskHint} />
-        <Stat label={t.statWeakest} value={<span className="text-base">{problemSkills[0]?.title ?? '—'}</span>} />
+        <Stat
+          label={t.statWeakest}
+          value={<span className="text-base">{problemSkills[0]?.title ?? t.noData}</span>}
+        />
       </div>
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-3">
+      <div className="mt-6 grid gap-6 lg:grid-cols-3">
         {/* Таблица учеников */}
         <div className="lg:col-span-2">
           <SectionHeader title={t.studentsTitle} description={t.studentsDescription} />
@@ -239,7 +249,10 @@ export default function TeacherPage() {
                 {[...rows]
                   .sort((a, b) => a.mastery - b.mastery)
                   .map((row) => (
-                    <tr key={row.id} className="border-b border-ink-100 last:border-0">
+                    <tr
+                      key={row.id}
+                      className="border-b border-ink-100 transition-colors duration-150 last:border-0 hover:bg-ink-50"
+                    >
                       <td className="px-4 py-3">
                         <span className="font-semibold text-ink-800">{row.name}</span>
                         {row.isLive && (
@@ -255,8 +268,8 @@ export default function TeacherPage() {
                           {Math.round(row.mastery * 100)}%
                         </span>
                       </td>
-                      <td className="px-4 py-3 tabular-nums text-ink-700">{row.points}</td>
-                      <td className="px-4 py-3 text-ink-500">
+                      <td className="px-4 py-3 font-semibold tabular-nums text-ink-700">{row.points}</td>
+                      <td className="px-4 py-3 tabular-nums text-ink-500">
                         {row.lastActiveDaysAgo === 0 ? t.today : t.daysAgo(row.lastActiveDaysAgo)}
                       </td>
                     </tr>
@@ -270,8 +283,8 @@ export default function TeacherPage() {
         <div>
           <SectionHeader title={t.problemTitle} />
           <Card>
-            <p className="mb-4 text-sm text-ink-500">{t.problemDescription}</p>
-            <div className="space-y-4">
+            <p className="text-sm text-ink-500">{t.problemDescription}</p>
+            <div className="mt-6 space-y-3">
               {problemSkills.map((skill) => (
                 <ProgressBar key={skill.skillId} label={skill.title} value={skill.average} />
               ))}
@@ -281,21 +294,26 @@ export default function TeacherPage() {
       </div>
 
       {/* Свои темы */}
-      <div className="mt-10">
+      <div className="mt-6">
         <SectionHeader title={t.customTitle} description={t.customDescription} />
 
         {customTopics.length > 0 && (
-          <ul className="mb-4 space-y-2">
+          <ul className="mb-4 space-y-3">
             {customTopics.map((topic) => (
-              <Card as="li" key={topic.id} className="flex flex-wrap items-center justify-between gap-3">
-                <div>
+              <Card
+                as="li"
+                key={topic.id}
+                className="flex flex-wrap items-center justify-between gap-3 transition-all duration-150 hover:border-brand-300 hover:shadow-[var(--shadow-lift)]"
+              >
+                <div className="flex items-center gap-2">
+                  <Icon name="folder" size={18} className="text-ink-400" />
                   <span className="font-semibold text-ink-900">{topic.title}</span>
-                  <span className="ml-2 text-sm text-ink-400">{t.taskCount(topic.tasks.length)}</span>
+                  <span className="text-sm tabular-nums text-ink-400">{t.taskCount(topic.tasks.length)}</span>
                 </div>
                 <div className="flex gap-2">
                   <a
                     href={`/learn/${topic.id}`}
-                    className="rounded-lg px-3 py-1.5 text-sm font-semibold text-brand-600 hover:bg-brand-50"
+                    className="inline-flex items-center rounded-lg px-3 py-1.5 text-sm font-semibold text-brand-600 outline-none transition-all duration-150 hover:bg-brand-50 focus-visible:ring-2 focus-visible:ring-brand-500"
                   >
                     {t.open}
                   </a>

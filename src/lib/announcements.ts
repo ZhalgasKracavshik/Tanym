@@ -11,32 +11,33 @@
  */
 
 import type { Grade, Language } from './types';
+import type { IconName } from '@/components/Icon';
 import { almatyDateIso, daysBetween } from './date';
 
 export type AnnouncementCategory = 'medical' | 'assembly' | 'schedule' | 'important' | 'general';
 
 export const ANNOUNCEMENT_CATEGORIES: {
   id: AnnouncementCategory;
-  icon: string;
+  icon: IconName;
   title: Record<Language, string>;
 }[] = [
-  { id: 'important', icon: '❗', title: { ru: 'Важное', kk: 'Маңызды', en: 'Important' } },
+  { id: 'important', icon: 'alert', title: { ru: 'Важное', kk: 'Маңызды', en: 'Important' } },
   {
     id: 'schedule',
-    icon: '🕘',
+    icon: 'clock',
     title: { ru: 'Расписание', kk: 'Сабақ кестесі', en: 'Timetable' },
   },
   {
     id: 'medical',
-    icon: '🩺',
+    icon: 'health',
     title: { ru: 'Медосмотр', kk: 'Медициналық тексеру', en: 'Health checks' },
   },
   {
     id: 'assembly',
-    icon: '🎓',
+    icon: 'flag',
     title: { ru: 'Линейки', kk: 'Салтанатты жиын', en: 'Assemblies' },
   },
-  { id: 'general', icon: '📣', title: { ru: 'Общее', kk: 'Жалпы', en: 'General' } },
+  { id: 'general', icon: 'megaphone', title: { ru: 'Общее', kk: 'Жалпы', en: 'General' } },
 ];
 
 export interface Announcement {

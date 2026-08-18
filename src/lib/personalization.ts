@@ -265,10 +265,10 @@ function buildReasons(input: {
   } else if (mastery < MASTERY_THRESHOLD) {
     reasons.push(`Есть куда расти: тема освоена на ${percent}%`);
   } else {
-    reasons.push(`Тема уже освоена на ${percent}% — можно закрепить`);
+    reasons.push(`Тема уже освоена на ${percent}%, можно закрепить`);
   }
 
-  if (started) reasons.push('Вы уже начали эту тему — стоит довести до конца');
+  if (started) reasons.push('Вы уже начали эту тему, стоит довести до конца');
 
   if (readiness < 1) {
     reasons.push('Сначала лучше подтянуть темы-предпосылки');
@@ -321,9 +321,9 @@ export function difficultyExplanation(subjectId: string, state: AppState): strin
 
   const correct = recent.filter((a) => a.correct).length;
   const accuracy = correct / recent.length;
-  if (accuracy >= 0.75) return `${correct} из ${recent.length} последних заданий решены верно — повышаем сложность`;
-  if (accuracy <= 0.25) return `Только ${correct} из ${recent.length} последних заданий верны — снижаем сложность`;
-  return `${correct} из ${recent.length} последних заданий верны — сложность подобрана правильно`;
+  if (accuracy >= 0.75) return `${correct} из ${recent.length} последних заданий решены верно, повышаем сложность`;
+  if (accuracy <= 0.25) return `Только ${correct} из ${recent.length} последних заданий верны, снижаем сложность`;
+  return `${correct} из ${recent.length} последних заданий верны, сложность подобрана правильно`;
 }
 
 /**

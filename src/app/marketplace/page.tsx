@@ -19,6 +19,7 @@ import type { Listing, ListingType } from '@/lib/listings';
 import type { Dict } from '@/lib/i18n';
 import { useStore } from '@/components/StoreProvider';
 import { PublishForm } from './PublishForm';
+import { Icon } from '@/components/Icon';
 import { Badge, Button, Card, EmptyState } from '@/components/ui';
 
 const TEXT: Dict<{
@@ -48,7 +49,7 @@ const TEXT: Dict<{
 }> = {
   ru: {
     title: 'Возможности',
-    subtitle: 'Секции, курсы, помощь старших и волонтёрство — всё, что есть вокруг школы.',
+    subtitle: 'Секции, курсы, помощь старших и волонтёрство: всё, что есть вокруг школы.',
     all: 'Все',
     mine: 'Мои объявления',
     free: 'Бесплатно',
@@ -69,11 +70,11 @@ const TEXT: Dict<{
     confirmRemove: (title) => `Снять объявление «${title}»?`,
     empty: 'В этой категории пока нет объявлений.',
     emptyMine: 'Вы пока ничего не размещали.',
-    safety: 'Никогда не переводи деньги вперёд незнакомым людям и не встречайся один — скажи родителям.',
+    safety: 'Никогда не переводи деньги вперёд незнакомым людям и не встречайся один. Скажи об этом родителям.',
   },
   kk: {
     title: 'Мүмкіндіктер',
-    subtitle: 'Үйірмелер, курстар, үлкендердің көмегі және волонтёрлық — мектеп айналасындағының бәрі.',
+    subtitle: 'Үйірмелер, курстар, үлкендердің көмегі және волонтёрлық: мектеп айналасындағының бәрі.',
     all: 'Барлығы',
     mine: 'Менің хабарландыруларым',
     free: 'Тегін',
@@ -94,11 +95,11 @@ const TEXT: Dict<{
     confirmRemove: (title) => `«${title}» хабарландыруы алынсын ба?`,
     empty: 'Бұл санатта әзірге хабарландыру жоқ.',
     emptyMine: 'Сіз әзірге ештеңе жарияламадыңыз.',
-    safety: 'Бейтаныс адамдарға ақшаны алдын ала аударма және жалғыз кездеспе — ата-анаңа айт.',
+    safety: 'Бейтаныс адамдарға ақшаны алдын ала аударма және жалғыз кездеспе. Бұл туралы ата-анаңа айт.',
   },
   en: {
     title: 'Opportunities',
-    subtitle: 'Clubs, courses, peer tutoring and volunteering — everything around the school.',
+    subtitle: 'Clubs, courses, peer tutoring and volunteering: everything around the school.',
     all: 'All',
     mine: 'My listings',
     free: 'Free',
@@ -119,7 +120,7 @@ const TEXT: Dict<{
     confirmRemove: (title) => `Remove the listing “${title}”?`,
     empty: 'No listings in this category yet.',
     emptyMine: 'You have not posted anything yet.',
-    safety: 'Never send money upfront to strangers and never meet alone — tell your parents.',
+    safety: 'Never send money upfront to strangers and never meet alone. Tell your parents about it.',
   },
 };
 
@@ -155,8 +156,11 @@ export default function MarketplacePage() {
 
       {/* Предупреждение о безопасности: аудитория — подростки, и часть
           объявлений размещают посторонние люди */}
-      <div className="mt-5 rounded-2xl border border-accent-200 bg-accent-50 p-4">
-        <p className="text-sm text-accent-700">⚠️ {t.safety}</p>
+      <div className="mt-6 rounded-2xl border border-accent-200 bg-accent-50 p-4">
+        <p className="flex items-center gap-2 text-sm text-accent-700">
+          <Icon name="alert" size={18} />
+          {t.safety}
+        </p>
       </div>
 
       {/* Фильтры */}
@@ -166,12 +170,16 @@ export default function MarketplacePage() {
         </button>
         {LISTING_TYPES.map((type) => (
           <button key={type.id} onClick={() => setFilter(type.id)} className={chip(filter === type.id)}>
-            <span aria-hidden>{type.icon}</span> {type.title[state.language]}
+            <Icon name={type.icon} size={16} />
+            {type.title[state.language]}
           </button>
         ))}
         {state.myListings.length > 0 && (
           <button onClick={() => setFilter('mine')} className={chip(filter === 'mine')}>
-            ✍️ {t.mine} ({state.myListings.length})
+            <Icon name="pencil" size={16} />
+            <span className="tabular-nums">
+              {t.mine} ({state.myListings.length})
+            </span>
           </button>
         )}
       </div>
@@ -182,8 +190,8 @@ export default function MarketplacePage() {
       </div>
 
       {sorted.length === 0 ? (
-        <div className="mt-8">
-          <EmptyState icon="🗂️" title={filter === 'mine' ? t.emptyMine : t.empty} description="" />
+        <div className="mt-6">
+          <EmptyState title={filter === 'mine' ? t.emptyMine : t.empty} description="" />
         </div>
       ) : (
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
@@ -193,9 +201,10 @@ export default function MarketplacePage() {
               <Card key={listing.id} className={listing.pending ? 'border-accent-200 bg-accent-50' : ''}>
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge tone="brand">
-                    <span aria-hidden>{meta?.icon}</span> {meta?.title[state.language]}
+                    {meta && <Icon name={meta.icon} size={14} />}
+                    {meta?.title[state.language]}
                   </Badge>
-                  <Badge tone={listing.price === null ? 'success' : 'neutral'}>
+                  <Badge tone={listing.price === null ? 'success' : 'neutral'} className="tabular-nums">
                     {listing.price === null
                       ? t.free
                       : `${listing.price.toLocaleString('ru-RU')} ${t.perLesson}${
@@ -229,7 +238,7 @@ export default function MarketplacePage() {
                   </span>
                   {listing.spots !== undefined && (
                     <span
-                      className={`rounded-lg px-2 py-1 font-semibold ${
+                      className={`rounded-lg px-2 py-1 font-semibold tabular-nums ${
                         listing.spots > 0 ? 'bg-success-50 text-success-700' : 'bg-ink-100 text-ink-500'
                       }`}
                     >
@@ -241,11 +250,12 @@ export default function MarketplacePage() {
                 {/* Отметка о проверке — ученик должен видеть разницу между
                     школьной секцией и предложением постороннего человека */}
                 <p
-                  className={`mt-3 text-xs ${
+                  className={`mt-3 flex items-center gap-2 text-xs ${
                     listing.verified ? 'font-semibold text-success-700' : 'text-ink-400'
                   }`}
                 >
-                  {listing.verified ? `✓ ${t.verified}` : `○ ${t.unverified}`}
+                  <Icon name={listing.verified ? 'check' : 'close'} size={14} />
+                  {listing.verified ? t.verified : t.unverified}
                 </p>
                 {!listing.verified && !listing.pending && (
                   <p className="mt-1 text-xs text-ink-400">{t.unverifiedHint}</p>
@@ -275,9 +285,9 @@ export default function MarketplacePage() {
 }
 
 function chip(active: boolean): string {
-  return `rounded-xl border px-4 py-2 text-sm font-semibold transition-colors ${
+  return `inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
     active
       ? 'border-brand-500 bg-brand-50 text-brand-700'
-      : 'border-ink-200 bg-white text-ink-600 hover:border-brand-300'
+      : 'border-ink-200 bg-white text-ink-600 hover:border-brand-300 hover:shadow-[var(--shadow-lift)]'
   }`;
 }

@@ -10,6 +10,7 @@
  */
 
 import { COMMON, useLang } from '@/lib/i18n';
+import { Icon } from '@/components/Icon';
 import { Badge } from './ui';
 
 export function AiBadge({ live, reason }: { live: boolean; reason?: string }) {
@@ -18,14 +19,15 @@ export function AiBadge({ live, reason }: { live: boolean; reason?: string }) {
   if (live) {
     return (
       <Badge tone="brand">
-        <span aria-hidden>✨</span> {t.aiAnswer}
+        <Icon name="sparkles" size={14} />
+        <span>{t.aiAnswer}</span>
       </Badge>
     );
   }
 
   return (
     <Badge tone="neutral" className={reason ? 'cursor-help' : ''}>
-      <span aria-hidden>📚</span>
+      <Icon name="book" size={14} />
       <span title={reason ? `AI: ${reason}` : undefined}>{t.aiFallback}</span>
     </Badge>
   );

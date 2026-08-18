@@ -18,6 +18,7 @@ import type { DiagnosticAnswer, DiagnosticResult, Task } from '@/lib/types';
 import { useStore } from '@/components/StoreProvider';
 import type { Dict } from '@/lib/i18n';
 import { Button, ButtonLink, Card, EmptyState, ProgressBar } from '@/components/ui';
+import { Icon } from '@/components/Icon';
 
 /** Подписи страницы на трёх языках. Ключи одинаковые — за этим следит TypeScript. */
 const TEXT: Dict<{
@@ -48,7 +49,7 @@ const TEXT: Dict<{
     toSubjects: 'К выбору предметов',
     introTitle: (subject) => `Диагностика: ${subject}`,
     introText: (count) =>
-      `${count} заданий, примерно 7 минут. Отвечай честно — по результатам построится твой персональный план. Ошибиться не страшно: это не оценка, а замер.`,
+      `${count} заданий, примерно 7 минут. Отвечай честно: по результатам построится твой персональный план. Ошибиться не страшно, это не оценка, а замер.`,
     start: 'Начать диагностику',
     question: (index, total) => `Вопрос ${index} из ${total}`,
     numericPlaceholder: 'Введите ответ числом',
@@ -71,7 +72,7 @@ const TEXT: Dict<{
     toSubjects: 'Пәндерді таңдауға',
     introTitle: (subject) => `Диагностика: ${subject}`,
     introText: (count) =>
-      `${count} тапсырма, шамамен 7 минут. Шыныңды жаз — нәтиже бойынша жеке жоспарың құрылады. Қателессең де ештеңе етпейді: бұл баға емес, өлшем.`,
+      `${count} тапсырма, шамамен 7 минут. Шыныңды жаз: нәтиже бойынша жеке жоспарың құрылады. Қателессең де ештеңе етпейді, бұл баға емес, өлшем.`,
     start: 'Диагностиканы бастау',
     question: (index, total) => `${index}-сұрақ, барлығы ${total}`,
     numericPlaceholder: 'Жауапты санмен жаз',
@@ -94,7 +95,7 @@ const TEXT: Dict<{
     toSubjects: 'Choose a subject',
     introTitle: (subject) => `Diagnostic: ${subject}`,
     introText: (count) =>
-      `${count} questions, about 7 minutes. Answer honestly — your personal plan is built from the result. Mistakes are fine: this is a measurement, not a grade.`,
+      `${count} questions, about 7 minutes. Answer honestly: your personal plan is built from the result. Mistakes are fine, this is a measurement, not a grade.`,
     start: 'Start the diagnostic',
     question: (index, total) => `Question ${index} of ${total}`,
     numericPlaceholder: 'Enter your answer as a number',
@@ -128,12 +129,17 @@ export function DiagnosticsClient({ subjectId }: { subjectId: string }) {
   if (!subject) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
-        <EmptyState
-          icon="🔍"
-          title={t.notFoundTitle}
-          description={t.notFoundText}
-          action={<ButtonLink href="/onboarding">{t.toSubjects}</ButtonLink>}
-        />
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-ink-100 text-ink-400">
+          <Icon name="compass" size={28} />
+        </div>
+        <div className="mt-3">
+          <EmptyState
+           
+            title={t.notFoundTitle}
+            description={t.notFoundText}
+            action={<ButtonLink href="/onboarding">{t.toSubjects}</ButtonLink>}
+          />
+        </div>
       </div>
     );
   }
@@ -185,14 +191,14 @@ export function DiagnosticsClient({ subjectId }: { subjectId: string }) {
 
   if (stage === 'intro') {
     return (
-      <div className="mx-auto max-w-2xl px-4 py-12 sm:px-6">
+      <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6">
         <Card className="text-center">
-          <span className="text-5xl" aria-hidden>
-            {subject.icon}
+          <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-50 text-brand-600">
+            <Icon name={subject.icon} size={32} />
           </span>
-          <h1 className="mt-4 text-2xl font-bold text-ink-900">{t.introTitle(subject.title)}</h1>
-          <p className="mt-3 text-ink-500">{t.introText(questions.length)}</p>
-          <Button size="lg" className="mt-7" onClick={() => setStage('quiz')}>
+          <h1 className="mt-4 text-2xl font-bold text-ink-900 sm:text-3xl">{t.introTitle(subject.title)}</h1>
+          <p className="mt-2 text-ink-500">{t.introText(questions.length)}</p>
+          <Button size="lg" className="mt-6" onClick={() => setStage('quiz')}>
             {t.start}
           </Button>
         </Card>
@@ -205,8 +211,10 @@ export function DiagnosticsClient({ subjectId }: { subjectId: string }) {
   if (stage === 'quiz' && task) {
     return (
       <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6">
-        <p className="text-sm font-semibold text-brand-600">{t.question(current + 1, questions.length)}</p>
-        <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-ink-200">
+        <p className="text-sm font-semibold tabular-nums text-brand-600">
+          {t.question(current + 1, questions.length)}
+        </p>
+        <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-ink-200">
           <div
             className="h-full rounded-full bg-brand-500 transition-all duration-300"
             style={{ width: `${(current / questions.length) * 100}%` }}
@@ -223,10 +231,10 @@ export function DiagnosticsClient({ subjectId }: { subjectId: string }) {
                   key={option}
                   onClick={() => setAnswer(String(index))}
                   aria-pressed={answer === String(index)}
-                  className={`rounded-xl border-2 p-4 text-left transition-colors ${
+                  className={`rounded-xl border-2 p-4 text-left transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
                     answer === String(index)
                       ? 'border-brand-500 bg-brand-50 text-brand-800'
-                      : 'border-ink-200 bg-white text-ink-700 hover:border-brand-300'
+                      : 'border-ink-200 bg-white text-ink-700 hover:border-brand-300 hover:shadow-[var(--shadow-lift)]'
                   }`}
                 >
                   {option}
@@ -271,17 +279,17 @@ export function DiagnosticsClient({ subjectId }: { subjectId: string }) {
       <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6">
         <Card className="text-center">
           <p className="text-sm font-semibold uppercase tracking-wide text-brand-600">{t.done}</p>
-          <p className="mt-3 text-5xl font-black text-ink-900">{Math.round(result.score * 100)}%</p>
-          <p className="mt-2 text-ink-500">
+          <p className="mt-3 text-5xl font-black tabular-nums text-ink-900">{Math.round(result.score * 100)}%</p>
+          <p className="mt-2 tabular-nums text-ink-500">
             {t.levelLabel} <span className="font-semibold text-ink-800">{levelText}</span> ·{' '}
             {t.correctOf(result.answers.filter((item) => item.correct).length, result.answers.length)}
           </p>
         </Card>
 
-        <Card className="mt-4">
+        <Card className="mt-6">
           <h2 className="text-lg font-bold text-ink-900">{t.skillMap}</h2>
-          <p className="mt-1 text-sm text-ink-500">{t.skillMapHint}</p>
-          <div className="mt-5 space-y-4">
+          <p className="mt-2 text-sm text-ink-500">{t.skillMapHint}</p>
+          <div className="mt-6 space-y-3">
             {testedSkills.map((skillId) => (
               <ProgressBar
                 key={skillId}

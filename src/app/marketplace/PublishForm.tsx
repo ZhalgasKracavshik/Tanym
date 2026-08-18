@@ -19,6 +19,7 @@ import { LISTING_TYPES } from '@/lib/listings';
 import type { Listing, ListingType } from '@/lib/listings';
 import type { Dict } from '@/lib/i18n';
 import { useStore } from '@/components/StoreProvider';
+import { Icon } from '@/components/Icon';
 import { Alert, Button, Card } from '@/components/ui';
 
 const TEXT: Dict<{
@@ -47,7 +48,7 @@ const TEXT: Dict<{
   studentTypesOnly: string;
 }> = {
   ru: {
-    open: '+ Разместить своё объявление',
+    open: 'Разместить своё объявление',
     heading: 'Новое объявление',
     needProfile: 'Чтобы разместить объявление, сначала создайте профиль.',
     typeLabel: 'Тип объявления',
@@ -72,7 +73,7 @@ const TEXT: Dict<{
     studentTypesOnly: 'Ученики размещают объявления в разделах «От учеников» и «Секции школы».',
   },
   kk: {
-    open: '+ Өз хабарландыруымды жариялау',
+    open: 'Өз хабарландыруымды жариялау',
     heading: 'Жаңа хабарландыру',
     needProfile: 'Хабарландыру жариялау үшін алдымен профиль құрыңыз.',
     typeLabel: 'Хабарландыру түрі',
@@ -97,7 +98,7 @@ const TEXT: Dict<{
     studentTypesOnly: 'Оқушылар «Оқушылардан» және «Мектеп үйірмелері» бөлімдеріне жариялайды.',
   },
   en: {
-    open: '+ Post your own listing',
+    open: 'Post your own listing',
     heading: 'New listing',
     needProfile: 'Create a profile first to post a listing.',
     typeLabel: 'Listing type',
@@ -124,7 +125,7 @@ const TEXT: Dict<{
 };
 
 const INPUT =
-  'w-full rounded-xl border border-ink-200 px-4 py-2.5 text-ink-900 outline-none focus:border-brand-500';
+  'w-full rounded-xl border border-ink-200 px-4 py-2.5 text-ink-900 outline-none transition-all duration-150 focus:border-brand-500 focus-visible:ring-2 focus-visible:ring-brand-500';
 
 export function PublishForm() {
   const { state, addListing } = useStore();
@@ -203,7 +204,10 @@ export function PublishForm() {
           </div>
         )}
         {profile ? (
-          <Button onClick={() => setOpen(true)}>{t.open}</Button>
+          <Button onClick={() => setOpen(true)}>
+            <Icon name="plus" size={18} />
+            {t.open}
+          </Button>
         ) : (
           <Alert>{t.needProfile}</Alert>
         )}
@@ -223,11 +227,13 @@ export function PublishForm() {
               key={item.id}
               onClick={() => setType(item.id)}
               aria-pressed={type === item.id}
-              className={`flex items-start gap-2 rounded-xl border-2 p-3 text-left transition-colors ${
-                type === item.id ? 'border-brand-500 bg-brand-50' : 'border-ink-200 hover:border-brand-300'
+              className={`flex items-center gap-2 rounded-xl border-2 p-3 text-left transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
+                type === item.id
+                  ? 'border-brand-500 bg-brand-50'
+                  : 'border-ink-200 hover:border-brand-300 hover:shadow-[var(--shadow-lift)]'
               }`}
             >
-              <span aria-hidden>{item.icon}</span>
+              <Icon name={item.icon} size={18} />
               <span className="text-sm font-semibold text-ink-800">{item.title[state.language]}</span>
             </button>
           ))}

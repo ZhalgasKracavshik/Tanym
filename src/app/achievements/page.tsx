@@ -15,6 +15,7 @@ import { summarize } from '@/lib/personalization';
 import { almatyDateIso, almatyYesterdayIso } from '@/lib/date';
 import type { Dict } from '@/lib/i18n';
 import { useStore } from '@/components/StoreProvider';
+import { Icon } from '@/components/Icon';
 import { ButtonLink, Card, EmptyState, ProgressBar, Skeleton, Stat } from '@/components/ui';
 
 const TEXT: Dict<{
@@ -40,11 +41,11 @@ const TEXT: Dict<{
     title: 'Достижения',
     subtitle: 'Серия занятий и награды за прогресс.',
     noProfileTitle: 'Сначала нужен профиль',
-    noProfileText: 'Достижения начисляются за решённые задания — начни с диагностики.',
+    noProfileText: 'Достижения начисляются за решённые задания, начни с диагностики.',
     createProfile: 'Создать профиль',
     streakTitle: 'Серия занятий',
     streakDays: (n) => (n === 1 ? '1 день' : n < 5 ? `${n} дня` : `${n} дней`),
-    streakActive: 'Серия идёт — не прерывай её сегодня',
+    streakActive: 'Серия идёт, не прерывай её сегодня',
     streakBroken: 'Серия прервалась. Реши одно задание, чтобы начать заново',
     streakNone: 'Реши первое задание, чтобы начать серию',
     longest: 'Лучшая серия',
@@ -59,11 +60,11 @@ const TEXT: Dict<{
     title: 'Жетістіктер',
     subtitle: 'Сабақ сериясы және прогресс үшін марапаттар.',
     noProfileTitle: 'Алдымен профиль қажет',
-    noProfileText: 'Жетістіктер шешілген тапсырмалар үшін беріледі — диагностикадан баста.',
+    noProfileText: 'Жетістіктер шешілген тапсырмалар үшін беріледі, диагностикадан баста.',
     createProfile: 'Профиль құру',
     streakTitle: 'Сабақ сериясы',
     streakDays: (n) => `${n} күн`,
-    streakActive: 'Серия жалғасып жатыр — бүгін үзіп алма',
+    streakActive: 'Серия жалғасып жатыр, бүгін үзіп алма',
     streakBroken: 'Серия үзілді. Қайта бастау үшін бір тапсырма шеш',
     streakNone: 'Серияны бастау үшін алғашқы тапсырманы шеш',
     longest: 'Үздік серия',
@@ -78,11 +79,11 @@ const TEXT: Dict<{
     title: 'Achievements',
     subtitle: 'Your study streak and rewards for progress.',
     noProfileTitle: 'A profile is needed first',
-    noProfileText: 'Achievements come from solving tasks — start with the diagnostic.',
+    noProfileText: 'Achievements come from solving tasks, so start with the diagnostic.',
     createProfile: 'Create profile',
     streakTitle: 'Study streak',
     streakDays: (n) => (n === 1 ? '1 day' : `${n} days`),
-    streakActive: 'Your streak is alive — keep it going today',
+    streakActive: 'Your streak is alive, keep it going today',
     streakBroken: 'Your streak ended. Solve one task to start again',
     streakNone: 'Solve your first task to start a streak',
     longest: 'Longest streak',
@@ -133,8 +134,14 @@ export default function AchievementsPage() {
   if (!state.profile) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
+        {/* Иконка стоит рядом: проп icon в EmptyState принимает строку,
+            а строкой иконку из набора не передать. */}
+        <div className="mb-3 flex justify-center">
+          <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-ink-200 bg-white text-ink-400">
+            <Icon name="trophy" size={24} />
+          </span>
+        </div>
         <EmptyState
-          icon="🏆"
           title={t.noProfileTitle}
           description={t.noProfileText}
           action={<ButtonLink href="/onboarding">{t.createProfile}</ButtonLink>}
@@ -160,14 +167,18 @@ export default function AchievementsPage() {
       {/* Поздравление с новыми достижениями */}
       {fresh.length > 0 && (
         <div className="mt-6 rounded-2xl border border-accent-200 bg-accent-50 p-5">
-          <p className="font-bold text-accent-700">🎉 {t.newlyUnlocked}</p>
+          <p className="flex items-center gap-2 font-bold text-accent-700">
+            <Icon name="sparkles" size={18} />
+            {t.newlyUnlocked}
+          </p>
           <div className="mt-3 flex flex-wrap gap-3">
             {fresh.map((item) => (
               <span
                 key={item.id}
                 className="flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm font-semibold text-ink-800"
               >
-                <span aria-hidden>{item.icon}</span> {item.title[state.language]}
+                <Icon name={item.icon} size={18} className="text-accent-600" />
+                {item.title[state.language]}
               </span>
             ))}
           </div>
@@ -179,11 +190,15 @@ export default function AchievementsPage() {
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="text-sm font-semibold uppercase tracking-wide text-ink-400">{t.streakTitle}</p>
-            <p className="mt-1 flex items-baseline gap-2">
-              <span aria-hidden className={`text-4xl ${streakValue > 0 ? '' : 'grayscale'}`}>
-                🔥
+            <p className="mt-1 flex items-center gap-2">
+              <Icon
+                name="flame"
+                size={36}
+                className={streakValue > 0 ? 'text-accent-500' : 'text-ink-300'}
+              />
+              <span className="text-4xl font-black tabular-nums text-ink-900">
+                {t.streakDays(streakValue)}
               </span>
-              <span className="text-4xl font-black text-ink-900">{t.streakDays(streakValue)}</span>
             </p>
             <p className="mt-2 text-sm text-ink-500">
               {streakValue > 0 ? t.streakActive : state.streak.longest > 0 ? t.streakBroken : t.streakNone}
@@ -207,8 +222,12 @@ export default function AchievementsPage() {
           >
             <div className="flex items-start gap-3">
               {/* Незаработанные показываем блёклыми — видно, что это цель, а не награда */}
-              <span aria-hidden className={`text-3xl ${item.unlocked ? '' : 'opacity-35 grayscale'}`}>
-                {item.icon}
+              <span
+                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${
+                  item.unlocked ? 'bg-success-500/10 text-success-700' : 'bg-ink-100 text-ink-400'
+                }`}
+              >
+                <Icon name={item.icon} size={24} />
               </span>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
@@ -226,7 +245,9 @@ export default function AchievementsPage() {
                 {!item.unlocked && (
                   <div className="mt-3">
                     <ProgressBar value={item.ratio} showPercent={false} />
-                    <p className="mt-1 text-xs text-ink-400">{t.ofTarget(item.current, item.target)}</p>
+                    <p className="mt-1 text-xs tabular-nums text-ink-400">
+                      {t.ofTarget(item.current, item.target)}
+                    </p>
                   </div>
                 )}
               </div>

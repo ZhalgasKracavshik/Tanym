@@ -92,9 +92,3 @@ export function rankEntries(entries: LeaderboardEntry[]): (LeaderboardEntry & { 
 }
 
 /** Медаль за место в тройке. null — обычная строка таблицы. */
-export function medalForRank(rank: number): string | null {
-  if (rank === 1) return '🥇';
-  if (rank === 2) return '🥈';
-  if (rank === 3) return '🥉';
-  return null;
-}

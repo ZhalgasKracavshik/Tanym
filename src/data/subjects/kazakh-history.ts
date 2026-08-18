@@ -17,7 +17,7 @@ export const kazakhHistory: Subject = {
   shortTitle: 'История КЗ',
   description:
     'Путь Казахстана от образования ханства в XV веке до обретения независимости: ключевые события, личности и причинно-следственные связи.',
-  icon: '🏛️',
+  icon: 'history',
   accent: 'var(--color-subject-history)',
   grades: [7, 8, 9, 10, 11],
 

@@ -15,6 +15,7 @@ import { EVENTS } from '@/data/events';
 import { daysLeftUntil } from '@/lib/events';
 import { useStore } from '@/components/StoreProvider';
 import type { Dict } from '@/lib/i18n';
+import { Icon } from '@/components/Icon';
 import { ButtonLink, Card, EmptyState, ProgressBar, SectionHeader, Skeleton, Stat } from '@/components/ui';
 
 /** Подписи кабинета на трёх языках. Ключи одинаковые — за этим следит TypeScript. */
@@ -55,13 +56,13 @@ const TEXT: Dict<{
 }> = {
   ru: {
     noProfileTitle: 'Профиль ещё не создан',
-    noProfileText: 'Расскажите о себе — класс, предметы и цель, — и кабинет наполнится данными.',
+    noProfileText: 'Расскажите о себе: класс, предметы и цель. Кабинет сразу наполнится данными.',
     createProfile: 'Создать профиль',
     greeting: (name) => `Привет, ${name}`,
     gradeLabel: (grade) => `${grade} класс`,
     daysLeft: (days) => `до цели осталось ${days} дн.`,
     noDataTitle: 'Пока нет данных о прогрессе',
-    noDataText: 'Пройди диагностику — она займёт 7 минут и покажет, с чего начать.',
+    noDataText: 'Пройди диагностику: она займёт 7 минут и покажет, с чего начать.',
     startDiagnostics: 'Пройти диагностику',
     statTasks: 'Решено заданий',
     statAccuracy: 'Точность',
@@ -90,13 +91,13 @@ const TEXT: Dict<{
   },
   kk: {
     noProfileTitle: 'Профиль әлі құрылмаған',
-    noProfileText: 'Өзің туралы айтып бер — сынып, пәндер және мақсат, — сонда кабинет деректерге толады.',
+    noProfileText: 'Өзің туралы айтып бер: сынып, пәндер және мақсат. Сонда кабинет деректерге толады.',
     createProfile: 'Профиль құру',
     greeting: (name) => `Сәлем, ${name}`,
     gradeLabel: (grade) => `${grade}-сынып`,
     daysLeft: (days) => `мақсатқа ${days} күн қалды`,
     noDataTitle: 'Әзірге прогресс туралы дерек жоқ',
-    noDataText: 'Диагностикадан өт — ол 7 минут алады және неден бастау керегін көрсетеді.',
+    noDataText: 'Диагностикадан өт: ол 7 минут алады және неден бастау керегін көрсетеді.',
     startDiagnostics: 'Диагностикадан өту',
     statTasks: 'Шығарылған тапсырма',
     statAccuracy: 'Дәлдік',
@@ -121,17 +122,17 @@ const TEXT: Dict<{
     allEvents: 'Барлық афиша',
     targetHintBefore: 'Емтихан күнін ',
     targetHintLink: 'профильде',
-    targetHintAfter: ' көрсет — сонда кері санақ пен қарқын бойынша кеңес пайда болады.',
+    targetHintAfter: ' көрсет, сонда кері санақ пен қарқын бойынша кеңес пайда болады.',
   },
   en: {
     noProfileTitle: 'No profile yet',
-    noProfileText: 'Tell us about yourself — grade, subjects and goal — and the dashboard will fill up.',
+    noProfileText: 'Tell us about yourself: grade, subjects and goal. The dashboard will fill up right away.',
     createProfile: 'Create profile',
     greeting: (name) => `Hi, ${name}`,
     gradeLabel: (grade) => `Grade ${grade}`,
     daysLeft: (days) => `${days} days left until your goal`,
     noDataTitle: 'No progress data yet',
-    noDataText: 'Take the diagnostic — it takes 7 minutes and shows where to start.',
+    noDataText: 'Take the diagnostic: it takes 7 minutes and shows where to start.',
     startDiagnostics: 'Take the diagnostic',
     statTasks: 'Tasks solved',
     statAccuracy: 'Accuracy',
@@ -178,8 +179,12 @@ export default function DashboardPage() {
   if (!profile) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
+        {/* Иконка вынесена наружу: проп icon у EmptyState принимает строку,
+            а рисованные иконки набора приходят готовым элементом. */}
+        <div className="mb-3 flex justify-center text-ink-300">
+          <Icon name="backpack" size={40} />
+        </div>
         <EmptyState
-          icon="🎒"
           title={t.noProfileTitle}
           description={t.noProfileText}
           action={<ButtonLink href="/onboarding">{t.createProfile}</ButtonLink>}
@@ -194,7 +199,14 @@ export default function DashboardPage() {
   const lastActive = state.streak.lastActiveDate;
   const streakValue =
     lastActive === almatyDateIso() || lastActive === almatyYesterdayIso() ? state.streak.current : 0;
-  const streakLabel = String.fromCodePoint(0x1f525) + ' ' + streakValue;
+  // Значение серии — само число. Огонёк рядом рисуется иконкой набора, а не
+  // символом шрифта: так он совпадает по цвету и высоте с остальным интерфейсом.
+  const streakLabel = (
+    <span className="flex items-center gap-2">
+      <Icon name="flame" size={22} className="text-accent-500" />
+      <span className="tabular-nums">{streakValue}</span>
+    </span>
+  );
 
   // Ближайшее из тех событий, на которые ученик записался и которые ещё не прошли.
   const upcomingEvent = EVENTS.filter(
@@ -216,9 +228,13 @@ export default function DashboardPage() {
       </p>
 
       {stats.totalAttempts === 0 ? (
-        <div className="mt-8">
+        <div className="mt-6">
+          {/* Иконка вынесена наружу: проп icon у EmptyState принимает строку. */}
+          <div className="mb-3 flex justify-center text-ink-300">
+            <Icon name="rocket" size={40} />
+          </div>
           <EmptyState
-            icon="🚀"
+           
             title={t.noDataTitle}
             description={t.noDataText}
             action={
@@ -243,7 +259,7 @@ export default function DashboardPage() {
             <Stat label={t.streakLabel} value={streakLabel} hint={t.streakHint(streakValue)} />
           </div>
 
-          <div className="mt-8 grid gap-6 lg:grid-cols-3">
+          <div className="mt-6 grid gap-6 lg:grid-cols-3">
             <div className="lg:col-span-2">
               <SectionHeader title={t.topicsTitle} description={t.topicsDescription} />
               {startedTopics.length === 0 ? (
@@ -256,10 +272,14 @@ export default function DashboardPage() {
                     const topic = getTopic(progress.topicId, state.customTopics);
                     if (!topic) return null;
                     return (
-                      <Card as="li" key={progress.topicId}>
+                      <Card
+                        as="li"
+                        key={progress.topicId}
+                        className="transition-all duration-150 hover:border-brand-300 hover:shadow-[var(--shadow-lift)]"
+                      >
                         <div className="flex flex-wrap items-start justify-between gap-2">
                           <h3 className="font-bold text-ink-900">{topic.title}</h3>
-                          <span className="text-sm text-ink-400">
+                          <span className="text-sm tabular-nums text-ink-400">
                             {t.solved(progress.correct, topic.tasks.length)}
                           </span>
                         </div>
@@ -279,7 +299,10 @@ export default function DashboardPage() {
             <div className="space-y-4">
               {/* Слабые места по всем предметам ученика */}
               <Card>
-                <h2 className="text-lg font-bold text-ink-900">{t.weakTitle}</h2>
+                <h2 className="flex items-center gap-2 text-lg font-bold text-ink-900">
+                  <Icon name="target" size={20} className="text-brand-500" />
+                  {t.weakTitle}
+                </h2>
                 <div className="mt-4 space-y-5">
                   {profile.subjectIds.map((subjectId) => {
                     const subject = getSubject(subjectId);
@@ -305,13 +328,16 @@ export default function DashboardPage() {
 
               {/* Что делать дальше */}
               <Card>
-                <h2 className="text-lg font-bold text-ink-900">{t.nextTitle}</h2>
+                <h2 className="flex items-center gap-2 text-lg font-bold text-ink-900">
+                  <Icon name="compass" size={20} className="text-brand-500" />
+                  {t.nextTitle}
+                </h2>
                 <ul className="mt-3 space-y-2">
                   {nextTopics.map((item) => (
                     <li key={item.topic.id}>
                       <a
                         href={`/learn/${item.topic.id}`}
-                        className="block rounded-xl border border-ink-200 p-3 transition-colors hover:border-brand-300 hover:bg-brand-50"
+                        className="block rounded-xl border border-ink-200 p-3 transition-all duration-150 hover:border-brand-300 hover:bg-brand-50 hover:shadow-[var(--shadow-lift)] focus-visible:ring-2 focus-visible:ring-brand-500"
                       >
                         <span className="block text-sm font-semibold text-ink-800">{item.topic.title}</span>
                         <span className="mt-0.5 block text-xs text-ink-400">{item.reasons[0]}</span>
@@ -323,7 +349,10 @@ export default function DashboardPage() {
 
               {upcomingEvent && (
                 <Card>
-                  <h2 className="text-lg font-bold text-ink-900">{t.eventTitle}</h2>
+                  <h2 className="flex items-center gap-2 text-lg font-bold text-ink-900">
+                    <Icon name="calendar" size={20} className="text-brand-500" />
+                    {t.eventTitle}
+                  </h2>
                   <p className="mt-2 font-semibold text-ink-800">{upcomingEvent.title}</p>
                   <p className="mt-1 text-sm text-brand-600">
                     {daysLeftUntil(upcomingEvent.startsAt) === 0

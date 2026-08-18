@@ -12,18 +12,19 @@
  */
 
 import type { Language } from './types';
+import type { IconName } from '@/components/Icon';
 
 export type ListingType = 'school-club' | 'teacher-course' | 'student-service' | 'external-center';
 
 export const LISTING_TYPES: {
   id: ListingType;
-  icon: string;
+  icon: IconName;
   title: Record<Language, string>;
   description: Record<Language, string>;
 }[] = [
   {
     id: 'school-club',
-    icon: '🏫',
+    icon: 'school',
     title: { ru: 'Секции школы', kk: 'Мектеп үйірмелері', en: 'School clubs' },
     description: {
       ru: 'Бесплатные кружки и клубы внутри школы',
@@ -33,7 +34,7 @@ export const LISTING_TYPES: {
   },
   {
     id: 'teacher-course',
-    icon: '👩‍🏫',
+    icon: 'presentation',
     title: { ru: 'Курсы учителей', kk: 'Мұғалім курстары', en: 'Teacher courses' },
     description: {
       ru: 'Дополнительные занятия, которые ведут школьные учителя',
@@ -43,7 +44,7 @@ export const LISTING_TYPES: {
   },
   {
     id: 'student-service',
-    icon: '🎒',
+    icon: 'backpack',
     title: { ru: 'От учеников', kk: 'Оқушылардан', en: 'From students' },
     description: {
       ru: 'Помощь старшеклассников и волонтёрские команды',
@@ -53,12 +54,12 @@ export const LISTING_TYPES: {
   },
   {
     id: 'external-center',
-    icon: '🏢',
+    icon: 'building',
     title: { ru: 'Внешние центры', kk: 'Сыртқы орталықтар', en: 'External centres' },
     description: {
-      ru: 'Учебные центры города — на правах рекламы',
-      kk: 'Қаладағы оқу орталықтары — жарнама ретінде',
-      en: 'City learning centres — paid placements',
+      ru: 'Учебные центры города, на правах рекламы',
+      kk: 'Қаладағы оқу орталықтары, жарнама ретінде',
+      en: 'City learning centres, paid placements',
     },
   },
 ];

@@ -8,19 +8,20 @@
  */
 
 import type { Difficulty, Grade, Language } from './types';
+import type { IconName } from '@/components/Icon';
 
 export type ArchiveCategory = 'ent' | 'olympiad' | 'ielts' | 'sat' | 'sor-soch';
 
 export const ARCHIVE_CATEGORIES: {
   id: ArchiveCategory;
-  icon: string;
+  icon: IconName;
   title: Record<Language, string>;
 }[] = [
-  { id: 'ent', icon: '🎓', title: { ru: 'ЕНТ', kk: 'ҰБТ', en: 'National exam' } },
-  { id: 'olympiad', icon: '🏅', title: { ru: 'Олимпиады', kk: 'Олимпиадалар', en: 'Olympiads' } },
-  { id: 'ielts', icon: '🌍', title: { ru: 'IELTS', kk: 'IELTS', en: 'IELTS' } },
-  { id: 'sat', icon: '📊', title: { ru: 'SAT', kk: 'SAT', en: 'SAT' } },
-  { id: 'sor-soch', icon: '📝', title: { ru: 'ТЖБ / БЖБ', kk: 'ТЖБ / БЖБ', en: 'Term assessments' } },
+  { id: 'ent', icon: 'cap', title: { ru: 'ЕНТ', kk: 'ҰБТ', en: 'National exam' } },
+  { id: 'olympiad', icon: 'medal', title: { ru: 'Олимпиады', kk: 'Олимпиадалар', en: 'Olympiads' } },
+  { id: 'ielts', icon: 'globe', title: { ru: 'IELTS', kk: 'IELTS', en: 'IELTS' } },
+  { id: 'sat', icon: 'chart', title: { ru: 'SAT', kk: 'SAT', en: 'SAT' } },
+  { id: 'sor-soch', icon: 'clipboard', title: { ru: 'ТЖБ / БЖБ', kk: 'ТЖБ / БЖБ', en: 'Term assessments' } },
 ];
 
 export interface ArchiveTask {

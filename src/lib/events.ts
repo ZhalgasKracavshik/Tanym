@@ -8,19 +8,20 @@
  */
 
 import type { Grade, Language } from './types';
+import type { IconName } from '@/components/Icon';
 import { almatyDateIso, daysBetween } from './date';
 
 export type EventType = 'olympiad' | 'contest' | 'school' | 'course';
 
 export const EVENT_TYPES: {
   id: EventType;
-  icon: string;
+  icon: IconName;
   title: Record<Language, string>;
 }[] = [
-  { id: 'olympiad', icon: '🏅', title: { ru: 'Олимпиады', kk: 'Олимпиадалар', en: 'Olympiads' } },
-  { id: 'contest', icon: '🏆', title: { ru: 'Конкурсы', kk: 'Байқаулар', en: 'Contests' } },
-  { id: 'school', icon: '🏫', title: { ru: 'Школьные', kk: 'Мектептік', en: 'School' } },
-  { id: 'course', icon: '🎥', title: { ru: 'Курсы и вебинары', kk: 'Курстар', en: 'Courses' } },
+  { id: 'olympiad', icon: 'medal', title: { ru: 'Олимпиады', kk: 'Олимпиадалар', en: 'Olympiads' } },
+  { id: 'contest', icon: 'trophy', title: { ru: 'Конкурсы', kk: 'Байқаулар', en: 'Contests' } },
+  { id: 'school', icon: 'school', title: { ru: 'Школьные', kk: 'Мектептік', en: 'School' } },
+  { id: 'course', icon: 'video', title: { ru: 'Курсы и вебинары', kk: 'Курстар', en: 'Courses' } },
 ];
 
 export interface SchoolEvent {

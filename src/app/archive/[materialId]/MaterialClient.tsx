@@ -17,12 +17,14 @@ import type { SocraticRequest, SocraticResponse } from '@/lib/ai/contracts';
 import type { Dict } from '@/lib/i18n';
 import { useStore } from '@/components/StoreProvider';
 import { AiBadge } from '@/components/AiBadge';
+import { Icon } from '@/components/Icon';
 import { Badge, Button, ButtonLink, Card, EmptyState, Skeleton } from '@/components/ui';
 
 const TEXT: Dict<{
   notFound: string;
   notFoundText: string;
   back: string;
+  mentor: string;
   taskNumber: (n: number, total: number) => string;
   chooseTask: string;
   startHint: string;
@@ -43,16 +45,17 @@ const TEXT: Dict<{
     notFound: 'Материал не найден',
     notFoundText: 'Возможно, ссылка устарела.',
     back: 'Вернуться в архив',
+    mentor: 'Наставник',
     taskNumber: (n, total) => `Задание ${n} из ${total}`,
     chooseTask: 'Выбери задание',
-    startHint: 'Напиши, с чего бы ты начал. Не бойся ошибиться — наставник поправит вопросом.',
+    startHint: 'Напиши, с чего бы ты начал. Не бойся ошибиться, наставник поправит вопросом.',
     placeholder: 'Твоя мысль или ответ…',
     send: 'Отправить',
     giveUp: 'Показать разбор',
     confirmGiveUp: 'Открыть полное решение? Дальше разбирать самому будет уже неинтересно.',
     solution: 'Полное решение',
     solved: 'Задача решена',
-    solvedHint: 'Ты дошёл до ответа сам — это и есть смысл разбора.',
+    solvedHint: 'Ты дошёл до ответа сам, в этом и есть смысл разбора.',
     nextTask: 'Следующее задание',
     restart: 'Начать разбор заново',
     networkError: 'Не удалось связаться с наставником. Попробуй ещё раз.',
@@ -63,16 +66,17 @@ const TEXT: Dict<{
     notFound: 'Материал табылмады',
     notFoundText: 'Сілтеме ескірген болуы мүмкін.',
     back: 'Мұрағатқа оралу',
+    mentor: 'Тәлімгер',
     taskNumber: (n, total) => `Тапсырма ${n} / ${total}`,
     chooseTask: 'Тапсырманы таңда',
-    startHint: 'Неден бастайтыныңды жаз. Қателесуден қорықпа — тәлімгер сұрақпен түзетеді.',
+    startHint: 'Неден бастайтыныңды жаз. Қателесуден қорықпа, тәлімгер сұрақпен түзетеді.',
     placeholder: 'Ойың немесе жауабың…',
     send: 'Жіберу',
     giveUp: 'Талдауды көрсету',
     confirmGiveUp: 'Толық шешім ашылсын ба? Одан кейін өзің талдау қызық болмайды.',
     solution: 'Толық шешім',
     solved: 'Тапсырма шешілді',
-    solvedHint: 'Жауапқа өзің жеттің — талдаудың мәні осында.',
+    solvedHint: 'Жауапқа өзің жеттің, талдаудың мәні осында.',
     nextTask: 'Келесі тапсырма',
     restart: 'Талдауды қайта бастау',
     networkError: 'Тәлімгермен байланысу мүмкін болмады. Қайта көр.',
@@ -83,16 +87,17 @@ const TEXT: Dict<{
     notFound: 'Material not found',
     notFoundText: 'The link may be outdated.',
     back: 'Back to archive',
+    mentor: 'Mentor',
     taskNumber: (n, total) => `Task ${n} of ${total}`,
     chooseTask: 'Pick a task',
-    startHint: 'Write where you would start. Mistakes are fine — the mentor answers with a question.',
+    startHint: 'Write where you would start. Mistakes are fine, the mentor answers with a question.',
     placeholder: 'Your thinking or answer…',
     send: 'Send',
     giveUp: 'Show the solution',
     confirmGiveUp: 'Reveal the full solution? Working it out yourself stops being interesting after this.',
     solution: 'Full solution',
     solved: 'Solved',
-    solvedHint: 'You reached the answer yourself — that was the whole point.',
+    solvedHint: 'You reached the answer yourself, and that was the whole point.',
     nextTask: 'Next task',
     restart: 'Start over',
     networkError: 'Could not reach the mentor. Try again.',
@@ -191,7 +196,6 @@ export function MaterialClient({ materialId }: { materialId: string }) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
         <EmptyState
-          icon="📂"
           title={t.notFound}
           description={t.notFoundText}
           action={<ButtonLink href="/archive">{t.back}</ButtonLink>}
@@ -206,7 +210,8 @@ export function MaterialClient({ materialId }: { materialId: string }) {
     <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
       <div className="flex flex-wrap items-center gap-2">
         <Badge tone="brand">
-          <span aria-hidden>{meta?.icon}</span> {meta?.title[state.language]}
+          {meta && <Icon name={meta.icon} size={14} />}
+          {meta?.title[state.language]}
         </Badge>
         <Badge>{t.difficulty[material.difficulty]}</Badge>
         <span className="text-xs text-ink-400">{material.source}</span>
@@ -215,17 +220,17 @@ export function MaterialClient({ materialId }: { materialId: string }) {
       <h1 className="mt-3 text-2xl font-bold text-ink-900 sm:text-3xl">{material.title}</h1>
 
       {/* Переключатель заданий */}
-      <div className="mt-5">
-        <p className="mb-2 text-sm font-semibold text-ink-500">{t.chooseTask}</p>
+      <div className="mt-6">
+        <p className="mb-3 text-sm font-semibold text-ink-500">{t.chooseTask}</p>
         <div className="flex flex-wrap gap-2">
           {material.tasks.map((item, index) => (
             <button
               key={item.id}
               onClick={() => openTask(index)}
-              className={`h-10 w-10 rounded-xl border-2 font-bold transition-colors ${
+              className={`h-10 w-10 rounded-xl border-2 font-bold tabular-nums transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
                 index === taskIndex
                   ? 'border-brand-500 bg-brand-50 text-brand-700'
-                  : 'border-ink-200 bg-white text-ink-600 hover:border-brand-300'
+                  : 'border-ink-200 bg-white text-ink-600 hover:border-brand-300 hover:shadow-[var(--shadow-lift)]'
               }`}
             >
               {index + 1}
@@ -235,8 +240,8 @@ export function MaterialClient({ materialId }: { materialId: string }) {
       </div>
 
       {/* Условие */}
-      <Card className="mt-5">
-        <p className="text-sm font-semibold text-ink-400">
+      <Card className="mt-6">
+        <p className="text-sm font-semibold tabular-nums text-ink-400">
           {t.taskNumber(taskIndex + 1, material.tasks.length)}
         </p>
         {/* whitespace-pre-line сохраняет переносы: у заданий IELTS отрывок
@@ -247,11 +252,14 @@ export function MaterialClient({ materialId }: { materialId: string }) {
       </Card>
 
       {/* Диалог */}
-      <div className="mt-5 space-y-3">
+      <div className="mt-6 space-y-3">
         {/* Первый вопрос заготовлен в контенте: он не требует обращения к модели
             и задаёт разговору верный тон с первой секунды */}
         <div className="rounded-2xl border border-ink-200 bg-white px-4 py-3">
-          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-brand-600">🏛️ Наставник</p>
+          <p className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-brand-600">
+            <Icon name="columns" size={14} />
+            {t.mentor}
+          </p>
           <p className="leading-relaxed text-ink-700">{task.opening}</p>
         </div>
 
@@ -287,10 +295,13 @@ export function MaterialClient({ materialId }: { materialId: string }) {
 
       {/* Успех */}
       {solved && (
-        <Card className="mt-5 border-success-500/40 bg-success-50">
-          <p className="font-bold text-success-700">✓ {t.solved}</p>
-          <p className="mt-1 text-sm text-success-700">{t.solvedHint}</p>
-          <div className="mt-4 flex flex-wrap gap-3">
+        <Card className="mt-6 border-success-500/40 bg-success-50">
+          <p className="flex items-center gap-2 font-bold text-success-700">
+            <Icon name="check" size={18} />
+            {t.solved}
+          </p>
+          <p className="mt-3 text-sm text-success-700">{t.solvedHint}</p>
+          <div className="mt-6 flex flex-wrap gap-3">
             {taskIndex + 1 < material.tasks.length && (
               <Button onClick={() => openTask(taskIndex + 1)}>{t.nextTask}</Button>
             )}
@@ -303,9 +314,9 @@ export function MaterialClient({ materialId }: { materialId: string }) {
 
       {/* Поле ввода */}
       {!solved && (
-        <div className="mt-5">
-          <p className="mb-2 text-sm text-ink-400">{messages.length === 0 ? t.startHint : t.yourTurn}</p>
-          <div className="flex items-end gap-2 rounded-2xl border border-ink-200 bg-white p-2 shadow-sm">
+        <div className="mt-6">
+          <p className="mb-3 text-sm text-ink-400">{messages.length === 0 ? t.startHint : t.yourTurn}</p>
+          <div className="flex items-end gap-2 rounded-2xl border border-ink-200 bg-white p-2 shadow-[var(--shadow-rest)] transition-all duration-150 focus-within:border-brand-300 focus-within:shadow-[var(--shadow-lift)]">
             <textarea
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
@@ -329,11 +340,11 @@ export function MaterialClient({ materialId }: { materialId: string }) {
 
       {/* Сдаться. Кнопка нужна: без выхода метод Сократа превращается
           в ловушку для того, кто действительно не понимает */}
-      <div className="mt-5">
+      <div className="mt-6">
         {showSolution ? (
           <Card>
             <h2 className="font-bold text-ink-900">{t.solution}</h2>
-            <p className="mt-2 leading-relaxed text-ink-700">{task.explanation}</p>
+            <p className="mt-3 leading-relaxed text-ink-700">{task.explanation}</p>
           </Card>
         ) : (
           <Button

@@ -13,6 +13,7 @@ import type { Grade, LearningGoal } from '@/lib/types';
 import { SUBJECTS } from '@/data';
 import { useStore } from '@/components/StoreProvider';
 import type { Dict } from '@/lib/i18n';
+import { Icon } from '@/components/Icon';
 import { Alert, Button, ButtonLink, Card, EmptyState, Skeleton } from '@/components/ui';
 
 /**
@@ -131,8 +132,12 @@ export default function ProfilePage() {
   if (!profile) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
+        {/* Иконка вынесена наружу: проп icon у EmptyState принимает строку,
+            а рисованные иконки набора приходят готовым элементом. */}
+        <div className="mb-3 flex justify-center text-ink-300">
+          <Icon name="user" size={40} />
+        </div>
         <EmptyState
-          icon="⚙️"
           title={t.noProfileTitle}
           description={t.noProfileText}
           action={<ButtonLink href="/onboarding">{t.createProfile}</ButtonLink>}
@@ -172,7 +177,7 @@ export default function ProfilePage() {
             type="text"
             value={profile.name}
             onChange={(event) => save({ name: event.target.value })}
-            className="mt-2 w-full rounded-xl border border-ink-200 px-4 py-3 outline-none focus:border-brand-500"
+            className="mt-2 w-full rounded-xl border border-ink-200 px-4 py-3 outline-none transition-all duration-150 focus:border-brand-500 focus-visible:ring-2 focus-visible:ring-brand-500"
           />
         </label>
 
@@ -183,10 +188,10 @@ export default function ProfilePage() {
               <button
                 key={grade}
                 onClick={() => save({ grade })}
-                className={`rounded-xl border-2 py-3 font-bold transition-colors ${
+                className={`rounded-xl border-2 py-3 font-bold tabular-nums transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
                   profile.grade === grade
                     ? 'border-brand-500 bg-brand-50 text-brand-700'
-                    : 'border-ink-200 text-ink-700 hover:border-brand-300'
+                    : 'border-ink-200 text-ink-700 hover:border-brand-300 hover:shadow-[var(--shadow-lift)]'
                 }`}
               >
                 {grade}
@@ -202,13 +207,13 @@ export default function ProfilePage() {
               <button
                 key={subject.id}
                 onClick={() => toggleSubject(subject.id)}
-                className={`flex items-center gap-3 rounded-xl border-2 p-3 text-left transition-colors ${
+                className={`flex items-center gap-3 rounded-xl border-2 p-3 text-left transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
                   profile.subjectIds.includes(subject.id)
                     ? 'border-brand-500 bg-brand-50'
-                    : 'border-ink-200 hover:border-brand-300'
+                    : 'border-ink-200 hover:border-brand-300 hover:shadow-[var(--shadow-lift)]'
                 }`}
               >
-                <span aria-hidden>{subject.icon}</span>
+                <Icon name={subject.icon} size={20} className="text-brand-500" />
                 <span className="font-semibold text-ink-800">{subject.title}</span>
               </button>
             ))}
@@ -218,15 +223,17 @@ export default function ProfilePage() {
         <div>
           <span className="font-semibold text-ink-800">{t.goal}</span>
           <div className="mt-2 grid gap-2">
-            {LEARNING_GOALS.map((item: { id: LearningGoal; title: string; icon: string }) => (
+            {LEARNING_GOALS.map((item) => (
               <button
                 key={item.id}
                 onClick={() => save({ goal: item.id })}
-                className={`flex items-center gap-3 rounded-xl border-2 p-3 text-left transition-colors ${
-                  profile.goal === item.id ? 'border-brand-500 bg-brand-50' : 'border-ink-200 hover:border-brand-300'
+                className={`flex items-center gap-3 rounded-xl border-2 p-3 text-left transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
+                  profile.goal === item.id
+                    ? 'border-brand-500 bg-brand-50'
+                    : 'border-ink-200 hover:border-brand-300 hover:shadow-[var(--shadow-lift)]'
                 }`}
               >
-                <span aria-hidden>{item.icon}</span>
+                <Icon name={item.icon} size={20} className="text-brand-500" />
                 <span className="font-semibold text-ink-800">{t.goals[item.id]}</span>
               </button>
             ))}
@@ -239,7 +246,7 @@ export default function ProfilePage() {
             type="date"
             value={profile.targetDate ?? ''}
             onChange={(event) => save({ targetDate: event.target.value || undefined })}
-            className="mt-2 w-full rounded-xl border border-ink-200 px-4 py-3 outline-none focus:border-brand-500"
+            className="mt-2 w-full rounded-xl border border-ink-200 px-4 py-3 tabular-nums outline-none transition-all duration-150 focus:border-brand-500 focus-visible:ring-2 focus-visible:ring-brand-500"
           />
         </label>
       </Card>

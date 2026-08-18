@@ -69,7 +69,7 @@ export async function POST(request: Request): Promise<NextResponse<FeedbackRespo
       title: 'Предмет',
       shortTitle: '',
       description: '',
-      icon: '📘',
+      icon: 'book',
       accent: 'var(--accent-blue)',
       grades: [],
       skills: [],

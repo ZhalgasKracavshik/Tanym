@@ -17,6 +17,7 @@ import type { FeedbackRequest, FeedbackResponse } from '@/lib/ai/contracts';
 import { useStore } from '@/components/StoreProvider';
 import { AiBadge } from '@/components/AiBadge';
 import { Badge, Button, ButtonLink, Card, EmptyState, Skeleton } from '@/components/ui';
+import { Icon } from '@/components/Icon';
 
 /**
  * Подписи страницы на трёх языках. Ключи одинаковые — за этим следит TypeScript.
@@ -71,8 +72,8 @@ const TEXT: Dict<{
     },
     numericPlaceholder: 'Ответ числом',
     showHint: 'Показать подсказку',
-    correct: '✓ Верно',
-    incorrect: '✗ Пока не верно',
+    correct: 'Верно',
+    incorrect: 'Пока не верно',
     correctAnswer: 'Правильный ответ:',
     explanation: 'Разбор',
     nextTask: 'Следующее задание',
@@ -103,8 +104,8 @@ const TEXT: Dict<{
     },
     numericPlaceholder: 'Жауапты санмен жаз',
     showHint: 'Кеңесті көрсету',
-    correct: '✓ Дұрыс',
-    incorrect: '✗ Әзірге дұрыс емес',
+    correct: 'Дұрыс',
+    incorrect: 'Әзірге дұрыс емес',
     correctAnswer: 'Дұрыс жауабы:',
     explanation: 'Талдау',
     nextTask: 'Келесі тапсырма',
@@ -135,8 +136,8 @@ const TEXT: Dict<{
     },
     numericPlaceholder: 'Answer as a number',
     showHint: 'Show hint',
-    correct: '✓ Correct',
-    incorrect: '✗ Not quite yet',
+    correct: 'Correct',
+    incorrect: 'Not quite yet',
     correctAnswer: 'Correct answer:',
     explanation: 'Explanation',
     nextTask: 'Next task',
@@ -207,12 +208,17 @@ export function LearnClient({ topicId }: { topicId: string }) {
   if (!topic || !subject) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
-        <EmptyState
-          icon="📕"
-          title={t.notFoundTitle}
-          description={t.notFoundText}
-          action={<ButtonLink href="/plan">{t.backToPlan}</ButtonLink>}
-        />
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-ink-100 text-ink-400">
+          <Icon name="book" size={28} />
+        </div>
+        <div className="mt-3">
+          <EmptyState
+           
+            title={t.notFoundTitle}
+            description={t.notFoundText}
+            action={<ButtonLink href="/plan">{t.backToPlan}</ButtonLink>}
+          />
+        </div>
       </div>
     );
   }
@@ -301,7 +307,8 @@ export function LearnClient({ topicId }: { topicId: string }) {
     <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
       <div className="flex flex-wrap items-center gap-2">
         <Badge tone="brand">
-          <span aria-hidden>{subject.icon}</span> {subject.title}
+          <Icon name={subject.icon} size={14} />
+          {subject.title}
         </Badge>
         {topic.custom && <Badge tone="accent">{t.teacherTopic}</Badge>}
       </div>
@@ -314,7 +321,7 @@ export function LearnClient({ topicId }: { topicId: string }) {
           <button
             key={item}
             onClick={() => setTab(item)}
-            className={`-mb-px border-b-2 px-4 py-2.5 text-sm font-semibold transition-colors ${
+            className={`-mb-px border-b-2 px-4 py-2.5 text-sm font-semibold transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
               tab === item
                 ? 'border-brand-500 text-brand-700'
                 : 'border-transparent text-ink-400 hover:text-ink-700'
@@ -349,8 +356,9 @@ export function LearnClient({ topicId }: { topicId: string }) {
               <h2 className="font-bold text-brand-800">{t.keyPoints}</h2>
               <ul className="mt-3 space-y-2">
                 {topic.material.keyPoints.map((point) => (
-                  <li key={point} className="text-sm text-brand-800">
-                    — {point}
+                  <li key={point} className="flex items-start gap-2 text-sm text-brand-800">
+                    <Icon name="check" size={16} className="mt-0.5 text-brand-600" />
+                    <span>{point}</span>
                   </li>
                 ))}
               </ul>
@@ -377,11 +385,11 @@ export function LearnClient({ topicId }: { topicId: string }) {
           {!task ? (
             // Задания закончились — итог
             <Card className="text-center">
-              <span className="text-5xl" aria-hidden>
-                🎯
+              <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-success-50 text-success-700">
+                <Icon name="crosshair" size={32} />
               </span>
               <h2 className="mt-4 text-xl font-bold text-ink-900">{t.topicDone}</h2>
-              <p className="mt-2 text-ink-500">{t.solved(solved, tasks.length)}</p>
+              <p className="mt-2 tabular-nums text-ink-500">{t.solved(solved, tasks.length)}</p>
               {difficultyExplanation(subject.id, state) && (
                 <p className="mt-3 text-sm text-brand-700">{difficultyExplanation(subject.id, state)}</p>
               )}
@@ -395,7 +403,7 @@ export function LearnClient({ topicId }: { topicId: string }) {
           ) : (
             <Card>
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-sm font-semibold text-ink-400">
+                <span className="text-sm font-semibold tabular-nums text-ink-400">
                   {t.taskCounter(index + 1, tasks.length)}
                 </span>
                 <Badge>{t.difficulty[task.difficulty]}</Badge>
@@ -412,10 +420,10 @@ export function LearnClient({ topicId }: { topicId: string }) {
                       onClick={() => setAnswer(String(i))}
                       disabled={feedback !== null}
                       aria-pressed={answer === String(i)}
-                      className={`rounded-xl border-2 p-4 text-left transition-colors disabled:opacity-70 ${
+                      className={`rounded-xl border-2 p-4 text-left transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 disabled:opacity-70 ${
                         answer === String(i)
                           ? 'border-brand-500 bg-brand-50 text-brand-800'
-                          : 'border-ink-200 bg-white text-ink-700 hover:border-brand-300'
+                          : 'border-ink-200 bg-white text-ink-700 hover:border-brand-300 hover:shadow-[var(--shadow-lift)]'
                       }`}
                     >
                       {option}
@@ -440,7 +448,10 @@ export function LearnClient({ topicId }: { topicId: string }) {
               {!feedback && (
                 <div className="mt-4">
                   {showHint ? (
-                    <p className="rounded-xl bg-accent-50 px-4 py-3 text-sm text-accent-700">💡 {task.hint}</p>
+                    <p className="flex items-center gap-2 rounded-xl bg-accent-50 px-4 py-3 text-sm text-accent-700">
+                      <Icon name="bulb" size={16} />
+                      {task.hint}
+                    </p>
                   ) : (
                     <Button variant="ghost" size="sm" onClick={() => setShowHint(true)}>
                       {t.showHint}
@@ -457,7 +468,8 @@ export function LearnClient({ topicId }: { topicId: string }) {
               )}
 
               {failed && !loading && (
-                <p className="mt-5 rounded-xl bg-danger-50 px-4 py-3 text-sm font-semibold text-danger-700">
+                <p className="mt-5 flex items-center gap-2 rounded-xl bg-danger-50 px-4 py-3 text-sm font-semibold text-danger-700">
+                  <Icon name="alert" size={16} />
                   {t.networkError}
                 </p>
               )}
@@ -466,13 +478,14 @@ export function LearnClient({ topicId }: { topicId: string }) {
               {feedback && !loading && (
                 <div className="mt-5">
                   <div
-                    className={`rounded-xl px-4 py-3 font-bold ${
+                    className={`flex flex-wrap items-center gap-2 rounded-xl px-4 py-3 font-bold ${
                       feedback.correct ? 'bg-success-50 text-success-700' : 'bg-danger-50 text-danger-700'
                     }`}
                   >
-                    {feedback.correct ? t.correct : t.incorrect}
+                    <Icon name={feedback.correct ? 'check' : 'close'} size={18} />
+                    <span>{feedback.correct ? t.correct : t.incorrect}</span>
                     {!feedback.correct && feedback.correctAnswer && (
-                      <span className="ml-2 font-normal">
+                      <span className="font-normal">
                         {t.correctAnswer} {feedback.correctAnswer}
                       </span>
                     )}

@@ -16,6 +16,7 @@ import type { PlanRequest, PlanResponse } from '@/lib/ai/contracts';
 import { useStore } from '@/components/StoreProvider';
 import type { Dict } from '@/lib/i18n';
 import { AiBadge } from '@/components/AiBadge';
+import { Icon } from '@/components/Icon';
 import { Alert, Badge, Button, ButtonLink, Card, EmptyState, ProgressBar, Skeleton } from '@/components/ui';
 
 /** Цвета для статуса темы. Подписи — в TEXT, потому что зависят от языка. */
@@ -53,9 +54,9 @@ const TEXT: Dict<{
     title: 'Мой план',
     subtitle: 'Темы отобраны под твой уровень, класс и цель.',
     noProfileTitle: 'Сначала нужен профиль',
-    noProfileText: 'Укажите класс, предметы и цель — без этого план построить не из чего.',
+    noProfileText: 'Укажите класс, предметы и цель: без этого план построить не из чего.',
     createProfile: 'Создать профиль',
-    alertBefore: 'Диагностика по предмету ещё не пройдена — план построен по классу и цели.',
+    alertBefore: 'Диагностика по предмету ещё не пройдена, поэтому план построен по классу и цели.',
     alertLink: 'Пройти диагностику',
     alertAfter: ', чтобы он стал точнее.',
     mentorSays: 'Что говорит наставник',
@@ -74,7 +75,7 @@ const TEXT: Dict<{
     },
     weakSpots: 'Слабые места',
     weakEmpty:
-      'Пока данных мало. Пройди диагностику или реши несколько заданий — здесь появятся навыки, которые стоит подтянуть.',
+      'Пока данных мало. Пройди диагностику или реши несколько заданий, и здесь появятся навыки, которые стоит подтянуть.',
     planError: 'Не удалось получить объяснение. Рекомендации ниже посчитаны без интернета.',
     status: {
       weak: 'Слабое место',
@@ -87,9 +88,9 @@ const TEXT: Dict<{
     title: 'Жоспарым',
     subtitle: 'Тақырыптар сенің деңгейіңе, сыныбыңа және мақсатыңа қарай таңдалды.',
     noProfileTitle: 'Алдымен профиль қажет',
-    noProfileText: 'Сыныбыңды, пәндерді және мақсатыңды көрсет — онсыз жоспар құруға негіз жоқ.',
+    noProfileText: 'Сыныбыңды, пәндерді және мақсатыңды көрсет, онсыз жоспар құруға негіз жоқ.',
     createProfile: 'Профиль құру',
-    alertBefore: 'Пән бойынша диагностика әлі өтілмеген — жоспар сынып пен мақсат бойынша құрылды.',
+    alertBefore: 'Пән бойынша диагностика әлі өтілмеген, сондықтан жоспар сынып пен мақсат бойынша құрылды.',
     alertLink: 'Диагностикадан өту',
     alertAfter: ', сонда ол дәлірек болады.',
     mentorSays: 'Тәлімгер не дейді',
@@ -102,7 +103,7 @@ const TEXT: Dict<{
     daysLeft: () => 'күн қалды',
     weakSpots: 'Әлсіз тұстар',
     weakEmpty:
-      'Әзірге дерек аз. Диагностикадан өт немесе бірнеше тапсырма шеш — пысықтауға тұрарлық дағдылар осында шығады.',
+      'Әзірге дерек аз. Диагностикадан өт немесе бірнеше тапсырма шеш, сонда пысықтауға тұрарлық дағдылар осында шығады.',
     planError: 'Түсіндірмені алу мүмкін болмады. Төмендегі ұсыныстар интернетсіз есептелген.',
     status: {
       weak: 'Әлсіз тұс',
@@ -115,9 +116,9 @@ const TEXT: Dict<{
     title: 'My plan',
     subtitle: 'Topics picked for your level, grade and goal.',
     noProfileTitle: 'A profile is needed first',
-    noProfileText: 'Set your grade, subjects and goal — there is nothing to build a plan from without them.',
+    noProfileText: 'Set your grade, subjects and goal: without them there is nothing to build a plan from.',
     createProfile: 'Create profile',
-    alertBefore: 'The subject diagnostic has not been taken yet — the plan is based on your grade and goal.',
+    alertBefore: 'The subject diagnostic has not been taken yet, so the plan is based on your grade and goal.',
     alertLink: 'Take the diagnostic',
     alertAfter: ' to make it more accurate.',
     mentorSays: 'What your mentor says',
@@ -130,7 +131,7 @@ const TEXT: Dict<{
     daysLeft: (n: number) => (n === 1 ? 'day left' : 'days left'),
     weakSpots: 'Weak spots',
     weakEmpty:
-      'Not enough data yet. Take the diagnostic or solve a few tasks — the skills worth working on will show up here.',
+      'Not enough data yet. Take the diagnostic or solve a few tasks, and the skills worth working on will show up here.',
     planError: 'Could not load the explanation. The recommendations below were calculated offline.',
     status: {
       weak: 'Weak spot',
@@ -279,8 +280,12 @@ export default function PlanPage() {
   if (!profile) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
+        {/* Иконка вынесена наружу: проп icon у EmptyState принимает строку,
+            а рисованные иконки набора приходят готовым элементом. */}
+        <div className="mb-3 flex justify-center text-ink-300">
+          <Icon name="compass" size={40} />
+        </div>
         <EmptyState
-          icon="🧭"
           title={t.noProfileTitle}
           description={t.noProfileText}
           action={<ButtonLink href="/onboarding">{t.createProfile}</ButtonLink>}
@@ -300,7 +305,7 @@ export default function PlanPage() {
 
       {/* Переключатель предметов появляется, только если их больше одного */}
       {profile.subjectIds.length > 1 && (
-        <div className="mt-5 flex flex-wrap gap-2">
+        <div className="mt-6 flex flex-wrap gap-2">
           {profile.subjectIds.map((id) => {
             const item = getSubject(id);
             if (!item) return null;
@@ -308,13 +313,14 @@ export default function PlanPage() {
               <button
                 key={id}
                 onClick={() => setSubjectId(id)}
-                className={`rounded-xl border px-4 py-2 text-sm font-semibold transition-colors ${
+                className={`flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
                   id === subjectId
                     ? 'border-brand-500 bg-brand-50 text-brand-700'
-                    : 'border-ink-200 bg-white text-ink-600 hover:border-brand-300'
+                    : 'border-ink-200 bg-white text-ink-600 hover:border-brand-300 hover:shadow-[var(--shadow-lift)]'
                 }`}
               >
-                <span aria-hidden>{item.icon}</span> {item.title}
+                <Icon name={item.icon} size={18} />
+                {item.title}
               </button>
             );
           })}
@@ -322,7 +328,7 @@ export default function PlanPage() {
       )}
 
       {!diagnostic && (
-        <div className="mt-5">
+        <div className="mt-6">
           <Alert>
             {t.alertBefore}{' '}
             <a href={`/diagnostics/${subject.id}`} className="font-semibold underline">
@@ -363,7 +369,11 @@ export default function PlanPage() {
             <h2 className="mb-3 text-lg font-bold text-ink-900">{t.recommendedTopics}</h2>
             <ul className="space-y-3">
               {ranked.slice(0, 5).map((item) => (
-                <Card as="li" key={item.topic.id}>
+                <Card
+                  as="li"
+                  key={item.topic.id}
+                  className="transition-all duration-150 hover:border-brand-300 hover:shadow-[var(--shadow-lift)]"
+                >
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <h3 className="font-bold text-ink-900">{item.topic.title}</h3>
                     <Badge tone={STATUS[item.status].tone}>{t.status[item.status]}</Badge>
@@ -376,15 +386,19 @@ export default function PlanPage() {
                       не случайная, а посчитанная */}
                   <ul className="mt-3 space-y-1">
                     {item.reasons.map((reason) => (
-                      <li key={reason} className="text-xs text-ink-400">
-                        — {reason}
+                      <li key={reason} className="flex items-start gap-2 text-xs text-ink-400">
+                        <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-ink-300" aria-hidden />
+                        {reason}
                       </li>
                     ))}
                   </ul>
 
                   <div className="mt-4 flex items-center justify-between gap-3">
-                    <span className="text-xs text-ink-400">
-                      ≈ {item.topic.estimatedMinutes} {t.minutes}
+                    <span className="flex items-center gap-2 text-xs text-ink-400">
+                      <Icon name="clock" size={14} />
+                      <span className="tabular-nums">
+                        ≈ {item.topic.estimatedMinutes} {t.minutes}
+                      </span>
                     </span>
                     <ButtonLink href={`/learn/${item.topic.id}`} size="sm">
                       {t.study}
@@ -401,7 +415,7 @@ export default function PlanPage() {
           {daysLeft !== null && daysLeft >= 0 && (
             <Card>
               <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-400">{t.untilGoal}</h2>
-              <p className="mt-2 text-4xl font-black text-ink-900">{daysLeft}</p>
+              <p className="mt-2 text-4xl font-black tabular-nums text-ink-900">{daysLeft}</p>
               <p className="text-sm text-ink-500">{t.daysLeft(daysLeft)}</p>
             </Card>
           )}
