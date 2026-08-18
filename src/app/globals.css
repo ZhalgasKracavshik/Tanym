@@ -1,0 +1,124 @@
+@import "tailwindcss";
+
+/**
+ * Дизайн-токены Tanym.
+ *
+ * Палитра построена вокруг двух цветов: глубокого «степного» синего
+ * и тёплого золотого акцента. Все цвета заданы здесь один раз, поэтому
+ * страницы не содержат случайных хексов, а внешний вид меняется в одном месте.
+ */
+
+@theme {
+  /* Основной цвет бренда */
+  --color-brand-50: #eef8fc;
+  --color-brand-100: #d5eef8;
+  --color-brand-200: #aeddf0;
+  --color-brand-300: #74c6e5;
+  --color-brand-400: #35aad5;
+  --color-brand-500: #128cba;
+  --color-brand-600: #0c7099;
+  --color-brand-700: #0d5a7c;
+  --color-brand-800: #114a66;
+  --color-brand-900: #133e56;
+
+  /* Акцент: достижения, важные подсказки, геймификация */
+  --color-accent-50: #fff8ec;
+  --color-accent-100: #ffedc9;
+  --color-accent-200: #ffd88e;
+  --color-accent-300: #ffbe53;
+  --color-accent-400: #ffa62b;
+  --color-accent-500: #f98607;
+  --color-accent-600: #dd6302;
+  --color-accent-700: #b74406;
+
+  /* Нейтральные: текст и поверхности */
+  --color-ink-900: #0d1b26;
+  --color-ink-800: #16293a;
+  --color-ink-700: #24425c;
+  --color-ink-500: #4d6b85;
+  --color-ink-400: #74909f;
+  --color-ink-300: #a8bcc8;
+  --color-ink-200: #d3e0e8;
+  --color-ink-100: #e8f0f4;
+  --color-ink-50: #f4f8fa;
+
+  /* Семантические цвета статусов */
+  --color-success-50: #eafaf1;
+  --color-success-500: #12a05c;
+  --color-success-700: #0b7343;
+  --color-danger-50: #fdeeee;
+  --color-danger-500: #dc4c4c;
+  --color-danger-700: #a92f2f;
+
+  /* Акценты предметов — используются в карточках */
+  --color-subject-math: #128cba;
+  --color-subject-physics: #7048c4;
+  --color-subject-history: #c2601c;
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  --radius-card: 1rem;
+}
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  /* Плавная прокрутка к якорям на лендинге */
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--color-ink-50);
+  color: var(--color-ink-900);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Видимый фокус для навигации с клавиатуры — требование доступности. */
+:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+}
+
+/* Уважаем системную настройку «уменьшить движение». */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@keyframes tanym-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-up {
+  animation: tanym-fade-up 0.35s ease-out both;
+}
+
+@keyframes tanym-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+.animate-soft-pulse {
+  animation: tanym-pulse 1.4s ease-in-out infinite;
+}

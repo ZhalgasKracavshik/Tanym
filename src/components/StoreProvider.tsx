@@ -1,0 +1,190 @@
+'use client';
+
+/**
+ * Единое хранилище состояния ученика на React Context.
+ *
+ * Почему контекст, а не глобальная библиотека состояния: данных немного,
+ * и все они всё равно синхронизируются с одним ключом localStorage.
+ * Лишняя зависимость здесь ничего не упрощает.
+ *
+ * Важная деталь про гидратацию: при рендере на сервере localStorage недоступен,
+ * поэтому первый рендер всегда идёт с пустым состоянием, а настоящие данные
+ * подставляются в useEffect. Флаг `hydrated` позволяет страницам показать
+ * скелет вместо мигающего «нет данных → есть данные».
+ */
+
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
+import { emptyState, loadState, saveState, clearState, createId } from '@/lib/storage';
+import { applyAttemptToProgress, nextDifficulty, pointsForAttempt } from '@/lib/personalization';
+import type {
+  AppState,
+  CachedPlan,
+  ChatMessage,
+  DiagnosticResult,
+  Difficulty,
+  Profile,
+  SubjectId,
+  TaskAttempt,
+  Topic,
+} from '@/lib/types';
+
+interface StoreValue {
+  state: AppState;
+  hydrated: boolean;
+  setProfile: (profile: Profile) => void;
+  updateProfile: (patch: Partial<Profile>) => void;
+  saveDiagnostic: (result: DiagnosticResult) => void;
+  recordAttempt: (attempt: Omit<TaskAttempt, 'at'>, topicTaskCount: number) => void;
+  addCustomTopic: (topic: Topic) => void;
+  removeCustomTopic: (topicId: string) => void;
+  cachePlan: (plan: CachedPlan) => void;
+  appendChat: (message: ChatMessage) => void;
+  clearChat: () => void;
+  resetAll: () => void;
+}
+
+const StoreContext = createContext<StoreValue | null>(null);
+
+export function StoreProvider({ children }: { children: ReactNode }) {
+  const [state, setState] = useState<AppState>(emptyState);
+  const [hydrated, setHydrated] = useState(false);
+
+  // Первый заход в браузере: поднимаем сохранённое состояние.
+  useEffect(() => {
+    setState(loadState());
+    setHydrated(true);
+  }, []);
+
+  // Любое изменение состояния сразу пишем в localStorage.
+  // До окончания гидратации не пишем, иначе затрём сохранённые данные пустыми.
+  const hydratedRef = useRef(false);
+  useEffect(() => {
+    if (!hydrated) return;
+    if (!hydratedRef.current) {
+      hydratedRef.current = true;
+      return;
+    }
+    saveState(state);
+  }, [state, hydrated]);
+
+  const setProfile = useCallback((profile: Profile) => {
+    setState((previous) => ({ ...previous, profile }));
+  }, []);
+
+  const updateProfile = useCallback((patch: Partial<Profile>) => {
+    setState((previous) =>
+      previous.profile ? { ...previous, profile: { ...previous.profile, ...patch } } : previous,
+    );
+  }, []);
+
+  const saveDiagnostic = useCallback((result: DiagnosticResult) => {
+    setState((previous) => ({
+      ...previous,
+      diagnostics: { ...previous.diagnostics, [result.subjectId]: result },
+      // Диагностика задаёт стартовый уровень сложности для этого предмета.
+      difficulty: { ...previous.difficulty, [result.subjectId]: result.startingDifficulty },
+      // Планы, построенные до диагностики, устарели.
+      plans: Object.fromEntries(
+        Object.entries(previous.plans).filter(([subjectId]) => subjectId !== result.subjectId),
+      ),
+    }));
+  }, []);
+
+  const recordAttempt = useCallback((attempt: Omit<TaskAttempt, 'at'>, topicTaskCount: number) => {
+    setState((previous) => {
+      const full: TaskAttempt = { ...attempt, at: new Date().toISOString() };
+      const withAttempt: AppState = {
+        ...previous,
+        attempts: [...previous.attempts, full],
+        topicProgress: applyAttemptToProgress(previous.topicProgress, full, topicTaskCount),
+        points: previous.points + pointsForAttempt(full.correct, full.difficulty),
+      };
+
+      // Сложность пересчитываем уже с учётом новой попытки.
+      const updatedDifficulty: Difficulty = nextDifficulty(full.subjectId, withAttempt);
+      return {
+        ...withAttempt,
+        difficulty: { ...withAttempt.difficulty, [full.subjectId]: updatedDifficulty },
+      };
+    });
+  }, []);
+
+  const addCustomTopic = useCallback((topic: Topic) => {
+    setState((previous) => ({ ...previous, customTopics: [...previous.customTopics, topic] }));
+  }, []);
+
+  const removeCustomTopic = useCallback((topicId: string) => {
+    setState((previous) => ({
+      ...previous,
+      customTopics: previous.customTopics.filter((topic) => topic.id !== topicId),
+    }));
+  }, []);
+
+  const cachePlan = useCallback((plan: CachedPlan) => {
+    setState((previous) => ({ ...previous, plans: { ...previous.plans, [plan.subjectId]: plan } }));
+  }, []);
+
+  const appendChat = useCallback((message: ChatMessage) => {
+    setState((previous) => ({ ...previous, chat: [...previous.chat, message] }));
+  }, []);
+
+  const clearChat = useCallback(() => {
+    setState((previous) => ({ ...previous, chat: [] }));
+  }, []);
+
+  const resetAll = useCallback(() => {
+    clearState();
+    setState(emptyState());
+  }, []);
+
+  const value = useMemo<StoreValue>(
+    () => ({
+      state,
+      hydrated,
+      setProfile,
+      updateProfile,
+      saveDiagnostic,
+      recordAttempt,
+      addCustomTopic,
+      removeCustomTopic,
+      cachePlan,
+      appendChat,
+      clearChat,
+      resetAll,
+    }),
+    [
+      state,
+      hydrated,
+      setProfile,
+      updateProfile,
+      saveDiagnostic,
+      recordAttempt,
+      addCustomTopic,
+      removeCustomTopic,
+      cachePlan,
+      appendChat,
+      clearChat,
+      resetAll,
+    ],
+  );
+
+  return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
+}
+
+/** Доступ к хранилищу. Бросает понятную ошибку, если компонент вне провайдера. */
+export function useStore(): StoreValue {
+  const context = useContext(StoreContext);
+  if (!context) {
+    throw new Error('useStore можно вызывать только внутри <StoreProvider>');
+  }
+  return context;
+}
+
+export { createId };
+
+/** Удобный доступ к текущему предмету ученика (первый выбранный). */
+export function usePrimarySubjectId(): SubjectId | null {
+  const { state } = useStore();
+  return state.profile?.subjectIds[0] ?? null;
+}
