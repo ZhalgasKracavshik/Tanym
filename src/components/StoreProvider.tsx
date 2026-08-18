@@ -17,6 +17,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { ReactNode } from 'react';
 import { emptyState, loadState, saveState, clearState, createId } from '@/lib/storage';
 import { applyAttemptToProgress, nextDifficulty, pointsForAttempt } from '@/lib/personalization';
+import { almatyDateIso, almatyYesterdayIso } from '@/lib/date';
 import type {
   AppState,
   CachedPlan,
@@ -38,6 +39,7 @@ interface StoreValue {
   updateProfile: (patch: Partial<Profile>) => void;
   saveDiagnostic: (result: DiagnosticResult) => void;
   recordAttempt: (attempt: Omit<TaskAttempt, 'at'>, topicTaskCount: number) => void;
+  markAchievementsSeen: (ids: string[]) => void;
   addCustomTopic: (topic: Topic) => void;
   removeCustomTopic: (topicId: string) => void;
   cachePlan: (plan: CachedPlan) => void;
@@ -111,6 +113,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         attempts: [...previous.attempts, full],
         topicProgress: applyAttemptToProgress(previous.topicProgress, full, topicTaskCount),
         points: previous.points + pointsForAttempt(full.correct, full.difficulty),
+        streak: updateStreak(previous.streak),
       };
 
       // Сложность пересчитываем уже с учётом новой попытки.
@@ -120,6 +123,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         difficulty: { ...withAttempt.difficulty, [full.subjectId]: updatedDifficulty },
       };
     });
+  }, []);
+
+  const markAchievementsSeen = useCallback((ids: string[]) => {
+    if (ids.length === 0) return;
+    setState((previous) => ({
+      ...previous,
+      // Set убирает повторы, если функция вызвалась дважды подряд.
+      seenAchievements: [...new Set([...previous.seenAchievements, ...ids])],
+    }));
   }, []);
 
   const addCustomTopic = useCallback((topic: Topic) => {
@@ -159,6 +171,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       updateProfile,
       saveDiagnostic,
       recordAttempt,
+      markAchievementsSeen,
       addCustomTopic,
       removeCustomTopic,
       cachePlan,
@@ -174,6 +187,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       updateProfile,
       saveDiagnostic,
       recordAttempt,
+      markAchievementsSeen,
       addCustomTopic,
       removeCustomTopic,
       cachePlan,
@@ -184,6 +198,28 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   );
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
+}
+
+/**
+ * Обновляет серию занятий при активности.
+ *
+ * Три случая: занимались сегодня повторно — ничего не меняем; занимались вчера —
+ * серия продолжается; был пропуск — серия начинается заново с единицы.
+ * Даты считаются по Астане, иначе занятие в 23:30 и в 00:30 попадали бы
+ * в разные «дни» по UTC и ломали бы подсчёт.
+ */
+function updateStreak(previous: AppState['streak']): AppState['streak'] {
+  const today = almatyDateIso();
+  if (previous.lastActiveDate === today) return previous;
+
+  const continued = previous.lastActiveDate === almatyYesterdayIso();
+  const current = continued ? previous.current + 1 : 1;
+
+  return {
+    current,
+    longest: Math.max(previous.longest, current),
+    lastActiveDate: today,
+  };
 }
 
 /** Доступ к хранилищу. Бросает понятную ошибку, если компонент вне провайдера. */

@@ -264,6 +264,15 @@ export interface AppState {
   /** Текущий адаптивный уровень сложности по каждому предмету. */
   difficulty: Record<SubjectId, Difficulty>;
   points: number;
+  /** Серия дней подряд с занятиями. Считается по времени Астаны (см. lib/date.ts). */
+  streak: {
+    current: number;
+    longest: number;
+    /** Последний день активности в формате «ГГГГ-ММ-ДД», null — занятий ещё не было. */
+    lastActiveDate: string | null;
+  };
+  /** Достижения, поздравление о которых ученик уже видел. */
+  seenAchievements: string[];
   /** Темы, добавленные учителем через панель управления. */
   customTopics: Topic[];
   plans: Record<SubjectId, CachedPlan>;

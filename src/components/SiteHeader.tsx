@@ -19,6 +19,7 @@ import { ButtonLink } from './ui';
 const TEXT: Dict<{
   plan: string;
   dashboard: string;
+  achievements: string;
   mentor: string;
   teacher: string;
   start: string;
@@ -30,6 +31,7 @@ const TEXT: Dict<{
   ru: {
     plan: 'Мой план',
     dashboard: 'Кабинет',
+    achievements: 'Достижения',
     mentor: 'Наставник',
     teacher: 'Учителю',
     start: 'Начать',
@@ -41,6 +43,7 @@ const TEXT: Dict<{
   kk: {
     plan: 'Жоспарым',
     dashboard: 'Кабинет',
+    achievements: 'Жетістіктер',
     mentor: 'Тәлімгер',
     teacher: 'Мұғалімге',
     start: 'Бастау',
@@ -52,6 +55,7 @@ const TEXT: Dict<{
   en: {
     plan: 'My plan',
     dashboard: 'Dashboard',
+    achievements: 'Achievements',
     mentor: 'Mentor',
     teacher: 'For teachers',
     start: 'Start',
@@ -73,6 +77,7 @@ export function SiteHeader() {
   const NAV = [
     { href: '/plan', label: t.plan },
     { href: '/dashboard', label: t.dashboard },
+    { href: '/achievements', label: t.achievements },
     { href: '/chat', label: t.mentor },
     { href: '/teacher', label: t.teacher },
   ];

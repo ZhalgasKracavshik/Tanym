@@ -10,6 +10,7 @@
 
 import { getSubject, getTopic } from '@/data';
 import { daysUntil, rankTopics, summarize, weakestSkills } from '@/lib/personalization';
+import { almatyDateIso, almatyYesterdayIso } from '@/lib/date';
 import { useStore } from '@/components/StoreProvider';
 import type { Dict } from '@/lib/i18n';
 import { ButtonLink, Card, EmptyState, ProgressBar, SectionHeader, Skeleton, Stat } from '@/components/ui';
@@ -32,6 +33,8 @@ const TEXT: Dict<{
   startedHint: (n: number) => string;
   statPoints: string;
   pointsHint: string;
+  streakLabel: string;
+  streakHint: (n: number) => string;
   topicsTitle: string;
   topicsDescription: string;
   topicsEmpty: string;
@@ -61,6 +64,8 @@ const TEXT: Dict<{
     startedHint: (n) => `начато ${n}`,
     statPoints: 'Очки',
     pointsHint: 'за сложность заданий',
+    streakLabel: 'Серия',
+    streakHint: (n) => (n === 1 ? 'день подряд' : n > 1 && n < 5 ? 'дня подряд' : 'дней подряд'),
     topicsTitle: 'Прогресс по темам',
     topicsDescription: 'Темы, которые ты уже начал решать',
     topicsEmpty: 'Ты ещё не начал ни одной темы. Загляни в план.',
@@ -90,6 +95,8 @@ const TEXT: Dict<{
     startedHint: (n) => `басталғаны ${n}`,
     statPoints: 'Ұпай',
     pointsHint: 'тапсырма күрделілігі үшін',
+    streakLabel: 'Серия',
+    streakHint: () => 'күн қатарынан',
     topicsTitle: 'Тақырыптар бойынша прогресс',
     topicsDescription: 'Сен шығара бастаған тақырыптар',
     topicsEmpty: 'Сен әлі бірде-бір тақырыпты бастаған жоқсың. Жоспарға кіріп көр.',
@@ -119,6 +126,8 @@ const TEXT: Dict<{
     startedHint: (n) => `${n} started`,
     statPoints: 'Points',
     pointsHint: 'for task difficulty',
+    streakLabel: 'Streak',
+    streakHint: (n) => (n === 1 ? 'day in a row' : 'days in a row'),
     topicsTitle: 'Progress by topic',
     topicsDescription: 'Topics you have already started',
     topicsEmpty: 'You have not started any topic yet. Take a look at your plan.',
@@ -162,6 +171,12 @@ export default function DashboardPage() {
   }
 
   const stats = summarize(state);
+  // Серия считается живой, только если занимались сегодня или вчера — иначе
+  // показывали бы «5 дней подряд» тому, кто не заходил месяц.
+  const lastActive = state.streak.lastActiveDate;
+  const streakValue =
+    lastActive === almatyDateIso() || lastActive === almatyYesterdayIso() ? state.streak.current : 0;
+  const streakLabel = String.fromCodePoint(0x1f525) + ' ' + streakValue;
   const daysLeft = daysUntil(profile.targetDate);
   const primarySubject = getSubject(profile.subjectIds[0]);
   const nextTopics = primarySubject ? rankTopics(primarySubject, state, state.customTopics).slice(0, 3) : [];
@@ -193,7 +208,7 @@ export default function DashboardPage() {
       ) : (
         <>
           {/* Метрики */}
-          <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-5">
             <Stat label={t.statTasks} value={stats.totalAttempts} />
             <Stat
               label={t.statAccuracy}
@@ -202,6 +217,7 @@ export default function DashboardPage() {
             />
             <Stat label={t.statTopics} value={stats.topicsMastered} hint={t.startedHint(stats.topicsStarted)} />
             <Stat label={t.statPoints} value={stats.points} hint={t.pointsHint} />
+            <Stat label={t.streakLabel} value={streakLabel} hint={t.streakHint(streakValue)} />
           </div>
 
           <div className="mt-8 grid gap-6 lg:grid-cols-3">
