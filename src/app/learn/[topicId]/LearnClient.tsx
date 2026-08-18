@@ -11,14 +11,144 @@
 import { useState } from 'react';
 import { getSubject, getTopic } from '@/data';
 import { computeSkillMastery, difficultyExplanation, selectTasks } from '@/lib/personalization';
-import { DIFFICULTY_LABELS } from '@/lib/types';
+import type { Difficulty } from '@/lib/types';
+import type { Dict } from '@/lib/i18n';
 import type { FeedbackRequest, FeedbackResponse } from '@/lib/ai/contracts';
 import { useStore } from '@/components/StoreProvider';
 import { AiBadge } from '@/components/AiBadge';
 import { Badge, Button, ButtonLink, Card, EmptyState, Skeleton } from '@/components/ui';
 
+/**
+ * Подписи страницы на трёх языках. Ключи одинаковые — за этим следит TypeScript.
+ * Уровни сложности переведены здесь, а не в types.ts: там подписи общие для сервера.
+ */
+const TEXT: Dict<{
+  notFoundTitle: string;
+  notFoundText: string;
+  backToPlan: string;
+  teacherTopic: string;
+  theory: string;
+  tasksTab: (n: number) => string;
+  keyPoints: string;
+  example: (n: number) => string;
+  goToTasks: string;
+  topicDone: string;
+  solved: (n: number, total: number) => string;
+  restart: string;
+  taskCounter: (n: number, total: number) => string;
+  difficulty: Record<Difficulty, string>;
+  numericPlaceholder: string;
+  showHint: string;
+  correct: string;
+  incorrect: string;
+  correctAnswer: string;
+  explanation: string;
+  nextTask: string;
+  finishTopic: string;
+  answer: string;
+  networkError: string;
+}> = {
+  ru: {
+    notFoundTitle: 'Тема не найдена',
+    notFoundText: 'Возможно, ссылка устарела или тему удалили.',
+    backToPlan: 'Вернуться к плану',
+    teacherTopic: 'Тема учителя',
+    theory: 'Теория',
+    tasksTab: (n) => `Задания (${n})`,
+    keyPoints: 'Главное запомнить',
+    example: (n) => `Пример ${n}`,
+    goToTasks: 'Перейти к заданиям',
+    topicDone: 'Тема пройдена',
+    solved: (n, total) => `Верно решено ${n} из ${total}.`,
+    restart: 'Решить ещё раз',
+    taskCounter: (n, total) => `Задание ${n} из ${total}`,
+    difficulty: {
+      1: 'Базовый',
+      2: 'Простой',
+      3: 'Средний',
+      4: 'Продвинутый',
+      5: 'Олимпиадный',
+    },
+    numericPlaceholder: 'Ответ числом',
+    showHint: 'Показать подсказку',
+    correct: '✓ Верно',
+    incorrect: '✗ Пока не верно',
+    correctAnswer: 'Правильный ответ:',
+    explanation: 'Разбор',
+    nextTask: 'Следующее задание',
+    finishTopic: 'Завершить тему',
+    answer: 'Ответить',
+    networkError: 'Не удалось связаться с сервером. Проверь интернет и попробуй ещё раз.',
+  },
+  kk: {
+    notFoundTitle: 'Тақырып табылмады',
+    notFoundText: 'Сілтеме ескірген болуы мүмкін немесе тақырып жойылған.',
+    backToPlan: 'Жоспарға оралу',
+    teacherTopic: 'Мұғалім тақырыбы',
+    theory: 'Теория',
+    tasksTab: (n) => `Тапсырмалар (${n})`,
+    keyPoints: 'Есте сақтау керек',
+    example: (n) => `${n}-мысал`,
+    goToTasks: 'Тапсырмаларға өту',
+    topicDone: 'Тақырып аяқталды',
+    solved: (n, total) => `${total} тапсырманың ішінен ${n} дұрыс шешілді.`,
+    restart: 'Қайта шешу',
+    taskCounter: (n, total) => `Тапсырма ${n} / ${total}`,
+    difficulty: {
+      1: 'Бастапқы',
+      2: 'Жеңіл',
+      3: 'Орташа',
+      4: 'Күрделі',
+      5: 'Олимпиадалық',
+    },
+    numericPlaceholder: 'Жауапты санмен жаз',
+    showHint: 'Кеңесті көрсету',
+    correct: '✓ Дұрыс',
+    incorrect: '✗ Әзірге дұрыс емес',
+    correctAnswer: 'Дұрыс жауабы:',
+    explanation: 'Талдау',
+    nextTask: 'Келесі тапсырма',
+    finishTopic: 'Тақырыпты аяқтау',
+    answer: 'Жауап беру',
+    networkError: 'Сервермен байланысу мүмкін болмады. Интернетті тексеріп, қайта көр.',
+  },
+  en: {
+    notFoundTitle: 'Topic not found',
+    notFoundText: 'The link may be outdated, or the topic was deleted.',
+    backToPlan: 'Back to plan',
+    teacherTopic: 'Teacher topic',
+    theory: 'Theory',
+    tasksTab: (n) => `Tasks (${n})`,
+    keyPoints: 'Key takeaways',
+    example: (n) => `Example ${n}`,
+    goToTasks: 'Go to tasks',
+    topicDone: 'Topic complete',
+    solved: (n, total) => `You solved ${n} of ${total} correctly.`,
+    restart: 'Try again',
+    taskCounter: (n, total) => `Task ${n} of ${total}`,
+    difficulty: {
+      1: 'Basic',
+      2: 'Easy',
+      3: 'Medium',
+      4: 'Advanced',
+      5: 'Olympiad',
+    },
+    numericPlaceholder: 'Answer as a number',
+    showHint: 'Show hint',
+    correct: '✓ Correct',
+    incorrect: '✗ Not quite yet',
+    correctAnswer: 'Correct answer:',
+    explanation: 'Explanation',
+    nextTask: 'Next task',
+    finishTopic: 'Finish topic',
+    answer: 'Submit',
+    networkError: 'Could not reach the server. Check your connection and try again.',
+  },
+};
+
 export function LearnClient({ topicId }: { topicId: string }) {
   const { state, hydrated, recordAttempt } = useStore();
+  const t = TEXT[state.language];
 
   const [tab, setTab] = useState<'theory' | 'tasks'>('theory');
   const [index, setIndex] = useState(0);
@@ -45,9 +175,9 @@ export function LearnClient({ topicId }: { topicId: string }) {
       <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
         <EmptyState
           icon="📕"
-          title="Тема не найдена"
-          description="Возможно, ссылка устарела или тему удалили."
-          action={<ButtonLink href="/plan">Вернуться к плану</ButtonLink>}
+          title={t.notFoundTitle}
+          description={t.notFoundText}
+          action={<ButtonLink href="/plan">{t.backToPlan}</ButtonLink>}
         />
       </div>
     );
@@ -69,6 +199,7 @@ export function LearnClient({ topicId }: { topicId: string }) {
     const body: FeedbackRequest = {
       taskId: task.id,
       topicId: topic.id,
+      language: state.language,
       answer,
       profile: state.profile,
       skillMastery: mastery,
@@ -103,7 +234,7 @@ export function LearnClient({ topicId }: { topicId: string }) {
       );
     } catch {
       setFeedback({
-        text: 'Не удалось связаться с сервером. Проверь интернет и попробуй ещё раз.',
+        text: t.networkError,
         live: false,
         correct: false,
         correctAnswer: '',
@@ -133,7 +264,7 @@ export function LearnClient({ topicId }: { topicId: string }) {
         <Badge tone="brand">
           <span aria-hidden>{subject.icon}</span> {subject.title}
         </Badge>
-        {topic.custom && <Badge tone="accent">Тема учителя</Badge>}
+        {topic.custom && <Badge tone="accent">{t.teacherTopic}</Badge>}
       </div>
       <h1 className="mt-3 text-2xl font-bold text-ink-900 sm:text-3xl">{topic.title}</h1>
       <p className="mt-2 text-ink-500">{topic.summary}</p>
@@ -150,7 +281,7 @@ export function LearnClient({ topicId }: { topicId: string }) {
                 : 'border-transparent text-ink-400 hover:text-ink-700'
             }`}
           >
-            {item === 'theory' ? 'Теория' : `Задания (${tasks.length})`}
+            {item === 'theory' ? t.theory : t.tasksTab(tasks.length)}
           </button>
         ))}
       </div>
@@ -176,7 +307,7 @@ export function LearnClient({ topicId }: { topicId: string }) {
 
           {topic.material.keyPoints.length > 0 && (
             <Card className="border-brand-200 bg-brand-50">
-              <h2 className="font-bold text-brand-800">Главное запомнить</h2>
+              <h2 className="font-bold text-brand-800">{t.keyPoints}</h2>
               <ul className="mt-3 space-y-2">
                 {topic.material.keyPoints.map((point) => (
                   <li key={point} className="text-sm text-brand-800">
@@ -189,14 +320,14 @@ export function LearnClient({ topicId }: { topicId: string }) {
 
           {topic.material.examples.map((example, i) => (
             <Card key={example.problem}>
-              <h2 className="font-bold text-ink-900">Пример {i + 1}</h2>
+              <h2 className="font-bold text-ink-900">{t.example(i + 1)}</h2>
               <p className="mt-2 font-medium text-ink-800">{example.problem}</p>
               <p className="mt-2 leading-relaxed text-ink-600">{example.solution}</p>
             </Card>
           ))}
 
           <Button size="lg" className="w-full" onClick={() => setTab('tasks')}>
-            Перейти к заданиям
+            {t.goToTasks}
           </Button>
         </div>
       )}
@@ -210,17 +341,15 @@ export function LearnClient({ topicId }: { topicId: string }) {
               <span className="text-5xl" aria-hidden>
                 🎯
               </span>
-              <h2 className="mt-4 text-xl font-bold text-ink-900">Тема пройдена</h2>
-              <p className="mt-2 text-ink-500">
-                Верно решено {solved} из {tasks.length}.
-              </p>
+              <h2 className="mt-4 text-xl font-bold text-ink-900">{t.topicDone}</h2>
+              <p className="mt-2 text-ink-500">{t.solved(solved, tasks.length)}</p>
               {difficultyExplanation(subject.id, state) && (
                 <p className="mt-3 text-sm text-brand-700">{difficultyExplanation(subject.id, state)}</p>
               )}
               <div className="mt-6 flex flex-wrap justify-center gap-3">
-                <ButtonLink href="/plan">Вернуться к плану</ButtonLink>
+                <ButtonLink href="/plan">{t.backToPlan}</ButtonLink>
                 <Button variant="secondary" onClick={restart}>
-                  Решить ещё раз
+                  {t.restart}
                 </Button>
               </div>
             </Card>
@@ -228,9 +357,9 @@ export function LearnClient({ topicId }: { topicId: string }) {
             <Card>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="text-sm font-semibold text-ink-400">
-                  Задание {index + 1} из {tasks.length}
+                  {t.taskCounter(index + 1, tasks.length)}
                 </span>
-                <Badge>{DIFFICULTY_LABELS[task.difficulty]}</Badge>
+                <Badge>{t.difficulty[task.difficulty]}</Badge>
               </div>
 
               <p className="mt-4 text-lg font-semibold text-ink-900">{task.prompt}</p>
@@ -263,7 +392,7 @@ export function LearnClient({ topicId }: { topicId: string }) {
                   value={answer}
                   disabled={feedback !== null}
                   onChange={(event) => setAnswer(event.target.value)}
-                  placeholder="Ответ числом"
+                  placeholder={t.numericPlaceholder}
                   className="mt-5 w-full rounded-xl border border-ink-200 px-4 py-3 outline-none focus:border-brand-500 disabled:bg-ink-50"
                 />
               )}
@@ -275,7 +404,7 @@ export function LearnClient({ topicId }: { topicId: string }) {
                     <p className="rounded-xl bg-accent-50 px-4 py-3 text-sm text-accent-700">💡 {task.hint}</p>
                   ) : (
                     <Button variant="ghost" size="sm" onClick={() => setShowHint(true)}>
-                      Показать подсказку
+                      {t.showHint}
                     </Button>
                   )}
                 </div>
@@ -296,15 +425,17 @@ export function LearnClient({ topicId }: { topicId: string }) {
                       feedback.correct ? 'bg-success-50 text-success-700' : 'bg-danger-50 text-danger-700'
                     }`}
                   >
-                    {feedback.correct ? '✓ Верно' : '✗ Пока не верно'}
+                    {feedback.correct ? t.correct : t.incorrect}
                     {!feedback.correct && feedback.correctAnswer && (
-                      <span className="ml-2 font-normal">Правильный ответ: {feedback.correctAnswer}</span>
+                      <span className="ml-2 font-normal">
+                        {t.correctAnswer} {feedback.correctAnswer}
+                      </span>
                     )}
                   </div>
 
                   <div className="mt-4 rounded-xl border border-ink-200 p-4">
                     <div className="mb-2 flex items-center justify-between gap-2">
-                      <span className="text-sm font-bold text-ink-800">Разбор</span>
+                      <span className="text-sm font-bold text-ink-800">{t.explanation}</span>
                       <AiBadge live={feedback.live} reason={feedback.fallbackReason} />
                     </div>
                     <p className="whitespace-pre-line leading-relaxed text-ink-700">{feedback.text}</p>
@@ -315,11 +446,11 @@ export function LearnClient({ topicId }: { topicId: string }) {
               <div className="mt-6">
                 {feedback ? (
                   <Button size="lg" className="w-full" onClick={next}>
-                    {index + 1 < tasks.length ? 'Следующее задание' : 'Завершить тему'}
+                    {index + 1 < tasks.length ? t.nextTask : t.finishTopic}
                   </Button>
                 ) : (
                   <Button size="lg" className="w-full" onClick={submit} disabled={answer === '' || loading}>
-                    Ответить
+                    {t.answer}
                   </Button>
                 )}
               </div>

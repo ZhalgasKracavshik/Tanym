@@ -15,10 +15,103 @@ import { createId } from '@/lib/storage';
 import type { Difficulty, Grade, Subject, Task, Topic } from '@/lib/types';
 import { GRADES } from '@/lib/types';
 import { useStore } from '@/components/StoreProvider';
+import type { Dict } from '@/lib/i18n';
 import { Alert, Button, Card } from '@/components/ui';
 
+/** Подписи формы на трёх языках. Ключи одинаковые — за этим следит TypeScript. */
+const TEXT: Dict<{
+  added: string;
+  addTopic: string;
+  formTitle: (subject: string) => string;
+  titleLabel: string;
+  titlePlaceholder: string;
+  summaryLabel: string;
+  summaryPlaceholder: string;
+  gradeLabel: string;
+  gradeOption: (n: number) => string;
+  difficultyLabel: string;
+  minutesLabel: string;
+  taskTitle: string;
+  questionLabel: string;
+  optionsHint: string;
+  optionCorrect: (n: number) => string;
+  optionPlaceholder: (n: number) => string;
+  explanationLabel: string;
+  explanationPlaceholder: string;
+  submit: string;
+  cancel: string;
+}> = {
+  ru: {
+    added: 'Тема добавлена — она уже доступна ученикам.',
+    addTopic: '+ Добавить тему',
+    formTitle: (subject) => `Новая тема по предмету «${subject}»`,
+    titleLabel: 'Название темы',
+    titlePlaceholder: 'Например, Формулы сокращённого умножения',
+    summaryLabel: 'Краткое описание',
+    summaryPlaceholder: 'О чём тема и зачем она нужна',
+    gradeLabel: 'Класс',
+    gradeOption: (n) => `${n} класс`,
+    difficultyLabel: 'Сложность',
+    minutesLabel: 'Минут на тему',
+    taskTitle: 'Задание',
+    questionLabel: 'Вопрос',
+    optionsHint: 'Варианты ответа — отметьте правильный',
+    optionCorrect: (n) => `Вариант ${n} — правильный`,
+    optionPlaceholder: (n) => `Вариант ${n}`,
+    explanationLabel: 'Объяснение решения',
+    explanationPlaceholder: 'Его увидит ученик после ответа, и на него опирается AI-разбор',
+    submit: 'Добавить тему',
+    cancel: 'Отмена',
+  },
+  kk: {
+    added: 'Тақырып қосылды — ол оқушыларға қазірден қолжетімді.',
+    addTopic: '+ Тақырып қосу',
+    formTitle: (subject) => `«${subject}» пәні бойынша жаңа тақырып`,
+    titleLabel: 'Тақырып атауы',
+    titlePlaceholder: 'Мысалы, Қысқаша көбейту формулалары',
+    summaryLabel: 'Қысқаша сипаттама',
+    summaryPlaceholder: 'Тақырып не туралы және ол не үшін қажет',
+    gradeLabel: 'Сынып',
+    gradeOption: (n) => `${n}-сынып`,
+    difficultyLabel: 'Күрделілігі',
+    minutesLabel: 'Тақырыпқа минут',
+    taskTitle: 'Тапсырма',
+    questionLabel: 'Сұрақ',
+    optionsHint: 'Жауап нұсқалары — дұрысын белгілеңіз',
+    optionCorrect: (n) => `${n}-нұсқа — дұрыс жауап`,
+    optionPlaceholder: (n) => `${n}-нұсқа`,
+    explanationLabel: 'Шешімнің түсіндірмесі',
+    explanationPlaceholder: 'Оны оқушы жауап бергеннен кейін көреді, AI-талдау да соған сүйенеді',
+    submit: 'Тақырып қосу',
+    cancel: 'Болдырмау',
+  },
+  en: {
+    added: 'Topic added — students can already see it.',
+    addTopic: '+ Add topic',
+    formTitle: (subject) => `New topic in “${subject}”`,
+    titleLabel: 'Topic title',
+    titlePlaceholder: 'For example, Special product formulas',
+    summaryLabel: 'Short description',
+    summaryPlaceholder: 'What the topic covers and why it matters',
+    gradeLabel: 'Grade',
+    gradeOption: (n) => `Grade ${n}`,
+    difficultyLabel: 'Difficulty',
+    minutesLabel: 'Minutes per topic',
+    taskTitle: 'Task',
+    questionLabel: 'Question',
+    optionsHint: 'Answer options — mark the correct one',
+    optionCorrect: (n) => `Option ${n} is correct`,
+    optionPlaceholder: (n) => `Option ${n}`,
+    explanationLabel: 'Solution explanation',
+    explanationPlaceholder: 'Students see it after answering, and the AI explanation builds on it',
+    submit: 'Add topic',
+    cancel: 'Cancel',
+  },
+};
+
 export function AddTopicForm({ subject }: { subject: Subject }) {
-  const { addCustomTopic } = useStore();
+  const { state, addCustomTopic } = useStore();
+  const t = TEXT[state.language];
 
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState('');
@@ -103,50 +196,50 @@ export function AddTopicForm({ subject }: { subject: Subject }) {
       <div>
         {saved && (
           <div className="mb-4">
-            <Alert tone="success">Тема добавлена — она уже доступна ученикам.</Alert>
+            <Alert tone="success">{t.added}</Alert>
           </div>
         )}
-        <Button onClick={() => setOpen(true)}>+ Добавить тему</Button>
+        <Button onClick={() => setOpen(true)}>{t.addTopic}</Button>
       </div>
     );
   }
 
   return (
     <Card className="space-y-5">
-      <h3 className="font-bold text-ink-900">Новая тема по предмету «{subject.title}»</h3>
+      <h3 className="font-bold text-ink-900">{t.formTitle(subject.title)}</h3>
 
-      <Field label="Название темы">
+      <Field label={t.titleLabel}>
         <input
           type="text"
           value={title}
           onChange={(event) => setTitle(event.target.value)}
-          placeholder="Например, Формулы сокращённого умножения"
+          placeholder={t.titlePlaceholder}
           className={INPUT}
         />
       </Field>
 
-      <Field label="Краткое описание">
+      <Field label={t.summaryLabel}>
         <textarea
           value={summary}
           onChange={(event) => setSummary(event.target.value)}
           rows={2}
-          placeholder="О чём тема и зачем она нужна"
+          placeholder={t.summaryPlaceholder}
           className={INPUT}
         />
       </Field>
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <Field label="Класс">
+        <Field label={t.gradeLabel}>
           <select value={grade} onChange={(e) => setGrade(Number(e.target.value) as Grade)} className={INPUT}>
             {GRADES.map((item) => (
               <option key={item} value={item}>
-                {item} класс
+                {t.gradeOption(item)}
               </option>
             ))}
           </select>
         </Field>
 
-        <Field label="Сложность">
+        <Field label={t.difficultyLabel}>
           <select
             value={difficulty}
             onChange={(e) => setDifficulty(Number(e.target.value) as Difficulty)}
@@ -160,7 +253,7 @@ export function AddTopicForm({ subject }: { subject: Subject }) {
           </select>
         </Field>
 
-        <Field label="Минут на тему">
+        <Field label={t.minutesLabel}>
           <input
             type="number"
             min={5}
@@ -173,9 +266,9 @@ export function AddTopicForm({ subject }: { subject: Subject }) {
       </div>
 
       <div className="border-t border-ink-200 pt-5">
-        <h4 className="font-bold text-ink-900">Задание</h4>
+        <h4 className="font-bold text-ink-900">{t.taskTitle}</h4>
 
-        <Field label="Вопрос" className="mt-3">
+        <Field label={t.questionLabel} className="mt-3">
           <textarea
             value={question}
             onChange={(event) => setQuestion(event.target.value)}
@@ -184,9 +277,7 @@ export function AddTopicForm({ subject }: { subject: Subject }) {
           />
         </Field>
 
-        <p className="mt-4 text-sm font-semibold text-ink-800">
-          Варианты ответа — отметьте правильный
-        </p>
+        <p className="mt-4 text-sm font-semibold text-ink-800">{t.optionsHint}</p>
         <div className="mt-2 space-y-2">
           {options.map((option, index) => (
             <label key={index} className="flex items-center gap-3">
@@ -196,25 +287,25 @@ export function AddTopicForm({ subject }: { subject: Subject }) {
                 checked={correctIndex === index}
                 onChange={() => setCorrectIndex(index)}
                 className="h-4 w-4 accent-[var(--color-brand-500)]"
-                aria-label={`Вариант ${index + 1} — правильный`}
+                aria-label={t.optionCorrect(index + 1)}
               />
               <input
                 type="text"
                 value={option}
                 onChange={(event) => setOption(index, event.target.value)}
-                placeholder={`Вариант ${index + 1}`}
+                placeholder={t.optionPlaceholder(index + 1)}
                 className={INPUT}
               />
             </label>
           ))}
         </div>
 
-        <Field label="Объяснение решения" className="mt-4">
+        <Field label={t.explanationLabel} className="mt-4">
           <textarea
             value={explanation}
             onChange={(event) => setExplanation(event.target.value)}
             rows={3}
-            placeholder="Его увидит ученик после ответа, и на него опирается AI-разбор"
+            placeholder={t.explanationPlaceholder}
             className={INPUT}
           />
         </Field>
@@ -222,10 +313,10 @@ export function AddTopicForm({ subject }: { subject: Subject }) {
 
       <div className="flex flex-wrap gap-3">
         <Button onClick={save} disabled={!canSave}>
-          Добавить тему
+          {t.submit}
         </Button>
         <Button variant="secondary" onClick={() => setOpen(false)}>
-          Отмена
+          {t.cancel}
         </Button>
       </div>
     </Card>

@@ -82,7 +82,7 @@ export async function POST(request: Request): Promise<NextResponse<PlanResponse 
 
   try {
     const result = await generateText({
-      system: planSystem(),
+      system: planSystem(body.language ?? 'ru'),
       prompt: planPrompt(input),
       temperature: 0.5,
       maxOutputTokens: 3500,

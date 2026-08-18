@@ -20,6 +20,7 @@ export const CURRENT_VERSION = 1;
 export function emptyState(): AppState {
   return {
     version: CURRENT_VERSION,
+    language: 'ru',
     profile: null,
     diagnostics: {},
     attempts: [],
@@ -54,6 +55,9 @@ export function loadState(): AppState {
     // и подставляем пустое значение, если тип не тот.
     return {
       version: CURRENT_VERSION,
+      // Состояния, сохранённые до появления мультиязычности, языка не содержат —
+      // подставляем русский, чтобы старый прогресс не сбрасывался.
+      language: parsed.language ?? 'ru',
       profile: parsed.profile ?? null,
       diagnostics: parsed.diagnostics ?? {},
       attempts: Array.isArray(parsed.attempts) ? parsed.attempts : [],

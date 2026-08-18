@@ -6,7 +6,17 @@
  * генерации типов из схемы, которой в MVP пока нет.
  */
 
-import type { AiResponse, ChatMessage, DiagnosticResult, Profile, SubjectId, Task, TaskId, TopicId } from '../types';
+import type {
+  AiResponse,
+  ChatMessage,
+  DiagnosticResult,
+  Language,
+  Profile,
+  SubjectId,
+  Task,
+  TaskId,
+  TopicId,
+} from '../types';
 
 /** Компактное описание темы для запроса плана. Полные данные сервер берёт из реестра. */
 export interface RankedTopicPayload {
@@ -24,6 +34,8 @@ export interface WeakSkillPayload {
 export interface FeedbackRequest {
   taskId: TaskId;
   topicId: TopicId;
+  /** Язык, на котором модель должна ответить. */
+  language: Language;
   /** Индекс варианта (для single) или введённое значение (для numeric). */
   answer: string;
   profile: Profile | null;
@@ -44,6 +56,7 @@ export interface FeedbackResponse extends AiResponse {
 
 export interface PlanRequest {
   subjectId: SubjectId;
+  language: Language;
   profile: Profile | null;
   diagnostic: DiagnosticResult | null;
   ranked: RankedTopicPayload[];
@@ -55,6 +68,7 @@ export type PlanResponse = AiResponse;
 
 export interface ChatRequest {
   question: string;
+  language: Language;
   history: ChatMessage[];
   profile: Profile | null;
   subjectId: SubjectId | null;

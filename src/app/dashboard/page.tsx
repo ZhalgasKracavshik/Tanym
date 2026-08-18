@@ -11,11 +11,132 @@
 import { getSubject, getTopic } from '@/data';
 import { daysUntil, rankTopics, summarize, weakestSkills } from '@/lib/personalization';
 import { useStore } from '@/components/StoreProvider';
+import type { Dict } from '@/lib/i18n';
 import { ButtonLink, Card, EmptyState, ProgressBar, SectionHeader, Skeleton, Stat } from '@/components/ui';
+
+/** Подписи кабинета на трёх языках. Ключи одинаковые — за этим следит TypeScript. */
+const TEXT: Dict<{
+  noProfileTitle: string;
+  noProfileText: string;
+  createProfile: string;
+  greeting: (name: string) => string;
+  gradeLabel: (grade: number) => string;
+  daysLeft: (days: number) => string;
+  noDataTitle: string;
+  noDataText: string;
+  startDiagnostics: string;
+  statTasks: string;
+  statAccuracy: string;
+  correctHint: (n: number) => string;
+  statTopics: string;
+  startedHint: (n: number) => string;
+  statPoints: string;
+  pointsHint: string;
+  topicsTitle: string;
+  topicsDescription: string;
+  topicsEmpty: string;
+  solved: (n: number, total: number) => string;
+  mastered: string;
+  continue: string;
+  weakTitle: string;
+  nextTitle: string;
+  targetHintBefore: string;
+  targetHintLink: string;
+  targetHintAfter: string;
+}> = {
+  ru: {
+    noProfileTitle: 'Профиль ещё не создан',
+    noProfileText: 'Расскажите о себе — класс, предметы и цель, — и кабинет наполнится данными.',
+    createProfile: 'Создать профиль',
+    greeting: (name) => `Привет, ${name}`,
+    gradeLabel: (grade) => `${grade} класс`,
+    daysLeft: (days) => `до цели осталось ${days} дн.`,
+    noDataTitle: 'Пока нет данных о прогрессе',
+    noDataText: 'Пройди диагностику — она займёт 7 минут и покажет, с чего начать.',
+    startDiagnostics: 'Пройти диагностику',
+    statTasks: 'Решено заданий',
+    statAccuracy: 'Точность',
+    correctHint: (n) => `верно ${n}`,
+    statTopics: 'Освоено тем',
+    startedHint: (n) => `начато ${n}`,
+    statPoints: 'Очки',
+    pointsHint: 'за сложность заданий',
+    topicsTitle: 'Прогресс по темам',
+    topicsDescription: 'Темы, которые ты уже начал решать',
+    topicsEmpty: 'Ты ещё не начал ни одной темы. Загляни в план.',
+    solved: (n, total) => `решено ${n} из ${total}`,
+    mastered: 'Освоено',
+    continue: 'Продолжить',
+    weakTitle: 'Слабые места',
+    nextTitle: 'Продолжить обучение',
+    targetHintBefore: 'Укажи дату экзамена в ',
+    targetHintLink: 'профиле',
+    targetHintAfter: ', и появится обратный отсчёт с подсказкой по темпу.',
+  },
+  kk: {
+    noProfileTitle: 'Профиль әлі құрылмаған',
+    noProfileText: 'Өзің туралы айтып бер — сынып, пәндер және мақсат, — сонда кабинет деректерге толады.',
+    createProfile: 'Профиль құру',
+    greeting: (name) => `Сәлем, ${name}`,
+    gradeLabel: (grade) => `${grade}-сынып`,
+    daysLeft: (days) => `мақсатқа ${days} күн қалды`,
+    noDataTitle: 'Әзірге прогресс туралы дерек жоқ',
+    noDataText: 'Диагностикадан өт — ол 7 минут алады және неден бастау керегін көрсетеді.',
+    startDiagnostics: 'Диагностикадан өту',
+    statTasks: 'Шығарылған тапсырма',
+    statAccuracy: 'Дәлдік',
+    correctHint: (n) => `дұрыс ${n}`,
+    statTopics: 'Меңгерілген тақырып',
+    startedHint: (n) => `басталғаны ${n}`,
+    statPoints: 'Ұпай',
+    pointsHint: 'тапсырма күрделілігі үшін',
+    topicsTitle: 'Тақырыптар бойынша прогресс',
+    topicsDescription: 'Сен шығара бастаған тақырыптар',
+    topicsEmpty: 'Сен әлі бірде-бір тақырыпты бастаған жоқсың. Жоспарға кіріп көр.',
+    solved: (n, total) => `${total} ішінен ${n} шығарылды`,
+    mastered: 'Меңгерілді',
+    continue: 'Жалғастыру',
+    weakTitle: 'Әлсіз тұстар',
+    nextTitle: 'Оқуды жалғастыру',
+    targetHintBefore: 'Емтихан күнін ',
+    targetHintLink: 'профильде',
+    targetHintAfter: ' көрсет — сонда кері санақ пен қарқын бойынша кеңес пайда болады.',
+  },
+  en: {
+    noProfileTitle: 'No profile yet',
+    noProfileText: 'Tell us about yourself — grade, subjects and goal — and the dashboard will fill up.',
+    createProfile: 'Create profile',
+    greeting: (name) => `Hi, ${name}`,
+    gradeLabel: (grade) => `Grade ${grade}`,
+    daysLeft: (days) => `${days} days left until your goal`,
+    noDataTitle: 'No progress data yet',
+    noDataText: 'Take the diagnostic — it takes 7 minutes and shows where to start.',
+    startDiagnostics: 'Take the diagnostic',
+    statTasks: 'Tasks solved',
+    statAccuracy: 'Accuracy',
+    correctHint: (n) => `${n} correct`,
+    statTopics: 'Topics mastered',
+    startedHint: (n) => `${n} started`,
+    statPoints: 'Points',
+    pointsHint: 'for task difficulty',
+    topicsTitle: 'Progress by topic',
+    topicsDescription: 'Topics you have already started',
+    topicsEmpty: 'You have not started any topic yet. Take a look at your plan.',
+    solved: (n, total) => `${n} of ${total} solved`,
+    mastered: 'Mastered',
+    continue: 'Continue',
+    weakTitle: 'Weak spots',
+    nextTitle: 'Keep learning',
+    targetHintBefore: 'Set your exam date in your ',
+    targetHintLink: 'profile',
+    targetHintAfter: ' and a countdown with pacing tips will appear.',
+  },
+};
 
 export default function DashboardPage() {
   const { state, hydrated } = useStore();
   const profile = state.profile;
+  const t = TEXT[state.language];
 
   if (!hydrated) {
     return (
@@ -32,9 +153,9 @@ export default function DashboardPage() {
       <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
         <EmptyState
           icon="🎒"
-          title="Профиль ещё не создан"
-          description="Расскажите о себе — класс, предметы и цель, — и кабинет наполнится данными."
-          action={<ButtonLink href="/onboarding">Создать профиль</ButtonLink>}
+          title={t.noProfileTitle}
+          description={t.noProfileText}
+          action={<ButtonLink href="/onboarding">{t.createProfile}</ButtonLink>}
         />
       </div>
     );
@@ -50,21 +171,21 @@ export default function DashboardPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-      <h1 className="text-2xl font-bold text-ink-900 sm:text-3xl">Привет, {profile.name.split(' ')[0]}</h1>
+      <h1 className="text-2xl font-bold text-ink-900 sm:text-3xl">{t.greeting(profile.name.split(' ')[0])}</h1>
       <p className="mt-2 text-ink-500">
-        {profile.grade} класс
-        {daysLeft !== null && daysLeft >= 0 && ` · до цели осталось ${daysLeft} дн.`}
+        {t.gradeLabel(profile.grade)}
+        {daysLeft !== null && daysLeft >= 0 && ` · ${t.daysLeft(daysLeft)}`}
       </p>
 
       {stats.totalAttempts === 0 ? (
         <div className="mt-8">
           <EmptyState
             icon="🚀"
-            title="Пока нет данных о прогрессе"
-            description="Пройди диагностику — она займёт 7 минут и покажет, с чего начать."
+            title={t.noDataTitle}
+            description={t.noDataText}
             action={
               primarySubject && (
-                <ButtonLink href={`/diagnostics/${primarySubject.id}`}>Пройти диагностику</ButtonLink>
+                <ButtonLink href={`/diagnostics/${primarySubject.id}`}>{t.startDiagnostics}</ButtonLink>
               )
             }
           />
@@ -73,18 +194,22 @@ export default function DashboardPage() {
         <>
           {/* Метрики */}
           <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <Stat label="Решено заданий" value={stats.totalAttempts} />
-            <Stat label="Точность" value={`${Math.round(stats.accuracy * 100)}%`} hint={`верно ${stats.correctAttempts}`} />
-            <Stat label="Освоено тем" value={stats.topicsMastered} hint={`начато ${stats.topicsStarted}`} />
-            <Stat label="Очки" value={stats.points} hint="за сложность заданий" />
+            <Stat label={t.statTasks} value={stats.totalAttempts} />
+            <Stat
+              label={t.statAccuracy}
+              value={`${Math.round(stats.accuracy * 100)}%`}
+              hint={t.correctHint(stats.correctAttempts)}
+            />
+            <Stat label={t.statTopics} value={stats.topicsMastered} hint={t.startedHint(stats.topicsStarted)} />
+            <Stat label={t.statPoints} value={stats.points} hint={t.pointsHint} />
           </div>
 
           <div className="mt-8 grid gap-6 lg:grid-cols-3">
             <div className="lg:col-span-2">
-              <SectionHeader title="Прогресс по темам" description="Темы, которые ты уже начал решать" />
+              <SectionHeader title={t.topicsTitle} description={t.topicsDescription} />
               {startedTopics.length === 0 ? (
                 <Card>
-                  <p className="text-sm text-ink-500">Ты ещё не начал ни одной темы. Загляни в план.</p>
+                  <p className="text-sm text-ink-500">{t.topicsEmpty}</p>
                 </Card>
               ) : (
                 <ul className="space-y-3">
@@ -96,13 +221,13 @@ export default function DashboardPage() {
                         <div className="flex flex-wrap items-start justify-between gap-2">
                           <h3 className="font-bold text-ink-900">{topic.title}</h3>
                           <span className="text-sm text-ink-400">
-                            решено {progress.correct} из {topic.tasks.length}
+                            {t.solved(progress.correct, topic.tasks.length)}
                           </span>
                         </div>
-                        <ProgressBar className="mt-3" label="Освоено" value={progress.mastery} />
+                        <ProgressBar className="mt-3" label={t.mastered} value={progress.mastery} />
                         <div className="mt-4">
                           <ButtonLink href={`/learn/${topic.id}`} size="sm" variant="secondary">
-                            Продолжить
+                            {t.continue}
                           </ButtonLink>
                         </div>
                       </Card>
@@ -115,7 +240,7 @@ export default function DashboardPage() {
             <div className="space-y-4">
               {/* Слабые места по всем предметам ученика */}
               <Card>
-                <h2 className="text-lg font-bold text-ink-900">Слабые места</h2>
+                <h2 className="text-lg font-bold text-ink-900">{t.weakTitle}</h2>
                 <div className="mt-4 space-y-5">
                   {profile.subjectIds.map((subjectId) => {
                     const subject = getSubject(subjectId);
@@ -141,7 +266,7 @@ export default function DashboardPage() {
 
               {/* Что делать дальше */}
               <Card>
-                <h2 className="text-lg font-bold text-ink-900">Продолжить обучение</h2>
+                <h2 className="text-lg font-bold text-ink-900">{t.nextTitle}</h2>
                 <ul className="mt-3 space-y-2">
                   {nextTopics.map((item) => (
                     <li key={item.topic.id}>
@@ -160,11 +285,11 @@ export default function DashboardPage() {
               {!profile.targetDate && (
                 <Card className="border-accent-200 bg-accent-50">
                   <p className="text-sm text-accent-700">
-                    Укажи дату экзамена в{' '}
+                    {t.targetHintBefore}
                     <a href="/profile" className="font-semibold underline">
-                      профиле
+                      {t.targetHintLink}
                     </a>
-                    , и появится обратный отсчёт с подсказкой по темпу.
+                    {t.targetHintAfter}
                   </p>
                 </Card>
               )}

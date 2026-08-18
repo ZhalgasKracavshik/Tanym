@@ -1,3 +1,5 @@
+'use client';
+
 /**
  * Метка происхождения текста: сгенерирован живой моделью или собран запасным
  * алгоритмом.
@@ -7,13 +9,16 @@
  * подмена одного другим без предупреждения — это обман пользователя.
  */
 
+import { COMMON, useLang } from '@/lib/i18n';
 import { Badge } from './ui';
 
 export function AiBadge({ live, reason }: { live: boolean; reason?: string }) {
+  const t = COMMON[useLang()];
+
   if (live) {
     return (
       <Badge tone="brand">
-        <span aria-hidden>✨</span> Ответ AI
+        <span aria-hidden>✨</span> {t.aiAnswer}
       </Badge>
     );
   }
@@ -21,7 +26,7 @@ export function AiBadge({ live, reason }: { live: boolean; reason?: string }) {
   return (
     <Badge tone="neutral" className={reason ? 'cursor-help' : ''}>
       <span aria-hidden>📚</span>
-      <span title={reason ? `AI недоступен: ${reason}` : undefined}>Разбор без AI</span>
+      <span title={reason ? `AI: ${reason}` : undefined}>{t.aiFallback}</span>
     </Badge>
   );
 }

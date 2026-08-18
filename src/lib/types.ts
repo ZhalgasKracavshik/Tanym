@@ -9,6 +9,9 @@
  * импортировать и на сервере (API-роуты), и на клиенте (страницы).
  */
 
+/** Язык интерфейса. Объявлен здесь, а не в i18n.ts, чтобы не было кольца импортов. */
+export type Language = 'ru' | 'kk' | 'en';
+
 /** Классы, для которых существует контент (кейс хакатона: 7–12 классы). */
 export type Grade = 7 | 8 | 9 | 10 | 11 | 12;
 
@@ -252,6 +255,8 @@ export interface CachedPlan {
 /** Полное состояние приложения, которое сохраняется в localStorage. */
 export interface AppState {
   version: number;
+  /** Язык интерфейса и язык, на котором отвечает AI. */
+  language: Language;
   profile: Profile | null;
   diagnostics: Record<SubjectId, DiagnosticResult>;
   attempts: TaskAttempt[];

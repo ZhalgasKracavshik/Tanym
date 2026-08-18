@@ -64,7 +64,7 @@ export async function POST(request: Request): Promise<NextResponse<ChatResponse 
 
   try {
     const result = await generateText({
-      system: chatSystem(),
+      system: chatSystem(body.language ?? 'ru'),
       prompt: chatPrompt(input),
       temperature: 0.6,
       maxOutputTokens: 2500,

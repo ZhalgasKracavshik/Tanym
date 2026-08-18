@@ -12,11 +12,110 @@ import { GRADES, LEARNING_GOALS } from '@/lib/types';
 import type { Grade, LearningGoal } from '@/lib/types';
 import { SUBJECTS } from '@/data';
 import { useStore } from '@/components/StoreProvider';
+import type { Dict } from '@/lib/i18n';
 import { Alert, Button, ButtonLink, Card, EmptyState, Skeleton } from '@/components/ui';
+
+/**
+ * Подписи страницы на трёх языках. Ключи одинаковые — за этим следит TypeScript.
+ * Названия целей переводятся по id, как в онбординге: сами данные в LEARNING_GOALS
+ * остаются на русском.
+ */
+const TEXT: Dict<{
+  noProfileTitle: string;
+  noProfileText: string;
+  createProfile: string;
+  title: string;
+  saved: string;
+  name: string;
+  grade: string;
+  subjects: string;
+  goal: string;
+  goals: Record<LearningGoal, string>;
+  targetDate: string;
+  dataTitle: string;
+  dataText: string;
+  resetConfirm: string;
+  reset: string;
+  backToDashboard: string;
+}> = {
+  ru: {
+    noProfileTitle: 'Профиля пока нет',
+    noProfileText: 'Создайте профиль, чтобы им управлять.',
+    createProfile: 'Создать профиль',
+    title: 'Профиль',
+    saved: 'Изменения сохранены.',
+    name: 'Имя',
+    grade: 'Класс',
+    subjects: 'Предметы',
+    goal: 'Цель',
+    goals: {
+      ent: 'Подготовка к ЕНТ',
+      olympiad: 'Олимпиада',
+      review: 'Повторение темы',
+      catchup: 'Догнать программу',
+    },
+    targetDate: 'Дата экзамена или олимпиады',
+    dataTitle: 'Данные',
+    dataText:
+      'Весь прогресс хранится только в этом браузере (localStorage) и никуда не отправляется. Если очистить данные сайта, прогресс пропадёт.',
+    resetConfirm: 'Удалить профиль и весь прогресс? Это действие нельзя отменить.',
+    reset: 'Сбросить весь прогресс',
+    backToDashboard: 'Вернуться в кабинет',
+  },
+  kk: {
+    noProfileTitle: 'Профиль әзірге жоқ',
+    noProfileText: 'Оны басқару үшін алдымен профиль құрыңыз.',
+    createProfile: 'Профиль құру',
+    title: 'Профиль',
+    saved: 'Өзгерістер сақталды.',
+    name: 'Аты',
+    grade: 'Сынып',
+    subjects: 'Пәндер',
+    goal: 'Мақсат',
+    goals: {
+      ent: 'ҰБТ-ға дайындық',
+      olympiad: 'Олимпиада',
+      review: 'Тақырыпты қайталау',
+      catchup: 'Бағдарламаны қуып жету',
+    },
+    targetDate: 'Емтихан немесе олимпиада күні',
+    dataTitle: 'Деректер',
+    dataText:
+      'Барлық прогресс тек осы браузерде (localStorage) сақталады және еш жаққа жіберілмейді. Сайт деректерін тазаласаң, прогресс жоғалады.',
+    resetConfirm: 'Профиль мен бүкіл прогресс жойылсын ба? Бұл әрекетті кері қайтару мүмкін емес.',
+    reset: 'Бүкіл прогрессті тазалау',
+    backToDashboard: 'Кабинетке оралу',
+  },
+  en: {
+    noProfileTitle: 'No profile yet',
+    noProfileText: 'Create a profile to manage it.',
+    createProfile: 'Create profile',
+    title: 'Profile',
+    saved: 'Changes saved.',
+    name: 'Name',
+    grade: 'Grade',
+    subjects: 'Subjects',
+    goal: 'Goal',
+    goals: {
+      ent: 'ENT preparation',
+      olympiad: 'Olympiad',
+      review: 'Topic review',
+      catchup: 'Catch up with the class',
+    },
+    targetDate: 'Exam or olympiad date',
+    dataTitle: 'Data',
+    dataText:
+      'All progress is stored only in this browser (localStorage) and is never sent anywhere. Clearing site data erases it.',
+    resetConfirm: 'Delete your profile and all progress? This cannot be undone.',
+    reset: 'Reset all progress',
+    backToDashboard: 'Back to dashboard',
+  },
+};
 
 export default function ProfilePage() {
   const { state, hydrated, updateProfile, resetAll } = useStore();
   const profile = state.profile;
+  const t = TEXT[state.language];
 
   const [saved, setSaved] = useState(false);
 
@@ -34,9 +133,9 @@ export default function ProfilePage() {
       <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
         <EmptyState
           icon="⚙️"
-          title="Профиля пока нет"
-          description="Создайте профиль, чтобы им управлять."
-          action={<ButtonLink href="/onboarding">Создать профиль</ButtonLink>}
+          title={t.noProfileTitle}
+          description={t.noProfileText}
+          action={<ButtonLink href="/onboarding">{t.createProfile}</ButtonLink>}
         />
       </div>
     );
@@ -58,17 +157,17 @@ export default function ProfilePage() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
-      <h1 className="text-2xl font-bold text-ink-900 sm:text-3xl">Профиль</h1>
+      <h1 className="text-2xl font-bold text-ink-900 sm:text-3xl">{t.title}</h1>
 
       {saved && (
         <div className="mt-4">
-          <Alert tone="success">Изменения сохранены.</Alert>
+          <Alert tone="success">{t.saved}</Alert>
         </div>
       )}
 
       <Card className="mt-6 space-y-6">
         <label className="block">
-          <span className="font-semibold text-ink-800">Имя</span>
+          <span className="font-semibold text-ink-800">{t.name}</span>
           <input
             type="text"
             value={profile.name}
@@ -78,7 +177,7 @@ export default function ProfilePage() {
         </label>
 
         <div>
-          <span className="font-semibold text-ink-800">Класс</span>
+          <span className="font-semibold text-ink-800">{t.grade}</span>
           <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-6">
             {GRADES.map((grade: Grade) => (
               <button
@@ -97,7 +196,7 @@ export default function ProfilePage() {
         </div>
 
         <div>
-          <span className="font-semibold text-ink-800">Предметы</span>
+          <span className="font-semibold text-ink-800">{t.subjects}</span>
           <div className="mt-2 grid gap-2">
             {SUBJECTS.map((subject) => (
               <button
@@ -117,7 +216,7 @@ export default function ProfilePage() {
         </div>
 
         <div>
-          <span className="font-semibold text-ink-800">Цель</span>
+          <span className="font-semibold text-ink-800">{t.goal}</span>
           <div className="mt-2 grid gap-2">
             {LEARNING_GOALS.map((item: { id: LearningGoal; title: string; icon: string }) => (
               <button
@@ -128,14 +227,14 @@ export default function ProfilePage() {
                 }`}
               >
                 <span aria-hidden>{item.icon}</span>
-                <span className="font-semibold text-ink-800">{item.title}</span>
+                <span className="font-semibold text-ink-800">{t.goals[item.id]}</span>
               </button>
             ))}
           </div>
         </div>
 
         <label className="block">
-          <span className="font-semibold text-ink-800">Дата экзамена или олимпиады</span>
+          <span className="font-semibold text-ink-800">{t.targetDate}</span>
           <input
             type="date"
             value={profile.targetDate ?? ''}
@@ -146,28 +245,25 @@ export default function ProfilePage() {
       </Card>
 
       <Card className="mt-6">
-        <h2 className="font-bold text-ink-900">Данные</h2>
-        <p className="mt-2 text-sm text-ink-500">
-          Весь прогресс хранится только в этом браузере (localStorage) и никуда не отправляется.
-          Если очистить данные сайта, прогресс пропадёт.
-        </p>
+        <h2 className="font-bold text-ink-900">{t.dataTitle}</h2>
+        <p className="mt-2 text-sm text-ink-500">{t.dataText}</p>
         <Button
           variant="danger"
           className="mt-4"
           onClick={() => {
             // Действие необратимо, поэтому спрашиваем подтверждение.
-            if (window.confirm('Удалить профиль и весь прогресс? Это действие нельзя отменить.')) {
+            if (window.confirm(t.resetConfirm)) {
               resetAll();
             }
           }}
         >
-          Сбросить весь прогресс
+          {t.reset}
         </Button>
       </Card>
 
       <div className="mt-6">
         <ButtonLink href="/dashboard" variant="secondary">
-          Вернуться в кабинет
+          {t.backToDashboard}
         </ButtonLink>
       </div>
     </div>

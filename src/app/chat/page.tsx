@@ -12,12 +12,94 @@
 import { useEffect, useRef, useState } from 'react';
 import { getSubject } from '@/data';
 import type { ChatRequest, ChatResponse } from '@/lib/ai/contracts';
+import type { Dict } from '@/lib/i18n';
 import { useStore } from '@/components/StoreProvider';
 import { AiBadge } from '@/components/AiBadge';
 import { Button, ButtonLink, Card, EmptyState, Skeleton } from '@/components/ui';
 
+/** Подписи страницы на трёх языках. Ключи одинаковые — за этим следит TypeScript. */
+const TEXT: Dict<{
+  title: string;
+  subtitle: string;
+  noProfileTitle: string;
+  noProfileText: string;
+  createProfile: string;
+  clearHistory: string;
+  confirmClear: string;
+  greeting: (name: string) => string;
+  placeholder: string;
+  send: string;
+  networkError: string;
+  suggestions: string[];
+}> = {
+  ru: {
+    title: 'AI-наставник',
+    subtitle: 'Спроси что угодно по школьной программе.',
+    noProfileTitle: 'Сначала создайте профиль',
+    noProfileText:
+      'Наставник отвечает с учётом класса и цели — без профиля он не знает, на каком уровне объяснять.',
+    createProfile: 'Создать профиль',
+    clearHistory: 'Очистить историю',
+    confirmClear: 'Очистить всю историю разговора?',
+    greeting: (name) =>
+      `Привет, ${name}. Я помогу разобраться с темой, а не решу задание за тебя. С чего начнём?`,
+    placeholder: 'Напиши свой вопрос…',
+    send: 'Отправить',
+    networkError: 'Не получилось связаться с сервером. Проверь интернет и спроси ещё раз.',
+    suggestions: [
+      'Объясни теорему Виета простыми словами',
+      'Как понять, когда применять закон Ома?',
+      'Составь план подготовки к ЕНТ на неделю',
+      'Почему я всё время путаю формулы сокращённого умножения?',
+    ],
+  },
+  kk: {
+    title: 'AI-тәлімгер',
+    subtitle: 'Мектеп бағдарламасы бойынша кез келген нәрсені сұра.',
+    noProfileTitle: 'Алдымен профиль құрыңыз',
+    noProfileText:
+      'Тәлімгер сыныбың мен мақсатыңды ескеріп жауап береді — профильсіз ол қандай деңгейде түсіндіру керегін білмейді.',
+    createProfile: 'Профиль құру',
+    clearHistory: 'Тарихты тазалау',
+    confirmClear: 'Әңгіме тарихы толығымен тазалансын ба?',
+    greeting: (name) =>
+      `Сәлем, ${name}. Мен тапсырманы сенің орныңа шешіп бермеймін, тақырыпты түсінуге көмектесемін. Неден бастаймыз?`,
+    placeholder: 'Сұрағыңды жаз…',
+    send: 'Жіберу',
+    networkError: 'Сервермен байланысу мүмкін болмады. Интернетті тексеріп, қайта сұра.',
+    suggestions: [
+      'Виет теоремасын қарапайым сөзбен түсіндір',
+      'Ом заңын қашан қолдану керегін қалай түсінемін?',
+      'ҰБТ-ға дайындықтың бір апталық жоспарын құр',
+      'Неге мен қысқаша көбейту формулаларын үнемі шатастырамын?',
+    ],
+  },
+  en: {
+    title: 'AI mentor',
+    subtitle: 'Ask anything from the school curriculum.',
+    noProfileTitle: 'Create a profile first',
+    noProfileText:
+      'The mentor answers based on your grade and goal — without a profile it cannot tell what level to explain at.',
+    createProfile: 'Create profile',
+    clearHistory: 'Clear history',
+    confirmClear: 'Clear the entire conversation history?',
+    greeting: (name) =>
+      `Hi, ${name}. I will help you understand the topic rather than solve it for you. Where shall we start?`,
+    placeholder: 'Type your question…',
+    send: 'Send',
+    networkError: 'Could not reach the server. Check your connection and ask again.',
+    suggestions: [
+      "Explain Vieta's formulas in simple terms",
+      "How do I know when to apply Ohm's law?",
+      'Make me a one-week study plan for the national exam',
+      'Why do I keep mixing up the short multiplication formulas?',
+    ],
+  },
+};
+
 export default function ChatPage() {
   const { state, hydrated, appendChat, clearChat } = useStore();
+  const t = TEXT[state.language];
   const [question, setQuestion] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -41,6 +123,7 @@ export default function ChatPage() {
 
     const body: ChatRequest = {
       question: trimmed,
+      language: state.language,
       history: state.chat.slice(-6),
       profile,
       subjectId: subject?.id ?? null,
@@ -58,7 +141,7 @@ export default function ChatPage() {
     } catch {
       appendChat({
         role: 'assistant',
-        content: 'Не получилось связаться с сервером. Проверь интернет и спроси ещё раз.',
+        content: t.networkError,
         at: new Date().toISOString(),
         live: false,
       });
@@ -81,38 +164,33 @@ export default function ChatPage() {
       <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
         <EmptyState
           icon="💬"
-          title="Сначала создайте профиль"
-          description="Наставник отвечает с учётом класса и цели — без профиля он не знает, на каком уровне объяснять."
-          action={<ButtonLink href="/onboarding">Создать профиль</ButtonLink>}
+          title={t.noProfileTitle}
+          description={t.noProfileText}
+          action={<ButtonLink href="/onboarding">{t.createProfile}</ButtonLink>}
         />
       </div>
     );
   }
 
   // Готовые вопросы для пустого экрана: с них проще начать, чем с чистого поля.
-  const suggestions = [
-    'Объясни теорему Виета простыми словами',
-    'Как понять, когда применять закон Ома?',
-    'Составь план подготовки к ЕНТ на неделю',
-    'Почему я всё время путаю формулы сокращённого умножения?',
-  ];
+  const suggestions = t.suggestions;
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col px-4 py-8 sm:px-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-ink-900">AI-наставник</h1>
-          <p className="mt-1 text-sm text-ink-500">Спроси что угодно по школьной программе.</p>
+          <h1 className="text-2xl font-bold text-ink-900">{t.title}</h1>
+          <p className="mt-1 text-sm text-ink-500">{t.subtitle}</p>
         </div>
         {state.chat.length > 0 && (
           <Button
             variant="ghost"
             size="sm"
             onClick={() => {
-              if (window.confirm('Очистить всю историю разговора?')) clearChat();
+              if (window.confirm(t.confirmClear)) clearChat();
             }}
           >
-            Очистить историю
+            {t.clearHistory}
           </Button>
         )}
       </div>
@@ -120,10 +198,7 @@ export default function ChatPage() {
       <div className="mt-6 space-y-3">
         {state.chat.length === 0 && !loading && (
           <Card>
-            <p className="text-ink-700">
-              Привет, {profile.name.split(' ')[0]}. Я помогу разобраться с темой, а не решу задание
-              за тебя. С чего начнём?
-            </p>
+            <p className="text-ink-700">{t.greeting(profile.name.split(' ')[0])}</p>
             <div className="mt-4 grid gap-2">
               {suggestions.map((item) => (
                 <button
@@ -181,11 +256,11 @@ export default function ChatPage() {
             }}
             rows={1}
             disabled={loading}
-            placeholder="Напиши свой вопрос…"
+            placeholder={t.placeholder}
             className="max-h-32 flex-1 resize-none px-3 py-2.5 outline-none disabled:bg-white"
           />
           <Button onClick={() => send(question)} disabled={loading || question.trim() === ''}>
-            Отправить
+            {t.send}
           </Button>
         </div>
       </div>

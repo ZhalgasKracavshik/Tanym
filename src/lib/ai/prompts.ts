@@ -9,11 +9,32 @@
  */
 
 import { correctAnswerText, studentAnswerText } from '../grading';
-import type { ChatMessage, DiagnosticResult, Profile, RankedTopic, SkillMasteryEntry, Subject, Task, Topic } from '../types';
+import type {
+  ChatMessage,
+  DiagnosticResult,
+  Language,
+  Profile,
+  RankedTopic,
+  SkillMasteryEntry,
+  Subject,
+  Task,
+  Topic,
+} from '../types';
 import { LEARNING_GOALS } from '../types';
+import { LANGUAGE_NAME } from '../i18n-shared';
 
-const PERSONA = `Ты — Tanym, AI-наставник для школьников Казахстана 7–12 классов.
-Пиши только на русском языке, простыми словами, обращайся к ученику на «ты».
+/**
+ * Личность наставника. Язык ответа подставляется параметром: интерфейс
+ * переведён на три языка, и модель обязана отвечать на том же, что выбрал ученик.
+ *
+ * Отдельно оговорено, что учебный контент остаётся русским: темы и условия
+ * заданий не переведены, и без этой оговорки модель, отвечая по-казахски,
+ * начинала бы переводить названия тем и путать ученика.
+ */
+const persona = (language: Language) => `Ты — Tanym, AI-наставник для школьников Казахстана 7–12 классов.
+Отвечай ТОЛЬКО на ${LANGUAGE_NAME[language]} языке, простыми словами, обращайся к ученику на «ты».
+Учебные материалы тебе дают на русском языке — это нормально: пойми их и объясни на нужном языке.
+Названия тем и предметов оставляй как есть, не переводи их.
 Тон — спокойный и поддерживающий, без снисходительности и без восторженных восклицаний.
 Не используй markdown-заголовки, списки со звёздочками и эмодзи.
 Пиши короткими абзацами, разделяя их пустой строкой.
@@ -42,8 +63,8 @@ export interface FeedbackInput {
   skillMastery: number;
 }
 
-export function feedbackSystem(): string {
-  return `${PERSONA}
+export function feedbackSystem(language: Language): string {
+  return `${persona(language)}
 
 Твоя задача — разобрать ответ ученика на конкретное задание.
 Опирайся строго на эталонное решение, которое тебе дают: не придумывай свой способ и не меняй ответ.
@@ -85,8 +106,8 @@ export interface PlanInput {
   daysLeft: number | null;
 }
 
-export function planSystem(): string {
-  return `${PERSONA}
+export function planSystem(language: Language): string {
+  return `${persona(language)}
 
 Твоя задача — объяснить ученику его персональный учебный план.
 Тебе дают готовые расчёты системы: уровень по диагностике, слабые навыки в процентах
@@ -139,8 +160,8 @@ export interface ChatInput {
   subject: Subject | null;
 }
 
-export function chatSystem(): string {
-  return `${PERSONA}
+export function chatSystem(language: Language): string {
+  return `${persona(language)}
 
 Ты отвечаешь на вопросы ученика по школьной программе.
 Если вопрос по теме, которую ученик сейчас проходит, объясняй с опорой на неё.

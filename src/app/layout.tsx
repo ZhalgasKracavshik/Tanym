@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { StoreProvider } from '@/components/StoreProvider';
 import { SiteHeader } from '@/components/SiteHeader';
+import { SiteFooter } from '@/components/SiteFooter';
 
 /**
  * Шрифт подключаем с кириллическим набором символов.
@@ -32,11 +33,7 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
         <StoreProvider>
           <SiteHeader />
           <main className="flex-1">{children}</main>
-          <footer className="border-t border-ink-200 bg-white">
-            <div className="mx-auto max-w-6xl px-4 py-6 text-sm text-ink-400 sm:px-6">
-              Tanym — учебный проект для Future Minds Hackathon 2026, трек Social Impact.
-            </div>
-          </footer>
+          <SiteFooter />
         </StoreProvider>
       </body>
     </html>

@@ -14,11 +14,124 @@ import { SUBJECTS } from '@/data';
 import { buildDemoClass, classSkillAverages } from '@/data/demo-class';
 import { computeSkillMastery, summarize } from '@/lib/personalization';
 import { useStore } from '@/components/StoreProvider';
+import type { Dict } from '@/lib/i18n';
 import { AddTopicForm } from './AddTopicForm';
 import { Badge, Button, Card, ProgressBar, SectionHeader, Skeleton, Stat } from '@/components/ui';
 
+/** Подписи страницы на трёх языках. Ключи одинаковые — за этим следит TypeScript. */
+const TEXT: Dict<{
+  title: string;
+  subtitle: string;
+  statStudents: string;
+  statAverage: string;
+  statAtRisk: string;
+  statAtRiskHint: string;
+  statWeakest: string;
+  studentsTitle: string;
+  studentsDescription: string;
+  colStudent: string;
+  colLevel: string;
+  colPoints: string;
+  colActivity: string;
+  you: string;
+  grade: (n: number) => string;
+  today: string;
+  daysAgo: (n: number) => string;
+  problemTitle: string;
+  problemDescription: string;
+  customTitle: string;
+  customDescription: string;
+  taskCount: (n: number) => string;
+  open: string;
+  remove: string;
+  confirmRemove: (title: string) => string;
+}> = {
+  ru: {
+    title: 'Панель учителя',
+    subtitle: 'Где класс проседает и кому нужна помощь — без проверки тетрадей.',
+    statStudents: 'Учеников',
+    statAverage: 'Средний уровень',
+    statAtRisk: 'В зоне риска',
+    statAtRiskHint: 'уровень ниже 50%',
+    statWeakest: 'Слабейшая тема',
+    studentsTitle: 'Ученики',
+    studentsDescription: 'Отсортированы по уровню: кому нужна помощь — сверху',
+    colStudent: 'Ученик',
+    colLevel: 'Уровень',
+    colPoints: 'Очки',
+    colActivity: 'Активность',
+    you: 'вы',
+    grade: (n) => `${n} класс`,
+    today: 'сегодня',
+    daysAgo: (n) => `${n} дн. назад`,
+    problemTitle: 'Проблемные навыки',
+    problemDescription: 'Средний уровень класса по навыку. Это то, что стоит разобрать на уроке ещё раз.',
+    customTitle: 'Свои темы',
+    customDescription: 'Добавленная тема сразу появляется у учеников и решается как обычная',
+    taskCount: (n) => `${n} заданий`,
+    open: 'Открыть',
+    remove: 'Удалить',
+    confirmRemove: (title) => `Удалить тему «${title}»?`,
+  },
+  kk: {
+    title: 'Мұғалім панелі',
+    subtitle: 'Сынып қай жерде қиналады және кімге көмек керек — дәптер тексермей-ақ.',
+    statStudents: 'Оқушы',
+    statAverage: 'Орташа деңгей',
+    statAtRisk: 'Тәуекел аймағында',
+    statAtRiskHint: 'деңгейі 50%-дан төмен',
+    statWeakest: 'Ең әлсіз тақырып',
+    studentsTitle: 'Оқушылар',
+    studentsDescription: 'Деңгейі бойынша сұрыпталған: көмек қажет оқушылар жоғарыда',
+    colStudent: 'Оқушы',
+    colLevel: 'Деңгей',
+    colPoints: 'Ұпай',
+    colActivity: 'Белсенділік',
+    you: 'сіз',
+    grade: (n) => `${n}-сынып`,
+    today: 'бүгін',
+    daysAgo: (n) => `${n} күн бұрын`,
+    problemTitle: 'Проблемалы дағдылар',
+    problemDescription: 'Дағды бойынша сыныптың орташа деңгейі. Осыны сабақта тағы бір рет талдаған жөн.',
+    customTitle: 'Өз тақырыптарым',
+    customDescription: 'Қосылған тақырып оқушыларда бірден шығады және кәдімгі тақырып сияқты шешіледі',
+    taskCount: (n) => `${n} тапсырма`,
+    open: 'Ашу',
+    remove: 'Жою',
+    confirmRemove: (title) => `«${title}» тақырыбы жойылсын ба?`,
+  },
+  en: {
+    title: 'Teacher dashboard',
+    subtitle: 'See where the class falls behind and who needs help — no notebooks to grade.',
+    statStudents: 'Students',
+    statAverage: 'Average level',
+    statAtRisk: 'At risk',
+    statAtRiskHint: 'level below 50%',
+    statWeakest: 'Weakest topic',
+    studentsTitle: 'Students',
+    studentsDescription: 'Sorted by level: those who need help come first',
+    colStudent: 'Student',
+    colLevel: 'Level',
+    colPoints: 'Points',
+    colActivity: 'Activity',
+    you: 'you',
+    grade: (n) => `Grade ${n}`,
+    today: 'today',
+    daysAgo: (n) => `${n} days ago`,
+    problemTitle: 'Weak skills',
+    problemDescription: 'The class average for each skill. These are worth going over in class once more.',
+    customTitle: 'Your own topics',
+    customDescription: 'A topic you add shows up for students right away and works like any other',
+    taskCount: (n) => `${n} tasks`,
+    open: 'Open',
+    remove: 'Delete',
+    confirmRemove: (title) => `Delete the topic “${title}”?`,
+  },
+};
+
 export default function TeacherPage() {
   const { state, hydrated, removeCustomTopic } = useStore();
+  const t = TEXT[state.language];
   const [subjectId, setSubjectId] = useState(SUBJECTS[0].id);
 
   const subject = SUBJECTS.find((item) => item.id === subjectId) ?? SUBJECTS[0];
@@ -80,8 +193,8 @@ export default function TeacherPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-      <h1 className="text-2xl font-bold text-ink-900 sm:text-3xl">Панель учителя</h1>
-      <p className="mt-2 text-ink-500">Где класс проседает и кому нужна помощь — без проверки тетрадей.</p>
+      <h1 className="text-2xl font-bold text-ink-900 sm:text-3xl">{t.title}</h1>
+      <p className="mt-2 text-ink-500">{t.subtitle}</p>
 
       {/* Выбор предмета */}
       <div className="mt-5 flex flex-wrap gap-2">
@@ -102,24 +215,24 @@ export default function TeacherPage() {
 
       {/* Сводка */}
       <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat label="Учеников" value={rows.length} />
-        <Stat label="Средний уровень" value={`${Math.round(classAverage * 100)}%`} />
-        <Stat label="В зоне риска" value={atRisk} hint="уровень ниже 50%" />
-        <Stat label="Слабейшая тема" value={<span className="text-base">{problemSkills[0]?.title ?? '—'}</span>} />
+        <Stat label={t.statStudents} value={rows.length} />
+        <Stat label={t.statAverage} value={`${Math.round(classAverage * 100)}%`} />
+        <Stat label={t.statAtRisk} value={atRisk} hint={t.statAtRiskHint} />
+        <Stat label={t.statWeakest} value={<span className="text-base">{problemSkills[0]?.title ?? '—'}</span>} />
       </div>
 
       <div className="mt-8 grid gap-6 lg:grid-cols-3">
         {/* Таблица учеников */}
         <div className="lg:col-span-2">
-          <SectionHeader title="Ученики" description="Отсортированы по уровню: кому нужна помощь — сверху" />
+          <SectionHeader title={t.studentsTitle} description={t.studentsDescription} />
           <Card className="overflow-x-auto p-0">
             <table className="w-full min-w-125 text-sm">
               <thead>
                 <tr className="border-b border-ink-200 text-left text-xs uppercase tracking-wide text-ink-400">
-                  <th className="px-4 py-3 font-semibold">Ученик</th>
-                  <th className="px-4 py-3 font-semibold">Уровень</th>
-                  <th className="px-4 py-3 font-semibold">Очки</th>
-                  <th className="px-4 py-3 font-semibold">Активность</th>
+                  <th className="px-4 py-3 font-semibold">{t.colStudent}</th>
+                  <th className="px-4 py-3 font-semibold">{t.colLevel}</th>
+                  <th className="px-4 py-3 font-semibold">{t.colPoints}</th>
+                  <th className="px-4 py-3 font-semibold">{t.colActivity}</th>
                 </tr>
               </thead>
               <tbody>
@@ -131,10 +244,10 @@ export default function TeacherPage() {
                         <span className="font-semibold text-ink-800">{row.name}</span>
                         {row.isLive && (
                           <Badge tone="brand" className="ml-2">
-                            вы
+                            {t.you}
                           </Badge>
                         )}
-                        <span className="block text-xs text-ink-400">{row.grade} класс</span>
+                        <span className="block text-xs text-ink-400">{t.grade(row.grade)}</span>
                       </td>
                       <td className="px-4 py-3">
                         <ProgressBar value={row.mastery} showPercent={false} className="w-24" />
@@ -144,7 +257,7 @@ export default function TeacherPage() {
                       </td>
                       <td className="px-4 py-3 tabular-nums text-ink-700">{row.points}</td>
                       <td className="px-4 py-3 text-ink-500">
-                        {row.lastActiveDaysAgo === 0 ? 'сегодня' : `${row.lastActiveDaysAgo} дн. назад`}
+                        {row.lastActiveDaysAgo === 0 ? t.today : t.daysAgo(row.lastActiveDaysAgo)}
                       </td>
                     </tr>
                   ))}
@@ -155,11 +268,9 @@ export default function TeacherPage() {
 
         {/* Проблемные навыки класса */}
         <div>
-          <SectionHeader title="Проблемные навыки" />
+          <SectionHeader title={t.problemTitle} />
           <Card>
-            <p className="mb-4 text-sm text-ink-500">
-              Средний уровень класса по навыку. Это то, что стоит разобрать на уроке ещё раз.
-            </p>
+            <p className="mb-4 text-sm text-ink-500">{t.problemDescription}</p>
             <div className="space-y-4">
               {problemSkills.map((skill) => (
                 <ProgressBar key={skill.skillId} label={skill.title} value={skill.average} />
@@ -171,10 +282,7 @@ export default function TeacherPage() {
 
       {/* Свои темы */}
       <div className="mt-10">
-        <SectionHeader
-          title="Свои темы"
-          description="Добавленная тема сразу появляется у учеников и решается как обычная"
-        />
+        <SectionHeader title={t.customTitle} description={t.customDescription} />
 
         {customTopics.length > 0 && (
           <ul className="mb-4 space-y-2">
@@ -182,23 +290,23 @@ export default function TeacherPage() {
               <Card as="li" key={topic.id} className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <span className="font-semibold text-ink-900">{topic.title}</span>
-                  <span className="ml-2 text-sm text-ink-400">{topic.tasks.length} заданий</span>
+                  <span className="ml-2 text-sm text-ink-400">{t.taskCount(topic.tasks.length)}</span>
                 </div>
                 <div className="flex gap-2">
                   <a
                     href={`/learn/${topic.id}`}
                     className="rounded-lg px-3 py-1.5 text-sm font-semibold text-brand-600 hover:bg-brand-50"
                   >
-                    Открыть
+                    {t.open}
                   </a>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => {
-                      if (window.confirm(`Удалить тему «${topic.title}»?`)) removeCustomTopic(topic.id);
+                      if (window.confirm(t.confirmRemove(topic.title))) removeCustomTopic(topic.id);
                     }}
                   >
-                    Удалить
+                    {t.remove}
                   </Button>
                 </div>
               </Card>

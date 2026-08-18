@@ -23,6 +23,7 @@ import type {
   ChatMessage,
   DiagnosticResult,
   Difficulty,
+  Language,
   Profile,
   SubjectId,
   TaskAttempt,
@@ -32,6 +33,7 @@ import type {
 interface StoreValue {
   state: AppState;
   hydrated: boolean;
+  setLanguage: (language: Language) => void;
   setProfile: (profile: Profile) => void;
   updateProfile: (patch: Partial<Profile>) => void;
   saveDiagnostic: (result: DiagnosticResult) => void;
@@ -67,6 +69,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
     saveState(state);
   }, [state, hydrated]);
+
+  const setLanguage = useCallback((language: Language) => {
+    setState((previous) => ({
+      ...previous,
+      language,
+      // Планы кэшируются вместе с языком: после переключения прежний текст
+      // остался бы на старом языке, поэтому кэш сбрасываем.
+      plans: {},
+    }));
+  }, []);
 
   const setProfile = useCallback((profile: Profile) => {
     setState((previous) => ({ ...previous, profile }));
@@ -142,6 +154,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     () => ({
       state,
       hydrated,
+      setLanguage,
       setProfile,
       updateProfile,
       saveDiagnostic,
@@ -156,6 +169,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [
       state,
       hydrated,
+      setLanguage,
       setProfile,
       updateProfile,
       saveDiagnostic,

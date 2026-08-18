@@ -95,7 +95,7 @@ export async function POST(request: Request): Promise<NextResponse<FeedbackRespo
 
   try {
     const result = await generateText({
-      system: feedbackSystem(),
+      system: feedbackSystem(body.language ?? 'ru'),
       prompt: feedbackPrompt(input),
       temperature: 0.3,
       maxOutputTokens: 2500,

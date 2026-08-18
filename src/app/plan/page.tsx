@@ -14,19 +14,136 @@ import { getSubject } from '@/data';
 import { daysUntil, rankTopics, weakestSkills } from '@/lib/personalization';
 import type { PlanRequest, PlanResponse } from '@/lib/ai/contracts';
 import { useStore } from '@/components/StoreProvider';
+import type { Dict } from '@/lib/i18n';
 import { AiBadge } from '@/components/AiBadge';
 import { Alert, Badge, Button, ButtonLink, Card, EmptyState, ProgressBar, Skeleton } from '@/components/ui';
 
-/** Подписи и цвета для статуса темы. */
+/** Цвета для статуса темы. Подписи — в TEXT, потому что зависят от языка. */
 const STATUS = {
-  weak: { label: 'Слабое место', tone: 'danger' as const },
-  'in-progress': { label: 'В работе', tone: 'accent' as const },
-  mastered: { label: 'Освоено', tone: 'success' as const },
-  new: { label: 'Новая тема', tone: 'neutral' as const },
+  weak: { tone: 'danger' as const },
+  'in-progress': { tone: 'accent' as const },
+  mastered: { tone: 'success' as const },
+  new: { tone: 'neutral' as const },
+};
+
+/** Подписи страницы на трёх языках. Ключи одинаковые — за этим следит TypeScript. */
+const TEXT: Dict<{
+  title: string;
+  subtitle: string;
+  noProfileTitle: string;
+  noProfileText: string;
+  createProfile: string;
+  alertBefore: string;
+  alertLink: string;
+  alertAfter: string;
+  mentorSays: string;
+  refresh: string;
+  recommendedTopics: string;
+  mastered: string;
+  minutes: string;
+  study: string;
+  untilGoal: string;
+  daysLeft: (n: number) => string;
+  weakSpots: string;
+  weakEmpty: string;
+  planError: string;
+  status: Record<'weak' | 'in-progress' | 'mastered' | 'new', string>;
+}> = {
+  ru: {
+    title: 'Мой план',
+    subtitle: 'Темы отобраны под твой уровень, класс и цель.',
+    noProfileTitle: 'Сначала нужен профиль',
+    noProfileText: 'Укажите класс, предметы и цель — без этого план построить не из чего.',
+    createProfile: 'Создать профиль',
+    alertBefore: 'Диагностика по предмету ещё не пройдена — план построен по классу и цели.',
+    alertLink: 'Пройти диагностику',
+    alertAfter: ', чтобы он стал точнее.',
+    mentorSays: 'Что говорит наставник',
+    refresh: 'Обновить',
+    recommendedTopics: 'Рекомендованные темы',
+    mastered: 'Освоено',
+    minutes: 'мин',
+    study: 'Изучать',
+    untilGoal: 'До цели',
+    daysLeft: (n: number) => {
+      const last = n % 10;
+      const teen = n % 100 >= 11 && n % 100 <= 14;
+      if (!teen && last === 1) return 'день остался';
+      if (!teen && last >= 2 && last <= 4) return 'дня осталось';
+      return 'дней осталось';
+    },
+    weakSpots: 'Слабые места',
+    weakEmpty:
+      'Пока данных мало. Пройди диагностику или реши несколько заданий — здесь появятся навыки, которые стоит подтянуть.',
+    planError: 'Не удалось получить объяснение. Рекомендации ниже посчитаны без интернета.',
+    status: {
+      weak: 'Слабое место',
+      'in-progress': 'В работе',
+      mastered: 'Освоено',
+      new: 'Новая тема',
+    },
+  },
+  kk: {
+    title: 'Жоспарым',
+    subtitle: 'Тақырыптар сенің деңгейіңе, сыныбыңа және мақсатыңа қарай таңдалды.',
+    noProfileTitle: 'Алдымен профиль қажет',
+    noProfileText: 'Сыныбыңды, пәндерді және мақсатыңды көрсет — онсыз жоспар құруға негіз жоқ.',
+    createProfile: 'Профиль құру',
+    alertBefore: 'Пән бойынша диагностика әлі өтілмеген — жоспар сынып пен мақсат бойынша құрылды.',
+    alertLink: 'Диагностикадан өту',
+    alertAfter: ', сонда ол дәлірек болады.',
+    mentorSays: 'Тәлімгер не дейді',
+    refresh: 'Жаңарту',
+    recommendedTopics: 'Ұсынылған тақырыптар',
+    mastered: 'Меңгерілді',
+    minutes: 'мин',
+    study: 'Оқу',
+    untilGoal: 'Мақсатқа дейін',
+    daysLeft: () => 'күн қалды',
+    weakSpots: 'Әлсіз тұстар',
+    weakEmpty:
+      'Әзірге дерек аз. Диагностикадан өт немесе бірнеше тапсырма шеш — пысықтауға тұрарлық дағдылар осында шығады.',
+    planError: 'Түсіндірмені алу мүмкін болмады. Төмендегі ұсыныстар интернетсіз есептелген.',
+    status: {
+      weak: 'Әлсіз тұс',
+      'in-progress': 'Оқылуда',
+      mastered: 'Меңгерілді',
+      new: 'Жаңа тақырып',
+    },
+  },
+  en: {
+    title: 'My plan',
+    subtitle: 'Topics picked for your level, grade and goal.',
+    noProfileTitle: 'A profile is needed first',
+    noProfileText: 'Set your grade, subjects and goal — there is nothing to build a plan from without them.',
+    createProfile: 'Create profile',
+    alertBefore: 'The subject diagnostic has not been taken yet — the plan is based on your grade and goal.',
+    alertLink: 'Take the diagnostic',
+    alertAfter: ' to make it more accurate.',
+    mentorSays: 'What your mentor says',
+    refresh: 'Refresh',
+    recommendedTopics: 'Recommended topics',
+    mastered: 'Mastered',
+    minutes: 'min',
+    study: 'Learn',
+    untilGoal: 'Until your goal',
+    daysLeft: (n: number) => (n === 1 ? 'day left' : 'days left'),
+    weakSpots: 'Weak spots',
+    weakEmpty:
+      'Not enough data yet. Take the diagnostic or solve a few tasks — the skills worth working on will show up here.',
+    planError: 'Could not load the explanation. The recommendations below were calculated offline.',
+    status: {
+      weak: 'Weak spot',
+      'in-progress': 'In progress',
+      mastered: 'Mastered',
+      new: 'New topic',
+    },
+  },
 };
 
 export default function PlanPage() {
   const { state, hydrated, cachePlan } = useStore();
+  const t = TEXT[state.language];
   const profile = state.profile;
 
   const [subjectId, setSubjectId] = useState<string | null>(null);
@@ -72,6 +189,7 @@ export default function PlanPage() {
     setLoading(true);
     const body: PlanRequest = {
       subjectId,
+      language: state.language,
       profile,
       diagnostic,
       ranked: ranked.slice(0, 3).map((item) => ({
@@ -111,7 +229,7 @@ export default function PlanPage() {
       }
     } catch {
       // Сеть недоступна — страница остаётся рабочей, план просто не показывается.
-      setPlan({ text: 'Не удалось получить объяснение. Рекомендации ниже посчитаны без интернета.', live: false });
+      setPlan({ text: t.planError, live: false });
     } finally {
       setLoading(false);
     }
@@ -134,9 +252,9 @@ export default function PlanPage() {
       <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
         <EmptyState
           icon="🧭"
-          title="Сначала нужен профиль"
-          description="Укажите класс, предметы и цель — без этого план построить не из чего."
-          action={<ButtonLink href="/onboarding">Создать профиль</ButtonLink>}
+          title={t.noProfileTitle}
+          description={t.noProfileText}
+          action={<ButtonLink href="/onboarding">{t.createProfile}</ButtonLink>}
         />
       </div>
     );
@@ -148,8 +266,8 @@ export default function PlanPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-      <h1 className="text-2xl font-bold text-ink-900 sm:text-3xl">Мой план</h1>
-      <p className="mt-2 text-ink-500">Темы отобраны под твой уровень, класс и цель.</p>
+      <h1 className="text-2xl font-bold text-ink-900 sm:text-3xl">{t.title}</h1>
+      <p className="mt-2 text-ink-500">{t.subtitle}</p>
 
       {/* Переключатель предметов появляется, только если их больше одного */}
       {profile.subjectIds.length > 1 && (
@@ -177,11 +295,11 @@ export default function PlanPage() {
       {!diagnostic && (
         <div className="mt-5">
           <Alert>
-            Диагностика по предмету ещё не пройдена — план построен по классу и цели.{' '}
+            {t.alertBefore}{' '}
             <a href={`/diagnostics/${subject.id}`} className="font-semibold underline">
-              Пройти диагностику
+              {t.alertLink}
             </a>
-            , чтобы он стал точнее.
+            {t.alertAfter}
           </Alert>
         </div>
       )}
@@ -191,11 +309,11 @@ export default function PlanPage() {
         <div className="space-y-4 lg:col-span-2">
           <Card>
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-lg font-bold text-ink-900">Что говорит наставник</h2>
+              <h2 className="text-lg font-bold text-ink-900">{t.mentorSays}</h2>
               <div className="flex items-center gap-2">
                 {plan && <AiBadge live={plan.live} reason={plan.fallbackReason} />}
                 <Button size="sm" variant="ghost" onClick={loadPlan} disabled={loading}>
-                  Обновить
+                  {t.refresh}
                 </Button>
               </div>
             </div>
@@ -213,17 +331,17 @@ export default function PlanPage() {
           </Card>
 
           <div>
-            <h2 className="mb-3 text-lg font-bold text-ink-900">Рекомендованные темы</h2>
+            <h2 className="mb-3 text-lg font-bold text-ink-900">{t.recommendedTopics}</h2>
             <ul className="space-y-3">
               {ranked.slice(0, 5).map((item) => (
                 <Card as="li" key={item.topic.id}>
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <h3 className="font-bold text-ink-900">{item.topic.title}</h3>
-                    <Badge tone={STATUS[item.status].tone}>{STATUS[item.status].label}</Badge>
+                    <Badge tone={STATUS[item.status].tone}>{t.status[item.status]}</Badge>
                   </div>
                   <p className="mt-1.5 text-sm text-ink-500">{item.topic.summary}</p>
 
-                  <ProgressBar className="mt-4" label="Освоено" value={item.mastery} />
+                  <ProgressBar className="mt-4" label={t.mastered} value={item.mastery} />
 
                   {/* Причины — самое ценное для защиты: видно, что рекомендация
                       не случайная, а посчитанная */}
@@ -236,9 +354,11 @@ export default function PlanPage() {
                   </ul>
 
                   <div className="mt-4 flex items-center justify-between gap-3">
-                    <span className="text-xs text-ink-400">≈ {item.topic.estimatedMinutes} мин</span>
+                    <span className="text-xs text-ink-400">
+                      ≈ {item.topic.estimatedMinutes} {t.minutes}
+                    </span>
                     <ButtonLink href={`/learn/${item.topic.id}`} size="sm">
-                      Изучать
+                      {t.study}
                     </ButtonLink>
                   </div>
                 </Card>
@@ -251,19 +371,16 @@ export default function PlanPage() {
         <div className="space-y-4">
           {daysLeft !== null && daysLeft >= 0 && (
             <Card>
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-400">До цели</h2>
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-400">{t.untilGoal}</h2>
               <p className="mt-2 text-4xl font-black text-ink-900">{daysLeft}</p>
-              <p className="text-sm text-ink-500">дней осталось</p>
+              <p className="text-sm text-ink-500">{t.daysLeft(daysLeft)}</p>
             </Card>
           )}
 
           <Card>
-            <h2 className="text-lg font-bold text-ink-900">Слабые места</h2>
+            <h2 className="text-lg font-bold text-ink-900">{t.weakSpots}</h2>
             {weak.length === 0 ? (
-              <p className="mt-3 text-sm text-ink-500">
-                Пока данных мало. Пройди диагностику или реши несколько заданий — здесь появятся
-                навыки, которые стоит подтянуть.
-              </p>
+              <p className="mt-3 text-sm text-ink-500">{t.weakEmpty}</p>
             ) : (
               <div className="mt-4 space-y-4">
                 {weak.map((item) => (
