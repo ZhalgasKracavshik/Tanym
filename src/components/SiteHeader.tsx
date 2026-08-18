@@ -23,6 +23,8 @@ const TEXT: Dict<{
   archive: string;
   events: string;
   marketplace: string;
+  announcements: string;
+  leaderboard: string;
   mentor: string;
   teacher: string;
   start: string;
@@ -38,6 +40,8 @@ const TEXT: Dict<{
     archive: 'Архив',
     events: 'Афиша',
     marketplace: 'Возможности',
+    announcements: 'Объявления',
+    leaderboard: 'Рейтинг',
     mentor: 'Наставник',
     teacher: 'Учителю',
     start: 'Начать',
@@ -53,6 +57,8 @@ const TEXT: Dict<{
     archive: 'Мұрағат',
     events: 'Афиша',
     marketplace: 'Мүмкіндіктер',
+    announcements: 'Хабарландырулар',
+    leaderboard: 'Рейтинг',
     mentor: 'Тәлімгер',
     teacher: 'Мұғалімге',
     start: 'Бастау',
@@ -68,6 +74,8 @@ const TEXT: Dict<{
     archive: 'Archive',
     events: 'Events',
     marketplace: 'Opportunities',
+    announcements: 'Announcements',
+    leaderboard: 'Leaderboard',
     mentor: 'Mentor',
     teacher: 'For teachers',
     start: 'Start',
@@ -87,12 +95,14 @@ export function SiteHeader() {
   const profile = state.profile;
 
   const NAV = [
+    { href: '/announcements', label: t.announcements },
     { href: '/plan', label: t.plan },
     { href: '/dashboard', label: t.dashboard },
     { href: '/archive', label: t.archive },
     { href: '/events', label: t.events },
     { href: '/marketplace', label: t.marketplace },
     { href: '/achievements', label: t.achievements },
+    { href: '/leaderboard', label: t.leaderboard },
     { href: '/chat', label: t.mentor },
     { href: '/teacher', label: t.teacher },
   ];

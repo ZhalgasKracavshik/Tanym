@@ -279,6 +279,13 @@ export interface AppState {
   eventRegistrations: string[];
   /** Объявления маркетплейса, размещённые самим пользователем. */
   myListings: Listing[];
+  /** Прочитанные объявления администрации — по ним считается счётчик непрочитанного. */
+  readAnnouncements: string[];
+  /**
+   * Скрывать ли имя в школьном лидерборде.
+   * Хранится у ученика, а не у школы: это его решение, а не настройка админа.
+   */
+  leaderboardAnonymous: boolean;
   /** Темы, добавленные учителем через панель управления. */
   customTopics: Topic[];
   plans: Record<SubjectId, CachedPlan>;

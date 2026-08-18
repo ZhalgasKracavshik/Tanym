@@ -43,6 +43,8 @@ interface StoreValue {
   markAchievementsSeen: (ids: string[]) => void;
   toggleEventRegistration: (eventId: string) => void;
   addListing: (listing: Listing) => void;
+  markAnnouncementsRead: (ids: string[]) => void;
+  setLeaderboardAnonymous: (anonymous: boolean) => void;
   removeListing: (listingId: string) => void;
   addCustomTopic: (topic: Topic) => void;
   removeCustomTopic: (topicId: string) => void;
@@ -160,6 +162,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
+  const markAnnouncementsRead = useCallback((ids: string[]) => {
+    if (ids.length === 0) return;
+    setState((previous) => ({
+      ...previous,
+      readAnnouncements: [...new Set([...previous.readAnnouncements, ...ids])],
+    }));
+  }, []);
+
+  const setLeaderboardAnonymous = useCallback((anonymous: boolean) => {
+    setState((previous) => ({ ...previous, leaderboardAnonymous: anonymous }));
+  }, []);
+
   const addCustomTopic = useCallback((topic: Topic) => {
     setState((previous) => ({ ...previous, customTopics: [...previous.customTopics, topic] }));
   }, []);
@@ -201,6 +215,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       toggleEventRegistration,
       addListing,
       removeListing,
+      markAnnouncementsRead,
+      setLeaderboardAnonymous,
       addCustomTopic,
       removeCustomTopic,
       cachePlan,
@@ -220,6 +236,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       toggleEventRegistration,
       addListing,
       removeListing,
+      markAnnouncementsRead,
+      setLeaderboardAnonymous,
       addCustomTopic,
       removeCustomTopic,
       cachePlan,
