@@ -222,12 +222,26 @@ export default function TeacherPage() {
 
       {/* Сводка */}
       <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat label={t.statStudents} value={rows.length} />
-        <Stat label={t.statAverage} value={`${Math.round(classAverage * 100)}%`} />
-        <Stat label={t.statAtRisk} value={atRisk} hint={t.statAtRiskHint} />
+        <Stat label={t.statStudents} value={rows.length} icon="user" />
+        <Stat
+          label={t.statAverage}
+          value={`${Math.round(classAverage * 100)}%`}
+          icon="chart"
+          progress={classAverage}
+        />
+        {/* Доля учеников в зоне риска нагляднее числа: видно, это трое из
+            тридцати или девять из тринадцати. */}
+        <Stat
+          label={t.statAtRisk}
+          value={atRisk}
+          icon="alert"
+          progress={rows.length > 0 ? atRisk / rows.length : 0}
+          progressNote={t.statAtRiskHint}
+        />
         <Stat
           label={t.statWeakest}
           value={<span className="text-base">{problemSkills[0]?.title ?? t.noData}</span>}
+          icon="target"
         />
       </div>
 

@@ -239,20 +239,60 @@ export function Alert({ tone = 'info', children }: { tone?: AlertTone; children:
 /*  Статистика                                                         */
 /* ------------------------------------------------------------------ */
 
+/**
+ * Карточка метрики.
+ *
+ * Порядок элементов важен: сначала мелкая подпись, потом крупное число.
+ * Взгляд идёт по числам сверху вниз, а подписи читаются только там, где число
+ * заинтересовало. Если поменять местами, глазу придётся каждый раз
+ * перепрыгивать через текст.
+ *
+ * Необязательная полоса внизу показывает долю от предела. Она появляется только
+ * когда предел действительно есть: полоса без верхней границы ничего не значит.
+ */
 export function Stat({
   label,
   value,
   hint,
+  icon,
+  progress,
+  progressNote,
 }: {
   label: string;
   value: ReactNode;
   hint?: string;
+  icon?: IconName;
+  /** Доля заполнения 0..1. Без неё полоса не рисуется. */
+  progress?: number;
+  /** Подпись справа под полосой, обычно вида «7 из 10». */
+  progressNote?: string;
 }) {
+  const percent = progress === undefined ? null : Math.round(Math.min(1, Math.max(0, progress)) * 100);
+
   return (
-    <div className="rounded-xl border border-ink-200 bg-white p-4">
-      <div className="text-xs font-medium uppercase tracking-wide text-ink-400">{label}</div>
+    <div className="rounded-xl border border-ink-200 bg-white p-4 transition-all duration-150 hover:border-ink-300 hover:shadow-[var(--shadow-lift)]">
+      <div className="flex items-start justify-between gap-2">
+        <span className="text-xs font-medium uppercase tracking-wide text-ink-400">{label}</span>
+        {icon && <Icon name={icon} size={16} className="text-ink-300" />}
+      </div>
+
       <div className="mt-1 text-2xl font-bold tabular-nums text-ink-900">{value}</div>
       {hint && <div className="mt-0.5 text-xs text-ink-400">{hint}</div>}
+
+      {percent !== null && (
+        <>
+          <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-ink-100">
+            <div
+              className="h-full rounded-full bg-brand-500 transition-all duration-500"
+              style={{ width: `${percent}%` }}
+            />
+          </div>
+          <div className="mt-2 flex items-center justify-between text-xs">
+            <span className="font-semibold tabular-nums text-brand-600">{percent}%</span>
+            {progressNote && <span className="tabular-nums text-ink-400">{progressNote}</span>}
+          </div>
+        </>
+      )}
     </div>
   );
 }

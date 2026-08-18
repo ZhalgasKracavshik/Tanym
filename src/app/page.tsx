@@ -21,6 +21,12 @@ const TEXT: Dict<{
   heroText: string;
   ctaStart: string;
   ctaDiagnostics: string;
+  proofLabel: string;
+  mockPlanTitle: string;
+  mockMentor: string;
+  mockWeak: string;
+  mockMastered: string;
+  mockMentorText: string;
   problemsTitle: string;
   /** Проблемы из кейса хакатона — то, ради чего продукт существует. */
   problems: { icon: IconName; title: string; text: string }[];
@@ -41,6 +47,13 @@ const TEXT: Dict<{
       'Tanym измеряет твой уровень по каждой теме, строит персональный план и разбирает каждую ошибку. Как репетитор, только бесплатно и в любое время.',
     ctaStart: 'Начать обучение',
     ctaDiagnostics: 'Пройти диагностику',
+    proofLabel: 'Уже готово к работе',
+    mockPlanTitle: 'Мой план',
+    mockMentor: 'Что говорит наставник',
+    mockWeak: 'Слабое место',
+    mockMastered: 'Освоено',
+    mockMentorText:
+      'Диагностика показала 34% по линейным уравнениям. Начни с них: на них опираются квадратные, и без этой базы дальше будет тяжело.',
     problemsTitle: 'Почему это важно',
     problems: [
       {
@@ -82,6 +95,13 @@ const TEXT: Dict<{
       'Tanym әр тақырып бойынша деңгейіңді өлшейді, жеке жоспар құрады және әр қатеңді талдап береді. Репетитор сияқты, тек тегін әрі кез келген уақытта.',
     ctaStart: 'Оқуды бастау',
     ctaDiagnostics: 'Диагностикадан өту',
+    proofLabel: 'Жұмысқа дайын',
+    mockPlanTitle: 'Жоспарым',
+    mockMentor: 'Тәлімгер не дейді',
+    mockWeak: 'Әлсіз тұс',
+    mockMastered: 'Меңгерілді',
+    mockMentorText:
+      'Диагностика сызықтық теңдеулер бойынша 34% көрсетті. Соларды бастап шеш: квадрат теңдеулер соған сүйенеді, бұл негізсіз әрі қарай қиын болады.',
     problemsTitle: 'Бұл неге маңызды',
     problems: [
       {
@@ -129,6 +149,13 @@ const TEXT: Dict<{
       'Tanym measures your level topic by topic, builds a personal study plan and explains every mistake. Like a tutor, only free and available any time.',
     ctaStart: 'Start learning',
     ctaDiagnostics: 'Take the assessment',
+    proofLabel: 'Ready to use',
+    mockPlanTitle: 'My plan',
+    mockMentor: 'What your mentor says',
+    mockWeak: 'Weak spot',
+    mockMastered: 'Mastered',
+    mockMentorText:
+      'The assessment put you at 34% on linear equations. Start there: quadratics build on them, and without that base the rest gets hard.',
     problemsTitle: 'Why this matters',
     problems: [
       {
@@ -171,21 +198,143 @@ const TEXT: Dict<{
 export default function HomePage() {
   const t = TEXT[useLang()];
 
+  // Цифры берём из самого контента, а не пишем руками: добавится тема,
+  // и строка на первом экране обновится сама.
+  //
+  // В счёт заданий входят и диагностические: ученик решает их наравне
+  // с остальными, и не показать их значило бы занизить объём продукта.
+  const totalTopics = SUBJECTS.reduce((sum, subject) => sum + subject.topics.length, 0);
+  const totalTasks = SUBJECTS.reduce(
+    (sum, subject) =>
+      sum +
+      subject.diagnostic.length +
+      subject.topics.reduce((count, topic) => count + topic.tasks.length, 0),
+    0,
+  );
+
   return (
     <div>
-      {/* Первый экран: за 15 секунд должно стать понятно, что это и кому */}
-      <section className="bg-gradient-to-b from-brand-50 to-ink-50">
-        <div className="mx-auto max-w-4xl px-4 py-16 text-center sm:px-6 sm:py-24">
-          <p className="mb-4 text-sm font-bold uppercase tracking-widest text-brand-600">{t.kicker}</p>
-          <h1 className="text-3xl font-black leading-tight text-ink-900 sm:text-5xl">{t.heroTitle}</h1>
-          <p className="mx-auto mt-5 max-w-2xl text-base text-ink-500 sm:text-lg">{t.heroText}</p>
-          <div className="mt-8 flex flex-wrap justify-center gap-3">
-            <ButtonLink href="/onboarding" size="lg">
+      {/*
+        Первый экран.
+
+        Композиция построена на вертикальных линиях, которые продолжают поля
+        контейнера сверху донизу. Приём из редакционной вёрстки: линии задают
+        колонку и удерживают взгляд по центру, поэтому крупный заголовок
+        не расползается по ширине экрана.
+
+        Под текстом стоит макет самого продукта. Ученик и жюри видят, что внутри,
+        не нажимая ни одной кнопки, и это снимает главный вопрос любого лендинга:
+        что там вообще происходит.
+      */}
+      <section className="border-b border-ink-200 bg-white">
+        <div className="mx-auto max-w-6xl border-x border-ink-200 px-6 py-14 text-center sm:py-20">
+          <p className="animate-fade-up text-xs font-bold uppercase tracking-[0.2em] text-brand-600">
+            {t.kicker}
+          </p>
+
+          <h1
+            className="animate-fade-up mx-auto mt-6 max-w-4xl text-4xl font-semibold leading-[1.08] text-ink-900 sm:text-6xl"
+            style={{ animationDelay: '60ms' }}
+          >
+            {t.heroTitle}
+          </h1>
+
+          <p
+            className="animate-fade-up mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-ink-400"
+            style={{ animationDelay: '120ms' }}
+          >
+            {t.heroText}
+          </p>
+
+          <div
+            className="animate-fade-up mt-9 flex flex-wrap justify-center gap-3"
+            style={{ animationDelay: '180ms' }}
+          >
+            {/* Скруглённая до предела кнопка: форма отличает главное действие
+                от прямоугольных кнопок внутри продукта */}
+            <ButtonLink href="/onboarding" size="lg" className="rounded-full px-9">
               {t.ctaStart}
             </ButtonLink>
-            <ButtonLink href="/onboarding" size="lg" variant="secondary">
+            <ButtonLink href="/onboarding" size="lg" variant="secondary" className="rounded-full px-9">
               {t.ctaDiagnostics}
             </ButtonLink>
+          </div>
+
+          {/*
+            В исходном образце здесь стояло «нас уже 80 000» с чужими аватарками.
+            Выдуманное число пользователей на публичной странице было бы обманом,
+            поэтому вместо него настоящий состав продукта: он проверяется за две
+            секунды переходом в каталог.
+          */}
+          <div className="animate-fade-up mt-9" style={{ animationDelay: '240ms' }}>
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-ink-300">{t.proofLabel}</p>
+            <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+              {SUBJECTS.map((subject) => (
+                <span
+                  key={subject.id}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-ink-200 bg-white px-3 py-1.5 text-xs font-semibold text-ink-600"
+                >
+                  <Icon name={subject.icon} size={14} className="text-brand-500" />
+                  {subject.title}
+                </span>
+              ))}
+              <span className="rounded-full bg-ink-900 px-3 py-1.5 text-xs font-semibold tabular-nums text-white">
+                {t.counts(totalTopics, totalTasks)}
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Макет продукта: показываем экран плана так, как его увидит ученик */}
+      <section className="border-b border-ink-200 bg-white pb-16">
+        <div className="mx-auto max-w-6xl border-x border-ink-200 px-6">
+          <div
+            className="animate-fade-up rounded-3xl border border-ink-200 bg-white p-2 shadow-[0_40px_100px_-30px_rgb(13_27_38_/_0.25)]"
+            style={{ animationDelay: '300ms' }}
+          >
+            <div className="rounded-[1.25rem] bg-gradient-to-b from-ink-100 to-brand-200 px-4 pt-14 sm:px-10 sm:pt-20">
+              {/* Две подложки создают ощущение стопки экранов позади основного */}
+              <div className="relative mx-auto max-w-3xl">
+                <div className="absolute -top-7 left-[7%] h-full w-[86%] rounded-t-2xl border border-ink-200 bg-ink-50" />
+                <div className="absolute -top-3.5 left-[3%] h-full w-[94%] rounded-t-2xl border border-ink-200 bg-white/70" />
+
+                <div className="relative rounded-t-2xl border border-ink-200 bg-white p-5 text-left sm:p-7">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-bold text-ink-900">{t.mockPlanTitle}</span>
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-accent-100 text-xs font-bold text-accent-700">
+                      А
+                    </span>
+                  </div>
+
+                  <div className="mt-5 rounded-xl border border-ink-200 p-4">
+                    <div className="flex items-center gap-2">
+                      <Icon name="sparkles" size={14} className="text-brand-500" />
+                      <span className="text-xs font-bold uppercase tracking-wide text-ink-400">
+                        {t.mockMentor}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-sm leading-relaxed text-ink-700">{t.mockMentorText}</p>
+                  </div>
+
+                  <div className="mt-3 rounded-xl border border-ink-200 p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-sm font-bold text-ink-900">Линейные уравнения и неравенства</span>
+                      <span className="rounded-full bg-danger-50 px-2.5 py-1 text-xs font-semibold text-danger-700">
+                        {t.mockWeak}
+                      </span>
+                    </div>
+                    <div className="mt-4 flex items-center justify-between text-xs font-semibold text-ink-500">
+                      <span>{t.mockMastered}</span>
+                      <span className="tabular-nums">34%</span>
+                    </div>
+                    <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-ink-100">
+                      <div className="h-full w-[34%] rounded-full bg-brand-500" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>

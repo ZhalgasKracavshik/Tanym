@@ -206,9 +206,14 @@ export default function AchievementsPage() {
           </div>
 
           <div className="grid grid-cols-3 gap-3">
-            <Stat label={t.longest} value={state.streak.longest} />
-            <Stat label={t.points} value={stats.points} />
-            <Stat label={t.unlockedCount} value={`${unlocked}/${achievements.length}`} />
+            <Stat label={t.longest} value={state.streak.longest} icon="flame" />
+            <Stat label={t.points} value={stats.points} icon="gem" />
+            <Stat
+              label={t.unlockedCount}
+              value={`${unlocked}/${achievements.length}`}
+              icon="trophy"
+              progress={unlocked / achievements.length}
+            />
           </div>
         </div>
       </Card>

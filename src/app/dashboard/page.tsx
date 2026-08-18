@@ -248,15 +248,25 @@ export default function DashboardPage() {
         <>
           {/* Метрики */}
           <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-5">
-            <Stat label={t.statTasks} value={stats.totalAttempts} />
+            <Stat label={t.statTasks} value={stats.totalAttempts} icon="check" />
+            {/* Полоса рисуется только у метрик с настоящим пределом: точность
+                считается от ста процентов, освоенные темы от начатых. */}
             <Stat
               label={t.statAccuracy}
               value={`${Math.round(stats.accuracy * 100)}%`}
-              hint={t.correctHint(stats.correctAttempts)}
+              icon="crosshair"
+              progress={stats.accuracy}
+              progressNote={t.correctHint(stats.correctAttempts)}
             />
-            <Stat label={t.statTopics} value={stats.topicsMastered} hint={t.startedHint(stats.topicsStarted)} />
-            <Stat label={t.statPoints} value={stats.points} hint={t.pointsHint} />
-            <Stat label={t.streakLabel} value={streakLabel} hint={t.streakHint(streakValue)} />
+            <Stat
+              label={t.statTopics}
+              value={stats.topicsMastered}
+              icon="bookCheck"
+              progress={stats.topicsStarted > 0 ? stats.topicsMastered / stats.topicsStarted : 0}
+              progressNote={t.startedHint(stats.topicsStarted)}
+            />
+            <Stat label={t.statPoints} value={stats.points} hint={t.pointsHint} icon="gem" />
+            <Stat label={t.streakLabel} value={streakLabel} hint={t.streakHint(streakValue)} icon="flame" />
           </div>
 
           <div className="mt-6 grid gap-6 lg:grid-cols-3">
