@@ -11,6 +11,8 @@
 import { getSubject, getTopic } from '@/data';
 import { daysUntil, rankTopics, summarize, weakestSkills } from '@/lib/personalization';
 import { almatyDateIso, almatyYesterdayIso } from '@/lib/date';
+import { EVENTS } from '@/data/events';
+import { daysLeftUntil } from '@/lib/events';
 import { useStore } from '@/components/StoreProvider';
 import type { Dict } from '@/lib/i18n';
 import { ButtonLink, Card, EmptyState, ProgressBar, SectionHeader, Skeleton, Stat } from '@/components/ui';
@@ -43,6 +45,10 @@ const TEXT: Dict<{
   continue: string;
   weakTitle: string;
   nextTitle: string;
+  eventTitle: string;
+  eventIn: (n: number) => string;
+  eventToday: string;
+  allEvents: string;
   targetHintBefore: string;
   targetHintLink: string;
   targetHintAfter: string;
@@ -74,6 +80,10 @@ const TEXT: Dict<{
     continue: 'Продолжить',
     weakTitle: 'Слабые места',
     nextTitle: 'Продолжить обучение',
+    eventTitle: 'Ближайшее событие',
+    eventIn: (n) => (n === 1 ? 'через 1 день' : n < 5 ? `через ${n} дня` : `через ${n} дней`),
+    eventToday: 'сегодня',
+    allEvents: 'Вся афиша',
     targetHintBefore: 'Укажи дату экзамена в ',
     targetHintLink: 'профиле',
     targetHintAfter: ', и появится обратный отсчёт с подсказкой по темпу.',
@@ -105,6 +115,10 @@ const TEXT: Dict<{
     continue: 'Жалғастыру',
     weakTitle: 'Әлсіз тұстар',
     nextTitle: 'Оқуды жалғастыру',
+    eventTitle: 'Жақын іс-шара',
+    eventIn: (n) => `${n} күннен кейін`,
+    eventToday: 'бүгін',
+    allEvents: 'Барлық афиша',
     targetHintBefore: 'Емтихан күнін ',
     targetHintLink: 'профильде',
     targetHintAfter: ' көрсет — сонда кері санақ пен қарқын бойынша кеңес пайда болады.',
@@ -136,6 +150,10 @@ const TEXT: Dict<{
     continue: 'Continue',
     weakTitle: 'Weak spots',
     nextTitle: 'Keep learning',
+    eventTitle: 'Next event',
+    eventIn: (n) => (n === 1 ? 'in 1 day' : `in ${n} days`),
+    eventToday: 'today',
+    allEvents: 'All events',
     targetHintBefore: 'Set your exam date in your ',
     targetHintLink: 'profile',
     targetHintAfter: ' and a countdown with pacing tips will appear.',
@@ -177,6 +195,11 @@ export default function DashboardPage() {
   const streakValue =
     lastActive === almatyDateIso() || lastActive === almatyYesterdayIso() ? state.streak.current : 0;
   const streakLabel = String.fromCodePoint(0x1f525) + ' ' + streakValue;
+
+  // Ближайшее из тех событий, на которые ученик записался и которые ещё не прошли.
+  const upcomingEvent = EVENTS.filter(
+    (event) => state.eventRegistrations.includes(event.id) && daysLeftUntil(event.startsAt) >= 0,
+  ).sort((a, b) => a.startsAt.localeCompare(b.startsAt))[0];
   const daysLeft = daysUntil(profile.targetDate);
   const primarySubject = getSubject(profile.subjectIds[0]);
   const nextTopics = primarySubject ? rankTopics(primarySubject, state, state.customTopics).slice(0, 3) : [];
@@ -297,6 +320,21 @@ export default function DashboardPage() {
                   ))}
                 </ul>
               </Card>
+
+              {upcomingEvent && (
+                <Card>
+                  <h2 className="text-lg font-bold text-ink-900">{t.eventTitle}</h2>
+                  <p className="mt-2 font-semibold text-ink-800">{upcomingEvent.title}</p>
+                  <p className="mt-1 text-sm text-brand-600">
+                    {daysLeftUntil(upcomingEvent.startsAt) === 0
+                      ? t.eventToday
+                      : t.eventIn(daysLeftUntil(upcomingEvent.startsAt))}
+                  </p>
+                  <a href="/events" className="mt-3 inline-block text-sm font-semibold text-brand-600 hover:underline">
+                    {t.allEvents}
+                  </a>
+                </Card>
+              )}
 
               {!profile.targetDate && (
                 <Card className="border-accent-200 bg-accent-50">

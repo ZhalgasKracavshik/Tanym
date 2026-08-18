@@ -40,6 +40,7 @@ interface StoreValue {
   saveDiagnostic: (result: DiagnosticResult) => void;
   recordAttempt: (attempt: Omit<TaskAttempt, 'at'>, topicTaskCount: number) => void;
   markAchievementsSeen: (ids: string[]) => void;
+  toggleEventRegistration: (eventId: string) => void;
   addCustomTopic: (topic: Topic) => void;
   removeCustomTopic: (topicId: string) => void;
   cachePlan: (plan: CachedPlan) => void;
@@ -134,6 +135,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
+  const toggleEventRegistration = useCallback((eventId: string) => {
+    setState((previous) => ({
+      ...previous,
+      // Один и тот же обработчик и записывает, и отменяет запись: у кнопки
+      // всего два состояния, и отдельное действие для отмены было бы лишним.
+      eventRegistrations: previous.eventRegistrations.includes(eventId)
+        ? previous.eventRegistrations.filter((id) => id !== eventId)
+        : [...previous.eventRegistrations, eventId],
+    }));
+  }, []);
+
   const addCustomTopic = useCallback((topic: Topic) => {
     setState((previous) => ({ ...previous, customTopics: [...previous.customTopics, topic] }));
   }, []);
@@ -172,6 +184,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       saveDiagnostic,
       recordAttempt,
       markAchievementsSeen,
+      toggleEventRegistration,
       addCustomTopic,
       removeCustomTopic,
       cachePlan,
@@ -188,6 +201,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       saveDiagnostic,
       recordAttempt,
       markAchievementsSeen,
+      toggleEventRegistration,
       addCustomTopic,
       removeCustomTopic,
       cachePlan,

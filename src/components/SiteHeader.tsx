@@ -21,6 +21,7 @@ const TEXT: Dict<{
   dashboard: string;
   achievements: string;
   archive: string;
+  events: string;
   mentor: string;
   teacher: string;
   start: string;
@@ -34,6 +35,7 @@ const TEXT: Dict<{
     dashboard: 'Кабинет',
     achievements: 'Достижения',
     archive: 'Архив',
+    events: 'Афиша',
     mentor: 'Наставник',
     teacher: 'Учителю',
     start: 'Начать',
@@ -47,6 +49,7 @@ const TEXT: Dict<{
     dashboard: 'Кабинет',
     achievements: 'Жетістіктер',
     archive: 'Мұрағат',
+    events: 'Афиша',
     mentor: 'Тәлімгер',
     teacher: 'Мұғалімге',
     start: 'Бастау',
@@ -60,6 +63,7 @@ const TEXT: Dict<{
     dashboard: 'Dashboard',
     achievements: 'Achievements',
     archive: 'Archive',
+    events: 'Events',
     mentor: 'Mentor',
     teacher: 'For teachers',
     start: 'Start',
@@ -82,6 +86,7 @@ export function SiteHeader() {
     { href: '/plan', label: t.plan },
     { href: '/dashboard', label: t.dashboard },
     { href: '/archive', label: t.archive },
+    { href: '/events', label: t.events },
     { href: '/achievements', label: t.achievements },
     { href: '/chat', label: t.mentor },
     { href: '/teacher', label: t.teacher },

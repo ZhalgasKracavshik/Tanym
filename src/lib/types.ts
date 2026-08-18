@@ -273,6 +273,8 @@ export interface AppState {
   };
   /** Достижения, поздравление о которых ученик уже видел. */
   seenAchievements: string[];
+  /** События афиши, на которые ученик записался. */
+  eventRegistrations: string[];
   /** Темы, добавленные учителем через панель управления. */
   customTopics: Topic[];
   plans: Record<SubjectId, CachedPlan>;

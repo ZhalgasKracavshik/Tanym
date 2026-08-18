@@ -29,6 +29,7 @@ export function emptyState(): AppState {
     points: 0,
     streak: { current: 0, longest: 0, lastActiveDate: null },
     seenAchievements: [],
+    eventRegistrations: [],
     customTopics: [],
     plans: {},
     chat: [],
@@ -69,6 +70,7 @@ export function loadState(): AppState {
       // Поля геймификации появились позже — у старых сохранений их нет.
       streak: parsed.streak ?? { current: 0, longest: 0, lastActiveDate: null },
       seenAchievements: Array.isArray(parsed.seenAchievements) ? parsed.seenAchievements : [],
+      eventRegistrations: Array.isArray(parsed.eventRegistrations) ? parsed.eventRegistrations : [],
       customTopics: Array.isArray(parsed.customTopics) ? parsed.customTopics : [],
       plans: parsed.plans ?? {},
       chat: Array.isArray(parsed.chat) ? parsed.chat : [],
