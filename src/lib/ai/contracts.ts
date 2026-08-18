@@ -76,3 +76,24 @@ export interface ChatRequest {
 }
 
 export type ChatResponse = AiResponse;
+
+/* ------------------------------------------------------------------ */
+/*  Сократовский диалог по заданиям архива                             */
+/* ------------------------------------------------------------------ */
+
+export interface SocraticRequest {
+  taskId: string;
+  language: Language;
+  /** Свободный текст ученика: рассуждение, вопрос или предполагаемый ответ. */
+  message: string;
+  history: ChatMessage[];
+  profile: Profile | null;
+}
+
+export interface SocraticResponse extends AiResponse {
+  /**
+   * Решена ли задача. Значение приходит от детерминированной проверки
+   * на сервере, а не от суждения модели.
+   */
+  solved: boolean;
+}

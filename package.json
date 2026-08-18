@@ -9,7 +9,8 @@
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
     "check-ai": "node scripts/check-ai.mjs",
-    "validate": "node scripts/validate-content.mjs"
+    "validate": "node scripts/validate-content.mjs",
+    "test:answers": "node scripts/test-answers.mjs"
   },
   "dependencies": {
     "next": "16.3.1",

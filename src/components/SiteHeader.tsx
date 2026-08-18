@@ -20,6 +20,7 @@ const TEXT: Dict<{
   plan: string;
   dashboard: string;
   achievements: string;
+  archive: string;
   mentor: string;
   teacher: string;
   start: string;
@@ -32,6 +33,7 @@ const TEXT: Dict<{
     plan: 'Мой план',
     dashboard: 'Кабинет',
     achievements: 'Достижения',
+    archive: 'Архив',
     mentor: 'Наставник',
     teacher: 'Учителю',
     start: 'Начать',
@@ -44,6 +46,7 @@ const TEXT: Dict<{
     plan: 'Жоспарым',
     dashboard: 'Кабинет',
     achievements: 'Жетістіктер',
+    archive: 'Мұрағат',
     mentor: 'Тәлімгер',
     teacher: 'Мұғалімге',
     start: 'Бастау',
@@ -56,6 +59,7 @@ const TEXT: Dict<{
     plan: 'My plan',
     dashboard: 'Dashboard',
     achievements: 'Achievements',
+    archive: 'Archive',
     mentor: 'Mentor',
     teacher: 'For teachers',
     start: 'Start',
@@ -77,6 +81,7 @@ export function SiteHeader() {
   const NAV = [
     { href: '/plan', label: t.plan },
     { href: '/dashboard', label: t.dashboard },
+    { href: '/archive', label: t.archive },
     { href: '/achievements', label: t.achievements },
     { href: '/chat', label: t.mentor },
     { href: '/teacher', label: t.teacher },
