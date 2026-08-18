@@ -136,6 +136,12 @@ export default function ChatPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
+      // Роуты отвечают {error} с кодом 4xx (например, при срабатывании
+      // ограничителя частоты). Без этой проверки такой ответ разбирался бы как
+      // обычный результат: поля пришли бы пустыми, и в прогресс ученика ушла бы
+      // ложная неверная попытка по заданию, которое сервер даже не проверял.
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
       const data: ChatResponse = await response.json();
       appendChat({ role: 'assistant', content: data.text, at: new Date().toISOString(), live: data.live });
     } catch {

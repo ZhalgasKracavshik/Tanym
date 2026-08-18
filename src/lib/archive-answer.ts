@@ -63,6 +63,7 @@ function markerNearNumber(text: string, expected: number): boolean {
 
   while ((match = pattern.exec(text)) !== null) {
     if (Math.abs(Number(match[0]) - expected) >= 0.01) continue;
+    if (isCoefficient(text, match.index, match[0].length)) continue;
 
     // Тридцати символов хватает, чтобы захватить «получается высота» или «ответ»,
     // но не дотянуться до соседнего числа в другой части предложения.
@@ -73,11 +74,31 @@ function markerNearNumber(text: string, expected: number): boolean {
   return false;
 }
 
-/** Состоит ли сообщение только из числа и единиц измерения. */
+/**
+ * Стоит ли число в позиции коэффициента, а не ответа.
+ *
+ * Во фразе «получилось 5y = 10» пятёрка — множитель при переменной, а не итог.
+ * Без этой проверки такой промежуточный шаг засчитывался бы как решение задачи,
+ * ответ которой равен пяти.
+ */
+function isCoefficient(text: string, index: number, length: number): boolean {
+  const next = text[index + length];
+  return next !== undefined && /[a-zA-Zа-яё^]/.test(next);
+}
+
+/**
+ * Состоит ли сообщение только из числа и, возможно, единицы измерения.
+ *
+ * Проверка строгая: сообщение обязано НАЧИНАТЬСЯ с числа. Прежняя версия просто
+ * вырезала все нецифры, из-за чего фраза «у меня 1 вопрос: что делать?»
+ * превращалась в «1» и засчитывалась как ответ на задачу, ответ которой равен
+ * единице.
+ */
 function isBareNumber(text: string, expected: number): boolean {
-  // Убираем всё, кроме цифр, точки и минуса: остаться должно ровно одно число.
-  const digitsOnly = text.replace(/[^\d.\-]/g, '');
-  return digitsOnly !== '' && Math.abs(Number(digitsOnly) - expected) < 0.01;
+  // Число, затем не больше короткого хвоста вроде «м», «тг», «км/ч».
+  const match = text.trim().match(/^(-?\d+(?:\.\d+)?)\s*\D{0,12}$/);
+  if (!match) return false;
+  return Math.abs(Number(match[1]) - expected) < 0.01;
 }
 
 /**
@@ -100,9 +121,18 @@ export function matchesArchiveAnswer(task: ArchiveTask, message: string): boolea
 
     if (!numbersIn(said).some(close)) return false;
 
-    // Число ответа встречается и в условии — значит его могли просто переписать.
-    // В этом случае требуем подтверждение, что ученик именно отвечает.
-    if (numbersIn(prompt).some(close)) {
+    /*
+     * Когда одного упоминания числа мало и нужен явный признак ответа:
+     *
+     * 1. Число ответа есть и в условии — его могли просто переписать оттуда.
+     * 2. Ответ — маленькое целое (до 10). Такие цифры попадаются в обычной речи
+     *    сплошь и рядом: «у меня 1 вопрос», «не знаю, 5 минут думаю», «вижу цикл
+     *    7, 9, 3, 1». Задача с ответом «1» засчитывалась по любой из этих фраз.
+     */
+    const ambiguous =
+      numbersIn(prompt).some(close) || (Number.isInteger(expectedNumber) && Math.abs(expectedNumber) < 10);
+
+    if (ambiguous) {
       return isBareNumber(said, expectedNumber) || markerNearNumber(said, expectedNumber);
     }
 

@@ -8,10 +8,10 @@
  * подстраивается. Всё остальное в приложении обслуживает этот цикл.
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { getSubject, getTopic } from '@/data';
 import { computeSkillMastery, difficultyExplanation, selectTasks } from '@/lib/personalization';
-import type { Difficulty } from '@/lib/types';
+import type { Difficulty, Task } from '@/lib/types';
 import type { Dict } from '@/lib/i18n';
 import type { FeedbackRequest, FeedbackResponse } from '@/lib/ai/contracts';
 import { useStore } from '@/components/StoreProvider';
@@ -158,8 +158,42 @@ export function LearnClient({ topicId }: { topicId: string }) {
   const [loading, setLoading] = useState(false);
   const [solved, setSolved] = useState(0);
 
+  /**
+   * Сбой связи держим отдельно от разбора.
+   *
+   * Раньше в этом случае подставлялся фальшивый разбор с correct: false, и ученик
+   * видел «✗ Пока не верно» — вердикт, которого сервер не выносил. Ответ мог быть
+   * правильным, просто запрос не дошёл.
+   */
+  const [failed, setFailed] = useState(false);
+
+  /**
+   * Подборка заданий фиксируется один раз за заход в тему.
+   *
+   * Раньше список пересчитывался на каждом рендере из state. Как только ученик
+   * отвечал верно, движок относил это задание к решённым и уводил в конец
+   * списка — прямо в тот момент, когда на экране показывался разбор. В карточке
+   * оказывалось условие уже СЛЕДУЮЩЕГО задания рядом с разбором предыдущего,
+   * а по кнопке «Дальше» одно задание пропускалось нерешённым.
+   *
+   * Изменение сложности тоже применяется со следующего захода, а не посреди
+   * темы: перетасовывать задания под пальцем у ученика — плохая идея.
+   */
+  const [sessionTasks, setSessionTasks] = useState<Task[]>([]);
+  const [session, setSession] = useState(0);
+
   const topic = getTopic(topicId, state.customTopics);
   const subject = getSubject(topic?.subjectId);
+
+  useEffect(() => {
+    if (!hydrated || !topic || !subject) return;
+    // Уровень сложности задаёт движок: он растёт и падает по результатам ученика.
+    const difficulty = state.difficulty[subject.id] ?? 2;
+    setSessionTasks(selectTasks(topic, difficulty, state));
+    // Намеренно только по теме и номеру захода: список не должен меняться
+    // от того, что ученик ответил на задание внутри этого же захода.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated, topicId, session]);
 
   if (!hydrated) {
     return (
@@ -183,9 +217,7 @@ export function LearnClient({ topicId }: { topicId: string }) {
     );
   }
 
-  // Уровень сложности задаёт движок: он растёт и падает по результатам ученика.
-  const difficulty = state.difficulty[subject.id] ?? 2;
-  const tasks = selectTasks(topic, difficulty, state);
+  const tasks = sessionTasks;
   const task = tasks[index];
 
   /** Отправляет ответ на проверку и получает разбор. */
@@ -194,6 +226,7 @@ export function LearnClient({ topicId }: { topicId: string }) {
 
     setLoading(true);
     setShowHint(false);
+    setFailed(false);
 
     const mastery = computeSkillMastery(state)[task.skillId]?.mastery ?? 0.5;
     const body: FeedbackRequest = {
@@ -214,6 +247,12 @@ export function LearnClient({ topicId }: { topicId: string }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
+      // Роуты отвечают {error} с кодом 4xx (например, при срабатывании
+      // ограничителя частоты). Без этой проверки такой ответ разбирался бы как
+      // обычный результат: поля пришли бы пустыми, и в прогресс ученика ушла бы
+      // ложная неверная попытка по заданию, которое сервер даже не проверял.
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
       const data: FeedbackResponse = await response.json();
 
       setFeedback(data);
@@ -233,12 +272,8 @@ export function LearnClient({ topicId }: { topicId: string }) {
         topic.tasks.length,
       );
     } catch {
-      setFeedback({
-        text: t.networkError,
-        live: false,
-        correct: false,
-        correctAnswer: '',
-      });
+      // Вердикт не выносим: сервер ответ не проверял.
+      setFailed(true);
     } finally {
       setLoading(false);
     }
@@ -246,6 +281,7 @@ export function LearnClient({ topicId }: { topicId: string }) {
 
   function next() {
     setFeedback(null);
+    setFailed(false);
     setAnswer('');
     setShowHint(false);
     setIndex(index + 1);
@@ -253,9 +289,12 @@ export function LearnClient({ topicId }: { topicId: string }) {
 
   function restart() {
     setFeedback(null);
+    setFailed(false);
     setAnswer('');
     setIndex(0);
     setSolved(0);
+    // Новый заход — новая подборка, уже с учётом изменившейся сложности.
+    setSession((value) => value + 1);
   }
 
   return (
@@ -415,6 +454,12 @@ export function LearnClient({ topicId }: { topicId: string }) {
                   <Skeleton className="h-4 w-full" />
                   <Skeleton className="h-4 w-10/12" />
                 </div>
+              )}
+
+              {failed && !loading && (
+                <p className="mt-5 rounded-xl bg-danger-50 px-4 py-3 text-sm font-semibold text-danger-700">
+                  {t.networkError}
+                </p>
               )}
 
               {/* Результат проверки */}

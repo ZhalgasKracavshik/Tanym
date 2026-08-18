@@ -50,7 +50,11 @@ export async function POST(
 
   const material = getMaterial(task.materialId);
   const language = body.language ?? 'ru';
-  const history = Array.isArray(body.history) ? body.history : [];
+  // Элементы истории тоже проверяем: [null] ронял обращение к message.role
+  // строкой ниже, и роут отвечал 500 вместо отказа или запасного текста.
+  const history = Array.isArray(body.history)
+    ? body.history.filter((message) => Boolean(message) && typeof message === 'object')
+    : [];
 
   // Вердикт выносит код, а не модель.
   const solved = matchesArchiveAnswer(task, body.message);

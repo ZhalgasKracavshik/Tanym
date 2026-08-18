@@ -9,7 +9,7 @@
  * считала сама, текст и список могли бы разойтись.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getSubject } from '@/data';
 import { daysUntil, rankTopics, weakestSkills } from '@/lib/personalization';
 import type { PlanRequest, PlanResponse } from '@/lib/ai/contracts';
@@ -150,6 +150,14 @@ export default function PlanPage() {
   const [plan, setPlan] = useState<PlanResponse | null>(null);
   const [loading, setLoading] = useState(false);
 
+  /**
+   * Номер последнего запроса. Ученик может переключить предмет, не дождавшись
+   * ответа: тогда приходят два ответа, и более медленный (по старому предмету)
+   * затирал более свежий. Ответ применяется, только если его номер всё ещё
+   * последний.
+   */
+  const requestRef = useRef(0);
+
   // Первый выбранный предмет становится активным, как только загрузился профиль.
   useEffect(() => {
     if (profile && subjectId === null) setSubjectId(profile.subjectIds[0] ?? null);
@@ -165,8 +173,14 @@ export default function PlanPage() {
    * Сигнатура состояния: пока она не изменилась, повторный запрос к модели
    * не нужен. Без этого план перезапрашивался бы при каждом заходе на страницу
    * и быстро выжег бы бесплатную квоту.
+   *
+   * Язык входит в сигнатуру обязательно: без него после переключения на казахский
+   * страница переводилась, а объяснение наставника молча оставалось русским.
    */
-  const signature = `${subjectId}|${state.attempts.length}|${ranked.slice(0, 3).map((r) => r.topic.id).join(',')}`;
+  const signature = `${subjectId}|${state.language}|${state.attempts.length}|${ranked
+    .slice(0, 3)
+    .map((r) => r.topic.id)
+    .join(',')}`;
 
   useEffect(() => {
     if (!subject || !subjectId) return;
@@ -185,6 +199,10 @@ export default function PlanPage() {
 
   async function loadPlan() {
     if (!subject || !subjectId) return;
+
+    const requestId = requestRef.current + 1;
+    requestRef.current = requestId;
+    const requestedSubjectId = subjectId;
 
     setLoading(true);
     const body: PlanRequest = {
@@ -211,7 +229,16 @@ export default function PlanPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
+      // Роуты отвечают {error} с кодом 4xx (например, при срабатывании
+      // ограничителя частоты). Без этой проверки такой ответ разбирался бы как
+      // обычный результат: поля пришли бы пустыми, и в прогресс ученика ушла бы
+      // ложная неверная попытка по заданию, которое сервер даже не проверял.
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
       const data: PlanResponse = await response.json();
+
+      // Пока ждали ответ, ученик мог переключить предмет — такой ответ устарел.
+      if (requestRef.current !== requestId) return;
 
       setPlan(data);
 
@@ -220,7 +247,7 @@ export default function PlanPage() {
       // не обновился бы даже после восстановления связи.
       if (data.live) {
         cachePlan({
-          subjectId,
+          subjectId: requestedSubjectId,
           text: data.text,
           live: data.live,
           generatedAt: new Date().toISOString(),
@@ -228,10 +255,12 @@ export default function PlanPage() {
         });
       }
     } catch {
+      if (requestRef.current !== requestId) return;
       // Сеть недоступна — страница остаётся рабочей, план просто не показывается.
       setPlan({ text: t.planError, live: false });
     } finally {
-      setLoading(false);
+      // Индикатор гасит только последний запрос, иначе он погаснет раньше времени.
+      if (requestRef.current === requestId) setLoading(false);
     }
   }
 

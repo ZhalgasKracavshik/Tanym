@@ -39,7 +39,21 @@ export async function POST(request: Request): Promise<NextResponse<PlanResponse 
 
   // Восстанавливаем полные темы по идентификаторам: клиент прислал только id,
   // проценты и причины — весь остальной контент сервер берёт из реестра.
-  const ranked: RankedTopic[] = (body.ranked ?? [])
+  /*
+   * Массивы приводим к безопасному виду до использования.
+   *
+   * Проверять только Array.isArray мало: тело {"ranked": "abc"} прошло бы мимо
+   * `?? []`, а `.map` у строки нет — роут падал бы с ошибкой 500 вместо честного
+   * отказа. Элементы тоже фильтруем: [null] ронял обращение к полю.
+   */
+  const rankedInput = Array.isArray(body.ranked)
+    ? body.ranked.filter((item): item is NonNullable<typeof item> => Boolean(item) && typeof item === 'object')
+    : [];
+  const weakInput = Array.isArray(body.weakSkills)
+    ? body.weakSkills.filter((item): item is NonNullable<typeof item> => Boolean(item) && typeof item === 'object')
+    : [];
+
+  const ranked: RankedTopic[] = rankedInput
     // Явная аннотация нужна, иначе TypeScript выводит status как литерал 'new'
     // и потом отказывается считать результат совместимым с RankedTopic.
     .map((item): RankedTopic | null => {
@@ -57,7 +71,7 @@ export async function POST(request: Request): Promise<NextResponse<PlanResponse 
     .filter((item): item is RankedTopic => item !== null)
     .slice(0, 3);
 
-  const weakSkills: SkillMasteryEntry[] = (body.weakSkills ?? []).map((item) => ({
+  const weakSkills: SkillMasteryEntry[] = weakInput.map((item) => ({
     skill: { id: item.skillId, subjectId: subject.id, title: item.title, grades: [] },
     mastery: item.mastery,
     attempts: 0,

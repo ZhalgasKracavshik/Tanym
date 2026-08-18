@@ -15,7 +15,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { emptyState, loadState, saveState, clearState, createId } from '@/lib/storage';
+import { emptyState, loadState, saveState, clearState, createId, STORAGE_KEY } from '@/lib/storage';
 import { applyAttemptToProgress, nextDifficulty, pointsForAttempt } from '@/lib/personalization';
 import { almatyDateIso, almatyYesterdayIso } from '@/lib/date';
 import type {
@@ -64,6 +64,24 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     setState(loadState());
     setHydrated(true);
+  }, []);
+
+  /**
+   * Синхронизация между вкладками.
+   *
+   * Хранилище пишется целиком, поэтому без этого две открытые вкладки затирали
+   * работу друг друга: ученик решал задания в одной, нажимал что-нибудь во второй —
+   * и та перезаписывала ключ своим устаревшим снимком, унося весь прогресс.
+   * Событие storage приходит только в ДРУГИЕ вкладки, поэтому цикла здесь нет.
+   */
+  useEffect(() => {
+    function handleExternalChange(event: StorageEvent) {
+      if (event.key !== STORAGE_KEY) return;
+      setState(loadState());
+    }
+
+    window.addEventListener('storage', handleExternalChange);
+    return () => window.removeEventListener('storage', handleExternalChange);
   }, []);
 
   // Любое изменение состояния сразу пишем в localStorage.
@@ -199,7 +217,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const resetAll = useCallback(() => {
     clearState();
-    setState(emptyState());
+    // Язык — не часть прогресса. Кнопка обещает удалить профиль и результаты,
+    // а не выкидывать ученика обратно на русский интерфейс.
+    setState((previous) => ({ ...emptyState(), language: previous.language }));
   }, []);
 
   const value = useMemo<StoreValue>(
