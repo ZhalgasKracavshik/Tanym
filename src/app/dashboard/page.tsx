@@ -16,7 +16,8 @@ import { daysLeftUntil } from '@/lib/events';
 import { useStore } from '@/components/StoreProvider';
 import type { Dict } from '@/lib/i18n';
 import { Icon } from '@/components/Icon';
-import { ButtonLink, Card, EmptyState, ProgressBar, SectionHeader, Skeleton, Stat } from '@/components/ui';
+import type { IconName } from '@/components/Icon';
+import { ButtonLink, Card, EmptyState, ProgressBar, SectionHeader, Skeleton } from '@/components/ui';
 
 /** Подписи кабинета на трёх языках. Ключи одинаковые — за этим следит TypeScript. */
 const TEXT: Dict<{
@@ -161,6 +162,38 @@ const TEXT: Dict<{
   },
 };
 
+/**
+ * Второстепенная метрика в строке показателей.
+ *
+ * Отличается от главной только размером числа. Одинаковый кегль у всех цифр
+ * означал бы, что все они одинаково важны, а это неправда: ученик судит о себе
+ * по точности, остальное это подробности.
+ */
+function Metric({
+  label,
+  value,
+  note,
+  icon,
+  accent = false,
+}: {
+  label: string;
+  value: number;
+  note?: string;
+  icon?: IconName;
+  accent?: boolean;
+}) {
+  return (
+    <div className="lg:px-8">
+      <p className="text-xs font-medium uppercase tracking-wide text-ink-400">{label}</p>
+      <p className="mt-1 flex items-center gap-1.5 text-2xl font-semibold tabular-nums text-ink-900">
+        {icon && <Icon name={icon} size={20} className={accent ? 'text-accent-500' : 'text-ink-300'} />}
+        {value}
+      </p>
+      {note && <p className="mt-1 text-xs text-ink-400">{note}</p>}
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const { state, hydrated } = useStore();
   const profile = state.profile;
@@ -199,15 +232,6 @@ export default function DashboardPage() {
   const lastActive = state.streak.lastActiveDate;
   const streakValue =
     lastActive === almatyDateIso() || lastActive === almatyYesterdayIso() ? state.streak.current : 0;
-  // Значение серии — само число. Огонёк рядом рисуется иконкой набора, а не
-  // символом шрифта: так он совпадает по цвету и высоте с остальным интерфейсом.
-  const streakLabel = (
-    <span className="flex items-center gap-2">
-      <Icon name="flame" size={22} className="text-accent-500" />
-      <span className="tabular-nums">{streakValue}</span>
-    </span>
-  );
-
   // Ближайшее из тех событий, на которые ученик записался и которые ещё не прошли.
   const upcomingEvent = EVENTS.filter(
     (event) => state.eventRegistrations.includes(event.id) && daysLeftUntil(event.startsAt) >= 0,
@@ -221,11 +245,24 @@ export default function DashboardPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-      <h1 className="text-2xl font-bold text-ink-900 sm:text-3xl">{t.greeting(profile.name.split(' ')[0])}</h1>
-      <p className="mt-2 text-ink-500">
-        {t.gradeLabel(profile.grade)}
-        {daysLeft !== null && daysLeft >= 0 && ` · ${t.daysLeft(daysLeft)}`}
-      </p>
+      {/*
+        Кабинет открывается иначе, чем остальные страницы, и это намеренно.
+
+        Когда каждый экран начинается одинаковым заголовком с подзаголовком,
+        интерфейс выглядит собранным по шаблону. Здесь ученик приходит смотреть
+        на свои цифры, поэтому первым делом идёт обращение по имени, а класс
+        и обратный отсчёт стоят рядом мелко, как подпись, а не как отдельная
+        строка описания.
+      */}
+      <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+        <h1 className="text-3xl font-semibold text-ink-900 sm:text-4xl">
+          {t.greeting(profile.name.split(' ')[0])}
+        </h1>
+        <p className="text-sm text-ink-400">
+          {t.gradeLabel(profile.grade)}
+          {daysLeft !== null && daysLeft >= 0 && ` · ${t.daysLeft(daysLeft)}`}
+        </p>
+      </div>
 
       {stats.totalAttempts === 0 ? (
         <div className="mt-6">
@@ -246,30 +283,42 @@ export default function DashboardPage() {
         </div>
       ) : (
         <>
-          {/* Метрики */}
-          <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-5">
-            <Stat label={t.statTasks} value={stats.totalAttempts} icon="check" />
-            {/* Полоса рисуется только у метрик с настоящим пределом: точность
-                считается от ста процентов, освоенные темы от начатых. */}
-            <Stat
-              label={t.statAccuracy}
-              value={`${Math.round(stats.accuracy * 100)}%`}
-              icon="crosshair"
-              progress={stats.accuracy}
-              progressNote={t.correctHint(stats.correctAttempts)}
-            />
-            <Stat
+          {/*
+            Метрики лежат прямо на фоне, а не в пяти одинаковых карточках.
+
+            Когда каждый блок на экране это карточка одного веса, у страницы нет
+            главного элемента: глаз не знает, за что зацепиться, и весь экран
+            читается как заготовка. Здесь цифры разделены тонкими линиями,
+            точность вынесена крупнее остальных, потому что это единственная
+            метрика, по которой ученик судит, движется он или нет.
+          */}
+          <div className="mt-8 grid grid-cols-2 gap-x-8 gap-y-6 border-y border-ink-200 py-6 sm:grid-cols-3 lg:grid-cols-5 lg:divide-x lg:divide-ink-200">
+            <div className="lg:pr-8">
+              <p className="text-xs font-medium uppercase tracking-wide text-ink-400">{t.statAccuracy}</p>
+              <p className="mt-1 text-4xl font-semibold tabular-nums text-ink-900">
+                {Math.round(stats.accuracy * 100)}
+                <span className="text-2xl text-ink-300">%</span>
+              </p>
+              <p className="mt-1 text-xs text-ink-400">{t.correctHint(stats.correctAttempts)}</p>
+            </div>
+
+            <Metric label={t.statTasks} value={stats.totalAttempts} />
+            <Metric
               label={t.statTopics}
               value={stats.topicsMastered}
-              icon="bookCheck"
-              progress={stats.topicsStarted > 0 ? stats.topicsMastered / stats.topicsStarted : 0}
-              progressNote={t.startedHint(stats.topicsStarted)}
+              note={t.startedHint(stats.topicsStarted)}
             />
-            <Stat label={t.statPoints} value={stats.points} hint={t.pointsHint} icon="gem" />
-            <Stat label={t.streakLabel} value={streakLabel} hint={t.streakHint(streakValue)} icon="flame" />
+            <Metric label={t.statPoints} value={stats.points} note={t.pointsHint} />
+            <Metric
+              label={t.streakLabel}
+              value={streakValue}
+              note={t.streakHint(streakValue)}
+              icon="flame"
+              accent={streakValue > 0}
+            />
           </div>
 
-          <div className="mt-6 grid gap-6 lg:grid-cols-3">
+          <div className="mt-10 grid gap-6 lg:grid-cols-3">
             <div className="lg:col-span-2">
               <SectionHeader title={t.topicsTitle} description={t.topicsDescription} />
               {startedTopics.length === 0 ? (
