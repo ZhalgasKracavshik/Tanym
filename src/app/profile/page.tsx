@@ -162,7 +162,12 @@ export default function ProfilePage() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
-      <h1 className="text-2xl font-bold text-ink-900 sm:text-3xl">{t.title}</h1>
+      {/* Заголовок с именем в строку: настройки открываются данными
+          пользователя, а не описанием раздела. */}
+      <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+        <h1 className="text-3xl font-semibold text-ink-900 sm:text-4xl">{t.title}</h1>
+        <p className="text-sm text-ink-400">{profile.name}</p>
+      </div>
 
       {saved && (
         <div className="mt-4">

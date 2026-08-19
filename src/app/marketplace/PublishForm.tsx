@@ -20,7 +20,7 @@ import type { Listing, ListingType } from '@/lib/listings';
 import type { Dict } from '@/lib/i18n';
 import { useStore } from '@/components/StoreProvider';
 import { Icon } from '@/components/Icon';
-import { Alert, Button, Card } from '@/components/ui';
+import { Alert, Button, Panel } from '@/components/ui';
 
 const TEXT: Dict<{
   open: string;
@@ -215,8 +215,15 @@ export function PublishForm() {
     );
   }
 
+  /*
+    Форма лежит на панели, а не на карточке.
+
+    Карточка означает самодостаточную единицу, которую можно мысленно перенести
+    на другой экран: объявление, событие. Форма размещения существует только
+    здесь и только пока она открыта, поэтому ей достаточно рамки без тени.
+  */
   return (
-    <Card className="space-y-5">
+    <Panel className="space-y-4 p-5 sm:p-6">
       <h3 className="font-bold text-ink-900">{t.heading}</h3>
 
       <div>
@@ -312,7 +319,7 @@ export function PublishForm() {
         </label>
 
         {!free && (
-          <label className="mt-3 block">
+          <label className="mt-4 block">
             <span className="mb-2 block text-sm font-semibold text-ink-800">{t.priceLabel}</span>
             <input
               type="number"
@@ -334,6 +341,6 @@ export function PublishForm() {
           {t.cancel}
         </Button>
       </div>
-    </Card>
+    </Panel>
   );
 }

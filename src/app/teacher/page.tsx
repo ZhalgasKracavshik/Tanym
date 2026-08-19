@@ -17,16 +17,16 @@ import { useStore } from '@/components/StoreProvider';
 import type { Dict } from '@/lib/i18n';
 import { AddTopicForm } from './AddTopicForm';
 import { Icon } from '@/components/Icon';
-import { Badge, Button, Card, ProgressBar, SectionHeader, Skeleton, Stat } from '@/components/ui';
+import { Badge, Button, Panel, ProgressBar, RailRow, SectionHeader, Skeleton } from '@/components/ui';
 
 /** Подписи страницы на трёх языках. Ключи одинаковые — за этим следит TypeScript. */
 const TEXT: Dict<{
   title: string;
-  subtitle: string;
   statStudents: string;
   statAverage: string;
   statAtRisk: string;
   statAtRiskHint: string;
+  statAtRiskOf: (n: number) => string;
   statWeakest: string;
   studentsTitle: string;
   studentsDescription: string;
@@ -50,11 +50,11 @@ const TEXT: Dict<{
 }> = {
   ru: {
     title: 'Панель учителя',
-    subtitle: 'Видно, где класс проседает и кому нужна помощь. Тетради проверять не нужно.',
     statStudents: 'Учеников',
     statAverage: 'Средний уровень',
     statAtRisk: 'В зоне риска',
     statAtRiskHint: 'уровень ниже 50%',
+    statAtRiskOf: (n) => `из ${n} учеников`,
     statWeakest: 'Слабейшая тема',
     studentsTitle: 'Ученики',
     studentsDescription: 'Отсортированы по уровню: наверху те, кому нужна помощь',
@@ -78,11 +78,11 @@ const TEXT: Dict<{
   },
   kk: {
     title: 'Мұғалім панелі',
-    subtitle: 'Сынып қай жерде қиналатыны және кімге көмек керегі дәптер тексермей-ақ көрінеді.',
     statStudents: 'Оқушы',
     statAverage: 'Орташа деңгей',
     statAtRisk: 'Тәуекел аймағында',
     statAtRiskHint: 'деңгейі 50%-дан төмен',
+    statAtRiskOf: (n) => `${n} оқушының ішінен`,
     statWeakest: 'Ең әлсіз тақырып',
     studentsTitle: 'Оқушылар',
     studentsDescription: 'Деңгейі бойынша сұрыпталған: көмек қажет оқушылар жоғарыда',
@@ -106,11 +106,11 @@ const TEXT: Dict<{
   },
   en: {
     title: 'Teacher dashboard',
-    subtitle: 'See where the class falls behind and who needs help, without grading a single notebook.',
     statStudents: 'Students',
     statAverage: 'Average level',
     statAtRisk: 'At risk',
     statAtRiskHint: 'level below 50%',
+    statAtRiskOf: (n) => `of ${n} students`,
     statWeakest: 'Weakest topic',
     studentsTitle: 'Students',
     studentsDescription: 'Sorted by level: those who need help come first',
@@ -198,11 +198,14 @@ export default function TeacherPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-      <h1 className="text-2xl font-bold text-ink-900 sm:text-3xl">{t.title}</h1>
-      <p className="mt-2 text-ink-500">{t.subtitle}</p>
+      {/*
+        Заголовок без описания: учитель открывает панель, чтобы увидеть цифры
+        класса, а не прочитать, зачем эта панель нужна.
+      */}
+      <h1 className="text-3xl font-semibold text-ink-900 sm:text-4xl">{t.title}</h1>
 
-      {/* Выбор предмета */}
-      <div className="mt-6 flex flex-wrap gap-2">
+      {/* Выбор предмета лежит на голом фоне и отделён линией, а не рамкой карточки */}
+      <div className="mt-10 flex flex-wrap gap-2 border-b border-ink-200 pb-4">
         {SUBJECTS.map((item) => (
           <button
             key={item.id}
@@ -220,36 +223,52 @@ export default function TeacherPage() {
         ))}
       </div>
 
-      {/* Сводка */}
-      <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat label={t.statStudents} value={rows.length} icon="user" />
-        <Stat
-          label={t.statAverage}
-          value={`${Math.round(classAverage * 100)}%`}
-          icon="chart"
-          progress={classAverage}
-        />
-        {/* Доля учеников в зоне риска нагляднее числа: видно, это трое из
-            тридцати или девять из тринадцати. */}
-        <Stat
-          label={t.statAtRisk}
-          value={atRisk}
-          icon="alert"
-          progress={rows.length > 0 ? atRisk / rows.length : 0}
-          progressNote={t.statAtRiskHint}
-        />
-        <Stat
-          label={t.statWeakest}
-          value={<span className="text-base">{problemSkills[0]?.title ?? t.noData}</span>}
-          icon="target"
-        />
+      {/*
+        Сводка лежит на голом фоне между волосяными линиями, а не в четырёх
+        одинаковых плитках. Число учеников в зоне риска набрано крупнее всего:
+        это единственная цифра, ради которой учитель открывает панель, остальное
+        она объясняет. Доля от класса осталась словами рядом: три из тридцати и
+        девять из тринадцати это разные новости.
+      */}
+      <div className="mt-10 grid grid-cols-2 gap-x-8 gap-y-6 border-y border-ink-200 py-6 lg:grid-cols-4 lg:divide-x lg:divide-ink-200">
+        <div className="lg:pr-8">
+          <p className="text-xs font-medium uppercase tracking-wide text-ink-400">{t.statAtRisk}</p>
+          <p className="mt-2 flex items-center gap-2 text-5xl font-semibold tabular-nums text-ink-900">
+            <Icon name="alert" size={28} className={atRisk > 0 ? 'text-danger-500' : 'text-ink-300'} />
+            {atRisk}
+          </p>
+          <p className="mt-2 text-xs tabular-nums text-ink-400">
+            {t.statAtRiskOf(rows.length)}, {t.statAtRiskHint}
+          </p>
+        </div>
+
+        <div className="lg:px-8">
+          <p className="text-xs font-medium uppercase tracking-wide text-ink-400">{t.statStudents}</p>
+          <p className="mt-2 text-2xl font-semibold tabular-nums text-ink-900">{rows.length}</p>
+        </div>
+
+        <div className="lg:px-8">
+          <p className="text-xs font-medium uppercase tracking-wide text-ink-400">{t.statAverage}</p>
+          <p className="mt-2 text-2xl font-semibold tabular-nums text-ink-900">
+            {Math.round(classAverage * 100)}
+            <span className="text-lg text-ink-300">%</span>
+          </p>
+        </div>
+
+        <div className="lg:px-8">
+          <p className="text-xs font-medium uppercase tracking-wide text-ink-400">{t.statWeakest}</p>
+          <p className="mt-2 text-base font-semibold text-ink-900">
+            {problemSkills[0]?.title ?? t.noData}
+          </p>
+        </div>
       </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-3">
+      <div className="mt-10 grid gap-x-8 gap-y-10 lg:grid-cols-3">
         {/* Таблица учеников */}
         <div className="lg:col-span-2">
           <SectionHeader title={t.studentsTitle} description={t.studentsDescription} />
-          <Card className="overflow-x-auto p-0">
+          {/* Таблица это плотные данные, поэтому панель без тени, а не карточка */}
+          <Panel className="overflow-x-auto">
             <table className="w-full min-w-125 text-sm">
               <thead>
                 <tr className="border-b border-ink-200 text-left text-xs uppercase tracking-wide text-ink-400">
@@ -290,58 +309,64 @@ export default function TeacherPage() {
                   ))}
               </tbody>
             </table>
-          </Card>
+          </Panel>
         </div>
 
-        {/* Проблемные навыки класса */}
+        {/* Проблемные навыки класса: этот блок нельзя перенести на другой экран
+            целиком, значит он не карточка */}
         <div>
           <SectionHeader title={t.problemTitle} />
-          <Card>
+          <Panel className="p-5">
             <p className="text-sm text-ink-500">{t.problemDescription}</p>
-            <div className="mt-6 space-y-3">
+            <div className="mt-4 space-y-4">
               {problemSkills.map((skill) => (
                 <ProgressBar key={skill.skillId} label={skill.title} value={skill.average} />
               ))}
             </div>
-          </Card>
+          </Panel>
         </div>
       </div>
 
-      {/* Свои темы */}
-      <div className="mt-6">
+      {/* Свои темы: вспомогательная область, отделена от данных класса паузой */}
+      <div className="mt-16">
         <SectionHeader title={t.customTitle} description={t.customDescription} />
 
         {customTopics.length > 0 && (
-          <ul className="mb-4 space-y-3">
+          <ul className="mb-4 space-y-4">
             {customTopics.map((topic) => (
-              <Card
-                as="li"
-                key={topic.id}
-                className="flex flex-wrap items-center justify-between gap-3 transition-all duration-150 hover:border-brand-300 hover:shadow-[var(--shadow-lift)]"
-              >
-                <div className="flex items-center gap-2">
-                  <Icon name="folder" size={18} className="text-ink-400" />
-                  <span className="font-semibold text-ink-900">{topic.title}</span>
-                  <span className="text-sm tabular-nums text-ink-400">{t.taskCount(topic.tasks.length)}</span>
-                </div>
-                <div className="flex gap-2">
-                  <a
-                    href={`/learn/${topic.id}`}
-                    className="inline-flex items-center rounded-lg px-3 py-1.5 text-sm font-semibold text-brand-600 outline-none transition-all duration-150 hover:bg-brand-50 focus-visible:ring-2 focus-visible:ring-brand-500"
-                  >
-                    {t.open}
-                  </a>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      if (window.confirm(t.confirmRemove(topic.title))) removeCustomTopic(topic.id);
-                    }}
-                  >
-                    {t.remove}
-                  </Button>
-                </div>
-              </Card>
+              /* Список тем это перечисление, поэтому строка с рейкой, а не карточка */
+              <li key={topic.id}>
+                <RailRow
+                  tone="neutral"
+                  interactive
+                  className="flex flex-wrap items-center justify-between gap-3"
+                >
+                  <div className="flex items-center gap-2">
+                    <Icon name="folder" size={18} className="text-ink-400" />
+                    <span className="font-semibold text-ink-900">{topic.title}</span>
+                    <span className="text-sm tabular-nums text-ink-400">
+                      {t.taskCount(topic.tasks.length)}
+                    </span>
+                  </div>
+                  <div className="flex gap-2">
+                    <a
+                      href={`/learn/${topic.id}`}
+                      className="inline-flex items-center rounded-lg px-3 py-1.5 text-sm font-semibold text-brand-600 outline-none transition-all duration-150 hover:bg-brand-50 focus-visible:ring-2 focus-visible:ring-brand-500"
+                    >
+                      {t.open}
+                    </a>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        if (window.confirm(t.confirmRemove(topic.title))) removeCustomTopic(topic.id);
+                      }}
+                    >
+                      {t.remove}
+                    </Button>
+                  </div>
+                </RailRow>
+              </li>
             ))}
           </ul>
         )}

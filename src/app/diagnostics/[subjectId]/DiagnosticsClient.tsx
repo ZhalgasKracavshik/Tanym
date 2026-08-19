@@ -17,7 +17,7 @@ import { scoreDiagnostic } from '@/lib/personalization';
 import type { DiagnosticAnswer, DiagnosticResult, Task } from '@/lib/types';
 import { useStore } from '@/components/StoreProvider';
 import type { Dict } from '@/lib/i18n';
-import { Button, ButtonLink, Card, EmptyState, ProgressBar } from '@/components/ui';
+import { Badge, Button, ButtonLink, EmptyState, Kicker, ProgressBar } from '@/components/ui';
 import { Icon } from '@/components/Icon';
 
 /** Подписи страницы на трёх языках. Ключи одинаковые — за этим следит TypeScript. */
@@ -25,7 +25,7 @@ const TEXT: Dict<{
   notFoundTitle: string;
   notFoundText: string;
   toSubjects: string;
-  introTitle: (subject: string) => string;
+  title: string;
   introText: (count: number) => string;
   start: string;
   question: (index: number, total: number) => string;
@@ -47,7 +47,7 @@ const TEXT: Dict<{
     notFoundTitle: 'Предмет не найден',
     notFoundText: 'Возможно, ссылка устарела. Выберите предмет заново.',
     toSubjects: 'К выбору предметов',
-    introTitle: (subject) => `Диагностика: ${subject}`,
+    title: 'Диагностика',
     introText: (count) =>
       `${count} заданий, примерно 7 минут. Отвечай честно: по результатам построится твой персональный план. Ошибиться не страшно, это не оценка, а замер.`,
     start: 'Начать диагностику',
@@ -70,7 +70,7 @@ const TEXT: Dict<{
     notFoundTitle: 'Пән табылмады',
     notFoundText: 'Сілтеме ескірген болуы мүмкін. Пәнді қайта таңдаңыз.',
     toSubjects: 'Пәндерді таңдауға',
-    introTitle: (subject) => `Диагностика: ${subject}`,
+    title: 'Диагностика',
     introText: (count) =>
       `${count} тапсырма, шамамен 7 минут. Шыныңды жаз: нәтиже бойынша жеке жоспарың құрылады. Қателессең де ештеңе етпейді, бұл баға емес, өлшем.`,
     start: 'Диагностиканы бастау',
@@ -93,7 +93,7 @@ const TEXT: Dict<{
     notFoundTitle: 'Subject not found',
     notFoundText: 'The link may be out of date. Pick a subject again.',
     toSubjects: 'Choose a subject',
-    introTitle: (subject) => `Diagnostic: ${subject}`,
+    title: 'Diagnostic',
     introText: (count) =>
       `${count} questions, about 7 minutes. Answer honestly: your personal plan is built from the result. Mistakes are fine, this is a measurement, not a grade.`,
     start: 'Start the diagnostic',
@@ -132,7 +132,7 @@ export function DiagnosticsClient({ subjectId }: { subjectId: string }) {
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-ink-100 text-ink-400">
           <Icon name="compass" size={28} />
         </div>
-        <div className="mt-3">
+        <div className="mt-4">
           <EmptyState
            
             title={t.notFoundTitle}
@@ -192,16 +192,26 @@ export function DiagnosticsClient({ subjectId }: { subjectId: string }) {
   if (stage === 'intro') {
     return (
       <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6">
-        <Card className="text-center">
-          <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-50 text-brand-600">
-            <Icon name={subject.icon} size={32} />
-          </span>
-          <h1 className="mt-4 text-2xl font-bold text-ink-900 sm:text-3xl">{t.introTitle(subject.title)}</h1>
-          <p className="mt-2 text-ink-500">{t.introText(questions.length)}</p>
-          <Button size="lg" className="mt-6" onClick={() => setStage('quiz')}>
-            {t.start}
-          </Button>
-        </Card>
+        {/*
+          Вступление открывается контекстной строкой: сначала предмет плашкой,
+          под ним название экрана. Раньше здесь стоял тот же одинаковый заголовок
+          с серым подзаголовком, что и на остальных страницах, и по первому экрану
+          нельзя было понять, куда именно попал ученик.
+
+          Карточки тут нет намеренно: вступление занимает экран целиком,
+          перенести его на другой экран нельзя, значит это не самодостаточная
+          единица, а сама страница.
+        */}
+        <Badge tone="brand">
+          <Icon name={subject.icon} size={14} />
+          {subject.title}
+        </Badge>
+        <h1 className="mt-2 text-3xl font-semibold text-ink-900 sm:text-4xl">{t.title}</h1>
+        <p className="mt-4 text-ink-500">{t.introText(questions.length)}</p>
+
+        <Button size="lg" className="mt-10" onClick={() => setStage('quiz')}>
+          {t.start}
+        </Button>
       </div>
     );
   }
@@ -211,53 +221,56 @@ export function DiagnosticsClient({ subjectId }: { subjectId: string }) {
   if (stage === 'quiz' && task) {
     return (
       <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6">
-        <p className="text-sm font-semibold tabular-nums text-brand-600">
+        {/*
+          Ход теста это служебная строка, а не самостоятельный блок, поэтому она
+          лежит прямо на фоне. Номер вопроса набран подписью, чтобы не спорить
+          с условием задания: на этом экране крупнее всего должен быть вопрос.
+        */}
+        <p className="text-xs font-medium uppercase tracking-wide text-ink-400">
           {t.question(current + 1, questions.length)}
         </p>
-        <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-ink-200">
+        <div aria-hidden className="mt-2 h-2 w-full overflow-hidden rounded-full bg-ink-100">
           <div
             className="h-full rounded-full bg-brand-500 transition-all duration-300"
             style={{ width: `${(current / questions.length) * 100}%` }}
           />
         </div>
 
-        <Card className="mt-6">
-          <p className="text-lg font-semibold text-ink-900">{task.prompt}</p>
+        <p className="mt-10 text-3xl font-semibold leading-snug text-ink-900 sm:text-4xl">{task.prompt}</p>
 
-          {task.kind === 'single' && task.options && (
-            <div className="mt-5 grid gap-2.5">
-              {task.options.map((option, index) => (
-                <button
-                  key={option}
-                  onClick={() => setAnswer(String(index))}
-                  aria-pressed={answer === String(index)}
-                  className={`rounded-xl border-2 p-4 text-left transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
-                    answer === String(index)
-                      ? 'border-brand-500 bg-brand-50 text-brand-800'
-                      : 'border-ink-200 bg-white text-ink-700 hover:border-brand-300 hover:shadow-[var(--shadow-lift)]'
-                  }`}
-                >
-                  {option}
-                </button>
-              ))}
-            </div>
-          )}
+        {task.kind === 'single' && task.options && (
+          <div className="mt-4 grid gap-2">
+            {task.options.map((option, index) => (
+              <button
+                key={option}
+                onClick={() => setAnswer(String(index))}
+                aria-pressed={answer === String(index)}
+                className={`rounded-xl border-2 p-4 text-left transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
+                  answer === String(index)
+                    ? 'border-brand-500 bg-brand-50 text-brand-800'
+                    : 'border-ink-200 bg-white text-ink-700 hover:border-brand-300 hover:shadow-[var(--shadow-lift)]'
+                }`}
+              >
+                {option}
+              </button>
+            ))}
+          </div>
+        )}
 
-          {task.kind === 'numeric' && (
-            <input
-              type="text"
-              inputMode="decimal"
-              value={answer}
-              onChange={(event) => setAnswer(event.target.value)}
-              placeholder={t.numericPlaceholder}
-              className="mt-5 w-full rounded-xl border border-ink-200 px-4 py-3 text-ink-900 outline-none focus:border-brand-500"
-            />
-          )}
+        {task.kind === 'numeric' && (
+          <input
+            type="text"
+            inputMode="decimal"
+            value={answer}
+            onChange={(event) => setAnswer(event.target.value)}
+            placeholder={t.numericPlaceholder}
+            className="mt-4 w-full rounded-xl border border-ink-200 px-4 py-3 text-ink-900 outline-none focus:border-brand-500"
+          />
+        )}
 
-          <Button className="mt-6 w-full" size="lg" onClick={submit} disabled={answer === ''}>
-            {current + 1 === questions.length ? t.finish : t.answer}
-          </Button>
-        </Card>
+        <Button className="mt-10 w-full" size="lg" onClick={submit} disabled={answer === ''}>
+          {current + 1 === questions.length ? t.finish : t.answer}
+        </Button>
       </div>
     );
   }
@@ -277,34 +290,45 @@ export function DiagnosticsClient({ subjectId }: { subjectId: string }) {
 
     return (
       <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6">
-        <Card className="text-center">
-          <p className="text-sm font-semibold uppercase tracking-wide text-brand-600">{t.done}</p>
-          <p className="mt-3 text-5xl font-black tabular-nums text-ink-900">{Math.round(result.score * 100)}%</p>
-          <p className="mt-2 tabular-nums text-ink-500">
-            {t.levelLabel} <span className="font-semibold text-ink-800">{levelText}</span> ·{' '}
-            {t.correctOf(result.answers.filter((item) => item.correct).length, result.answers.length)}
-          </p>
-        </Card>
+        {/*
+          Итог держится на одном числе. Раньше процент стоял в карточке рядом
+          с рамкой и тенью и терялся среди блоков одного веса, хотя ради него
+          ученик и проходил тест. Теперь он лежит на голом фоне и заметно крупнее
+          всего остального на экране, а уровень и число верных ответов ушли
+          в строку подробностей под ним.
+        */}
+        <Kicker>{t.done}</Kicker>
+        <p className="mt-2 text-6xl font-semibold tabular-nums text-ink-900">
+          {Math.round(result.score * 100)}
+          <span className="text-3xl text-ink-300">%</span>
+        </p>
+        <p className="mt-2 tabular-nums text-ink-500">
+          {t.levelLabel} <span className="font-semibold text-ink-800">{levelText}</span> ·{' '}
+          {t.correctOf(result.answers.filter((item) => item.correct).length, result.answers.length)}
+        </p>
 
-        <Card className="mt-6">
+        {/*
+          Карта навыков это таблица показателей, а не самодостаточная единица:
+          перенести её на другой экран целиком нельзя. Поэтому голый фон
+          с волосяными линиями вместо карточки.
+        */}
+        <section className="mt-10">
           <h2 className="text-lg font-bold text-ink-900">{t.skillMap}</h2>
           <p className="mt-2 text-sm text-ink-500">{t.skillMapHint}</p>
-          <div className="mt-6 space-y-3">
+          <div className="mt-4 divide-y divide-ink-200 border-y border-ink-200">
             {testedSkills.map((skillId) => (
-              <ProgressBar
-                key={skillId}
-                label={getSkillTitle(skillId)}
-                value={result.skillMastery[skillId] ?? 0}
-              />
+              <div key={skillId} className="py-4">
+                <ProgressBar label={getSkillTitle(skillId)} value={result.skillMastery[skillId] ?? 0} />
+              </div>
             ))}
           </div>
-        </Card>
+        </section>
 
-        <div className="mt-6 flex flex-wrap gap-3">
+        <div className="mt-16 flex flex-wrap items-center gap-4">
           <ButtonLink href="/plan" size="lg">
             {t.toPlan}
           </ButtonLink>
-          <Link href="/dashboard" className="self-center text-sm font-semibold text-brand-600 hover:underline">
+          <Link href="/dashboard" className="text-sm font-semibold text-brand-600 hover:underline">
             {t.toDashboard}
           </Link>
         </div>

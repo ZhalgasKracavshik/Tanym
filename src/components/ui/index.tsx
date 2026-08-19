@@ -317,3 +317,79 @@ export function SectionHeader({
     </div>
   );
 }
+
+/* ------------------------------------------------------------------ */
+/*  Поверхности помимо карточки                                        */
+/* ------------------------------------------------------------------ */
+
+type RailTone = 'brand' | 'accent' | 'success' | 'danger' | 'neutral';
+
+const RAIL_TONES: Record<RailTone, string> = {
+  brand: 'bg-brand-500',
+  accent: 'bg-accent-400',
+  success: 'bg-success-500',
+  danger: 'bg-danger-500',
+  neutral: 'bg-ink-200',
+};
+
+/**
+ * Строка списка с цветной рейкой слева.
+ *
+ * Нужна там, где элементы перечисляются: темы, задания, объявления. Раньше всё
+ * это было карточками, и экран превращался в решётку одинаковых прямоугольников,
+ * в которой глазу не за что зацепиться. Рейка занимает три пикселя и при этом
+ * несёт смысл: её цвет кодирует состояние строки, поэтому список читается
+ * сканированием по левому краю, без чтения текста.
+ *
+ * Цвет никогда не единственный носитель смысла: рядом со строкой всегда стоит
+ * подпись состояния словами.
+ */
+export function RailRow({
+  tone = 'neutral',
+  interactive = false,
+  className = '',
+  children,
+}: {
+  tone?: RailTone;
+  /** true добавляет отклик на наведение. Ставится только у кликабельных строк. */
+  interactive?: boolean;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      className={`relative overflow-hidden rounded-xl border border-ink-200 bg-white py-4 pl-5 pr-4 sm:pl-6 ${
+        interactive
+          ? 'transition-all duration-150 hover:border-ink-300 hover:shadow-[var(--shadow-lift)]'
+          : ''
+      } ${className}`}
+    >
+      <span aria-hidden className={`absolute inset-y-0 left-0 w-[3px] ${RAIL_TONES[tone]}`} />
+      {children}
+    </div>
+  );
+}
+
+/**
+ * Панель для плотных данных.
+ *
+ * Отличается от карточки отсутствием тени и меньшим внутренним отступом.
+ * Таблице тень не нужна: она и так читается как отдельный объект за счёт
+ * собственной сетки, а лишняя глубина делает страницу тяжелее.
+ */
+export function Panel({ className = '', children }: { className?: string; children: ReactNode }) {
+  return <div className={`rounded-xl border border-ink-200 bg-white ${className}`}>{children}</div>;
+}
+
+/**
+ * Микроподпись над крупным заголовком раздела.
+ *
+ * Существует, чтобы страницы открывались по-разному. Когда каждый экран начинается
+ * одинаковым заголовком с серой строкой под ним, продукт выглядит собранным
+ * по шаблону.
+ */
+export function Kicker({ children }: { children: ReactNode }) {
+  return (
+    <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-600">{children}</p>
+  );
+}

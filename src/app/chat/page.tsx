@@ -15,7 +15,7 @@ import type { ChatRequest, ChatResponse } from '@/lib/ai/contracts';
 import type { Dict } from '@/lib/i18n';
 import { useStore } from '@/components/StoreProvider';
 import { AiBadge } from '@/components/AiBadge';
-import { Button, ButtonLink, Card, EmptyState, Skeleton } from '@/components/ui';
+import { Button, ButtonLink, Card, EmptyState, Kicker, Skeleton } from '@/components/ui';
 
 /** Подписи страницы на трёх языках. Ключи одинаковые — за этим следит TypeScript. */
 const TEXT: Dict<{
@@ -184,8 +184,11 @@ export default function ChatPage() {
     <div className="mx-auto flex max-w-3xl flex-col px-4 py-10 sm:px-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-ink-900 sm:text-3xl">{t.title}</h1>
-          <p className="mt-2 text-ink-500">{t.subtitle}</p>
+          {/* Микроподпись над заголовком: соседние по навигации страницы
+              не должны открываться одинаково, иначе продукт выглядит
+              собранным по одному шаблону. */}
+          <Kicker>{t.subtitle}</Kicker>
+          <h1 className="mt-2 text-3xl font-semibold text-ink-900 sm:text-4xl">{t.title}</h1>
         </div>
         {state.chat.length > 0 && (
           <Button

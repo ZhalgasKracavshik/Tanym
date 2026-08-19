@@ -16,16 +16,15 @@ import { almatyDateIso, almatyYesterdayIso } from '@/lib/date';
 import type { Dict } from '@/lib/i18n';
 import { useStore } from '@/components/StoreProvider';
 import { Icon } from '@/components/Icon';
-import { ButtonLink, Card, EmptyState, ProgressBar, Skeleton, Stat } from '@/components/ui';
+import { ButtonLink, EmptyState, ProgressBar, RailRow, Skeleton } from '@/components/ui';
 
 const TEXT: Dict<{
   title: string;
-  subtitle: string;
   noProfileTitle: string;
   noProfileText: string;
   createProfile: string;
   streakTitle: string;
-  streakDays: (n: number) => string;
+  streakUnit: (n: number) => string;
   streakActive: string;
   streakBroken: string;
   streakNone: string;
@@ -39,12 +38,11 @@ const TEXT: Dict<{
 }> = {
   ru: {
     title: 'Достижения',
-    subtitle: 'Серия занятий и награды за прогресс.',
     noProfileTitle: 'Сначала нужен профиль',
     noProfileText: 'Достижения начисляются за решённые задания, начни с диагностики.',
     createProfile: 'Создать профиль',
     streakTitle: 'Серия занятий',
-    streakDays: (n) => (n === 1 ? '1 день' : n < 5 ? `${n} дня` : `${n} дней`),
+    streakUnit: (n) => (n === 1 ? 'день' : n > 1 && n < 5 ? 'дня' : 'дней'),
     streakActive: 'Серия идёт, не прерывай её сегодня',
     streakBroken: 'Серия прервалась. Реши одно задание, чтобы начать заново',
     streakNone: 'Реши первое задание, чтобы начать серию',
@@ -58,12 +56,11 @@ const TEXT: Dict<{
   },
   kk: {
     title: 'Жетістіктер',
-    subtitle: 'Сабақ сериясы және прогресс үшін марапаттар.',
     noProfileTitle: 'Алдымен профиль қажет',
     noProfileText: 'Жетістіктер шешілген тапсырмалар үшін беріледі, диагностикадан баста.',
     createProfile: 'Профиль құру',
     streakTitle: 'Сабақ сериясы',
-    streakDays: (n) => `${n} күн`,
+    streakUnit: () => 'күн',
     streakActive: 'Серия жалғасып жатыр, бүгін үзіп алма',
     streakBroken: 'Серия үзілді. Қайта бастау үшін бір тапсырма шеш',
     streakNone: 'Серияны бастау үшін алғашқы тапсырманы шеш',
@@ -77,12 +74,11 @@ const TEXT: Dict<{
   },
   en: {
     title: 'Achievements',
-    subtitle: 'Your study streak and rewards for progress.',
     noProfileTitle: 'A profile is needed first',
     noProfileText: 'Achievements come from solving tasks, so start with the diagnostic.',
     createProfile: 'Create profile',
     streakTitle: 'Study streak',
-    streakDays: (n) => (n === 1 ? '1 day' : `${n} days`),
+    streakUnit: (n) => (n === 1 ? 'day' : 'days'),
     streakActive: 'Your streak is alive, keep it going today',
     streakBroken: 'Your streak ended. Solve one task to start again',
     streakNone: 'Solve your first task to start a streak',
@@ -161,17 +157,65 @@ export default function AchievementsPage() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
-      <h1 className="text-2xl font-bold text-ink-900 sm:text-3xl">{t.title}</h1>
-      <p className="mt-2 text-ink-500">{t.subtitle}</p>
+      {/*
+        Заголовок без описания, сразу серия. Ученик приходит сюда посмотреть,
+        сколько дней он держится, а не прочитать, что такое достижения.
+      */}
+      <h1 className="text-3xl font-semibold text-ink-900 sm:text-4xl">{t.title}</h1>
 
-      {/* Поздравление с новыми достижениями */}
+      {/*
+        Серия это главный элемент экрана, поэтому она набрана в несколько раз
+        крупнее всего остального и лежит прямо на фоне между волосяными линиями.
+        Раньше она сидела в карточке рядом с тремя одинаковыми плитками метрик
+        и по весу ничем от них не отличалась.
+      */}
+      <div className="mt-10 flex flex-wrap items-end justify-between gap-x-10 gap-y-8 border-y border-ink-200 py-8">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-wide text-ink-400">{t.streakTitle}</p>
+          <p className="mt-2 flex items-end gap-3">
+            <Icon
+              name="flame"
+              size={52}
+              className={streakValue > 0 ? 'text-accent-500' : 'text-ink-300'}
+            />
+            <span className="text-6xl font-semibold leading-none tabular-nums text-ink-900 sm:text-7xl">
+              {streakValue}
+            </span>
+            <span className="text-xl text-ink-400">{t.streakUnit(streakValue)}</span>
+          </p>
+          <p className="mt-2 text-sm text-ink-500">
+            {streakValue > 0 ? t.streakActive : state.streak.longest > 0 ? t.streakBroken : t.streakNone}
+          </p>
+        </div>
+
+        {/* Второстепенные показатели: те же цифры, но заметно мельче серии */}
+        <div className="grid grid-cols-3 gap-x-8 sm:divide-x sm:divide-ink-200">
+          <div className="sm:pr-8">
+            <p className="text-xs font-medium uppercase tracking-wide text-ink-400">{t.longest}</p>
+            <p className="mt-2 text-2xl font-semibold tabular-nums text-ink-900">{state.streak.longest}</p>
+          </div>
+          <div className="sm:px-8">
+            <p className="text-xs font-medium uppercase tracking-wide text-ink-400">{t.points}</p>
+            <p className="mt-2 text-2xl font-semibold tabular-nums text-ink-900">{stats.points}</p>
+          </div>
+          <div className="sm:pl-8">
+            <p className="text-xs font-medium uppercase tracking-wide text-ink-400">{t.unlockedCount}</p>
+            <p className="mt-2 text-2xl font-semibold tabular-nums text-ink-900">
+              {unlocked}/{achievements.length}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Поздравление с новыми достижениями стоит после серии: иначе экран
+          открывался бы разным содержимым в зависимости от дня. */}
       {fresh.length > 0 && (
-        <div className="mt-6 rounded-2xl border border-accent-200 bg-accent-50 p-5">
+        <div className="mt-10 rounded-2xl border border-accent-200 bg-accent-50 p-5">
           <p className="flex items-center gap-2 font-bold text-accent-700">
             <Icon name="sparkles" size={18} />
             {t.newlyUnlocked}
           </p>
-          <div className="mt-3 flex flex-wrap gap-3">
+          <div className="mt-4 flex flex-wrap gap-3">
             {fresh.map((item) => (
               <span
                 key={item.id}
@@ -185,44 +229,16 @@ export default function AchievementsPage() {
         </div>
       )}
 
-      {/* Серия занятий */}
-      <Card className="mt-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-wide text-ink-400">{t.streakTitle}</p>
-            <p className="mt-1 flex items-center gap-2">
-              <Icon
-                name="flame"
-                size={36}
-                className={streakValue > 0 ? 'text-accent-500' : 'text-ink-300'}
-              />
-              <span className="text-4xl font-black tabular-nums text-ink-900">
-                {t.streakDays(streakValue)}
-              </span>
-            </p>
-            <p className="mt-2 text-sm text-ink-500">
-              {streakValue > 0 ? t.streakActive : state.streak.longest > 0 ? t.streakBroken : t.streakNone}
-            </p>
-          </div>
-
-          <div className="grid grid-cols-3 gap-3">
-            <Stat label={t.longest} value={state.streak.longest} icon="flame" />
-            <Stat label={t.points} value={stats.points} icon="gem" />
-            <Stat
-              label={t.unlockedCount}
-              value={`${unlocked}/${achievements.length}`}
-              icon="trophy"
-              progress={unlocked / achievements.length}
-            />
-          </div>
-        </div>
-      </Card>
-
-      {/* Сетка достижений */}
-      <div className="mt-6 grid gap-3 sm:grid-cols-2">
+      {/*
+        Достижения это перечисление, а не набор самодостаточных единиц, поэтому
+        они переехали с карточек на строки с рейкой. Цвет рейки кодирует
+        состояние, но рядом всегда стоит подпись словами.
+      */}
+      <div className="mt-10 grid gap-4 sm:grid-cols-2">
         {achievements.map((item) => (
-          <Card
+          <RailRow
             key={item.id}
+            tone={item.unlocked ? 'success' : 'neutral'}
             className={item.unlocked ? 'border-success-500/40 bg-success-50' : ''}
           >
             <div className="flex items-start gap-3">
@@ -245,19 +261,19 @@ export default function AchievementsPage() {
                     {item.unlocked ? t.done : t.locked}
                   </span>
                 </div>
-                <p className="mt-1 text-sm text-ink-500">{item.description[state.language]}</p>
+                <p className="mt-2 text-sm text-ink-500">{item.description[state.language]}</p>
 
                 {!item.unlocked && (
-                  <div className="mt-3">
+                  <div className="mt-4">
                     <ProgressBar value={item.ratio} showPercent={false} />
-                    <p className="mt-1 text-xs tabular-nums text-ink-400">
+                    <p className="mt-2 text-xs tabular-nums text-ink-400">
                       {t.ofTarget(item.current, item.target)}
                     </p>
                   </div>
                 )}
               </div>
             </div>
-          </Card>
+          </RailRow>
         ))}
       </div>
     </div>

@@ -20,9 +20,10 @@ import type { Dict } from '@/lib/i18n';
 import { useStore } from '@/components/StoreProvider';
 import { PublishForm } from './PublishForm';
 import { Icon } from '@/components/Icon';
-import { Badge, Button, Card, EmptyState } from '@/components/ui';
+import { Badge, Button, Card, EmptyState, Kicker } from '@/components/ui';
 
 const TEXT: Dict<{
+  kicker: string;
   title: string;
   subtitle: string;
   all: string;
@@ -48,6 +49,7 @@ const TEXT: Dict<{
   safety: string;
 }> = {
   ru: {
+    kicker: 'Вокруг школы',
     title: 'Возможности',
     subtitle: 'Секции, курсы, помощь старших и волонтёрство: всё, что есть вокруг школы.',
     all: 'Все',
@@ -73,6 +75,7 @@ const TEXT: Dict<{
     safety: 'Никогда не переводи деньги вперёд незнакомым людям и не встречайся один. Скажи об этом родителям.',
   },
   kk: {
+    kicker: 'Мектеп айналасында',
     title: 'Мүмкіндіктер',
     subtitle: 'Үйірмелер, курстар, үлкендердің көмегі және волонтёрлық: мектеп айналасындағының бәрі.',
     all: 'Барлығы',
@@ -98,6 +101,7 @@ const TEXT: Dict<{
     safety: 'Бейтаныс адамдарға ақшаны алдын ала аударма және жалғыз кездеспе. Бұл туралы ата-анаңа айт.',
   },
   en: {
+    kicker: 'Around the school',
     title: 'Opportunities',
     subtitle: 'Clubs, courses, peer tutoring and volunteering: everything around the school.',
     all: 'All',
@@ -151,12 +155,13 @@ export default function MarketplacePage() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
-      <h1 className="text-2xl font-bold text-ink-900 sm:text-3xl">{t.title}</h1>
-      <p className="mt-2 text-ink-500">{t.subtitle}</p>
+      <Kicker>{t.kicker}</Kicker>
+      <h1 className="mt-2 text-3xl font-semibold text-ink-900 sm:text-4xl">{t.title}</h1>
+      <p className="mt-4 max-w-2xl text-sm text-ink-500">{t.subtitle}</p>
 
       {/* Предупреждение о безопасности: аудитория — подростки, и часть
           объявлений размещают посторонние люди */}
-      <div className="mt-6 rounded-2xl border border-accent-200 bg-accent-50 p-4">
+      <div className="mt-4 rounded-xl border border-accent-200 bg-accent-50 p-4">
         <p className="flex items-center gap-2 text-sm text-accent-700">
           <Icon name="alert" size={18} />
           {t.safety}
@@ -164,7 +169,7 @@ export default function MarketplacePage() {
       </div>
 
       {/* Фильтры */}
-      <div className="mt-6 flex flex-wrap gap-2">
+      <div className="mt-10 flex flex-wrap gap-2">
         <button onClick={() => setFilter('all')} className={chip(filter === 'all')}>
           {t.all}
         </button>
@@ -185,20 +190,26 @@ export default function MarketplacePage() {
       </div>
 
       {/* Форма размещения */}
-      <div className="mt-6">
+      <div className="mt-4">
         <PublishForm />
       </div>
 
       {sorted.length === 0 ? (
-        <div className="mt-6">
+        <div className="mt-10">
           <EmptyState title={filter === 'mine' ? t.emptyMine : t.empty} description="" />
         </div>
       ) : (
-        <div className="mt-6 grid gap-4 sm:grid-cols-2">
+        <div className="mt-10 grid gap-4 sm:grid-cols-2">
           {sorted.map((listing) => {
             const meta = LISTING_TYPES.find((type) => type.id === listing.type);
             return (
               <Card key={listing.id} className={listing.pending ? 'border-accent-200 bg-accent-50' : ''}>
+                {/*
+                  В шапке ровно две плашки: вид объявления и цена. Состояние
+                  «на модерации» раньше стояло третьей плашкой, хотя оно и так
+                  видно по фону карточки и по пояснению внизу, поэтому ушло
+                  в строку подробностей словами.
+                */}
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge tone="brand">
                     {meta && <Icon name={meta.icon} size={14} />}
@@ -211,16 +222,40 @@ export default function MarketplacePage() {
                           listing.priceNote ? ` / ${listing.priceNote}` : ''
                         }`}
                   </Badge>
-                  {listing.pending && <Badge tone="accent">{t.pending}</Badge>}
                 </div>
 
-                <h2 className="mt-3 font-bold text-ink-900">{listing.title}</h2>
-                <p className="mt-1 text-sm text-ink-400">
+                <h2 className="mt-4 font-bold text-ink-900">{listing.title}</h2>
+                <p className="mt-2 text-sm text-ink-400">
                   {listing.authorName} · {listing.authorRole}
                 </p>
                 <p className="mt-2 text-sm text-ink-600">{listing.description}</p>
 
-                <dl className="mt-3 space-y-1 text-sm">
+                {/* Строка подробностей вместо ряда серых пилюль */}
+                <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink-500">
+                  {listing.pending && (
+                    <>
+                      <span className="font-semibold text-accent-700">{t.pending}</span>
+                      <span aria-hidden>·</span>
+                    </>
+                  )}
+                  <span>{listing.category}</span>
+                  <span aria-hidden>·</span>
+                  <span>{formatLabel[listing.format]}</span>
+                  {listing.spots !== undefined && (
+                    <>
+                      <span aria-hidden>·</span>
+                      <span
+                        className={`tabular-nums ${
+                          listing.spots > 0 ? 'font-semibold text-success-700' : 'text-ink-400'
+                        }`}
+                      >
+                        {listing.spots > 0 ? t.spots(listing.spots) : t.noSpots}
+                      </span>
+                    </>
+                  )}
+                </p>
+
+                <dl className="mt-4 space-y-2 border-t border-ink-200 pt-4 text-sm">
                   <div className="flex gap-2">
                     <dt className="shrink-0 text-ink-400">{t.schedule}:</dt>
                     <dd className="text-ink-700">{listing.schedule}</dd>
@@ -231,26 +266,10 @@ export default function MarketplacePage() {
                   </div>
                 </dl>
 
-                <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-                  <span className="rounded-lg bg-ink-50 px-2 py-1 text-ink-600">{listing.category}</span>
-                  <span className="rounded-lg bg-ink-50 px-2 py-1 text-ink-600">
-                    {formatLabel[listing.format]}
-                  </span>
-                  {listing.spots !== undefined && (
-                    <span
-                      className={`rounded-lg px-2 py-1 font-semibold tabular-nums ${
-                        listing.spots > 0 ? 'bg-success-50 text-success-700' : 'bg-ink-100 text-ink-500'
-                      }`}
-                    >
-                      {listing.spots > 0 ? t.spots(listing.spots) : t.noSpots}
-                    </span>
-                  )}
-                </div>
-
                 {/* Отметка о проверке — ученик должен видеть разницу между
                     школьной секцией и предложением постороннего человека */}
                 <p
-                  className={`mt-3 flex items-center gap-2 text-xs ${
+                  className={`mt-4 flex items-center gap-2 text-xs ${
                     listing.verified ? 'font-semibold text-success-700' : 'text-ink-400'
                   }`}
                 >
@@ -258,12 +277,12 @@ export default function MarketplacePage() {
                   {listing.verified ? t.verified : t.unverified}
                 </p>
                 {!listing.verified && !listing.pending && (
-                  <p className="mt-1 text-xs text-ink-400">{t.unverifiedHint}</p>
+                  <p className="mt-2 text-xs text-ink-400">{t.unverifiedHint}</p>
                 )}
-                {listing.pending && <p className="mt-1 text-xs text-accent-700">{t.pendingHint}</p>}
+                {listing.pending && <p className="mt-2 text-xs text-accent-700">{t.pendingHint}</p>}
 
                 {listing.pending && (
-                  <div className="mt-3">
+                  <div className="mt-4">
                     <Button
                       variant="ghost"
                       size="sm"

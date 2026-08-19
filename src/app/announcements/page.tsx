@@ -21,14 +21,15 @@ import type { Announcement, AnnouncementCategory } from '@/lib/announcements';
 import type { Dict } from '@/lib/i18n';
 import { useStore } from '@/components/StoreProvider';
 import { Icon } from '@/components/Icon';
-import { Badge, Card, EmptyState, Skeleton } from '@/components/ui';
+import { Badge, EmptyState, RailRow, Skeleton } from '@/components/ui';
 
 const TEXT: Dict<{
   title: string;
-  subtitle: string;
+  statNew: string;
+  statTotal: string;
+  statPinned: string;
   all: string;
   myGrade: string;
-  unread: (n: number) => string;
   pinned: string;
   isNew: string;
   expired: string;
@@ -40,10 +41,11 @@ const TEXT: Dict<{
 }> = {
   ru: {
     title: 'Объявления',
-    subtitle: 'Всё, что объявила школа. Закреплённое и свежее показано сверху.',
+    statNew: 'Новых',
+    statTotal: 'Всего',
+    statPinned: 'Закреплённых',
     all: 'Все',
     myGrade: 'Только для моего класса',
-    unread: (n) => (n === 1 ? '1 новое объявление' : n < 5 ? `${n} новых объявления` : `${n} новых объявлений`),
     pinned: 'Закреплено',
     isNew: 'Новое',
     expired: 'Срок истёк',
@@ -55,10 +57,11 @@ const TEXT: Dict<{
   },
   kk: {
     title: 'Хабарландырулар',
-    subtitle: 'Мектеп әкімшілігі хабарлағанның бәрі. Бекітілгені мен жаңасы жоғарыда тұрады.',
+    statNew: 'Жаңа',
+    statTotal: 'Барлығы',
+    statPinned: 'Бекітілген',
     all: 'Барлығы',
     myGrade: 'Тек менің сыныбыма',
-    unread: (n) => `${n} жаңа хабарландыру`,
     pinned: 'Бекітілген',
     isNew: 'Жаңа',
     expired: 'Мерзімі өтті',
@@ -70,10 +73,11 @@ const TEXT: Dict<{
   },
   en: {
     title: 'Announcements',
-    subtitle: 'Everything the school has announced. Pinned and recent notices come first.',
+    statNew: 'New',
+    statTotal: 'Total',
+    statPinned: 'Pinned notices',
     all: 'All',
     myGrade: 'Only for my grade',
-    unread: (n) => (n === 1 ? '1 new announcement' : `${n} new announcements`),
     pinned: 'Pinned',
     isNew: 'New',
     expired: 'Expired',
@@ -169,19 +173,48 @@ export default function AnnouncementsPage() {
     return byRank !== 0 ? byRank : b.publishedAt.localeCompare(a.publishedAt);
   });
 
+  const pinnedCount = ANNOUNCEMENTS.filter(
+    (announcement) => announcement.pinned && !isExpired(announcement),
+  ).length;
+
   return (
     <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
-      <h1 className="text-2xl font-bold text-ink-900 sm:text-3xl">{t.title}</h1>
-      <p className="mt-2 text-ink-500">{t.subtitle}</p>
-      {unreadIds.length > 0 && (
-        <p className="mt-3 flex items-center gap-2 text-sm font-semibold tabular-nums text-accent-700">
-          <Icon name="bell" size={16} />
-          {t.unread(unreadIds.length)}
-        </p>
-      )}
+      {/*
+        Страница открывается заголовком без описания и сразу показывает цифры.
+        Описание того, что такое доска объявлений, ученик прочитает один раз,
+        а цифру непрочитанного он приходит смотреть каждый день.
+      */}
+      <h1 className="text-3xl font-semibold text-ink-900 sm:text-4xl">{t.title}</h1>
 
-      {/* Фильтры */}
-      <div className="mt-6 flex flex-wrap gap-2">
+      {/*
+        Полоса показателей лежит прямо на фоне между двумя волосяными линиями.
+        Непрочитанное набрано крупнее остального: это единственное число,
+        ради которого сюда заходят.
+      */}
+      <div className="mt-10 grid grid-cols-3 gap-x-8 border-y border-ink-200 py-6 sm:divide-x sm:divide-ink-200">
+        <div className="sm:pr-8">
+          <p className="text-xs font-medium uppercase tracking-wide text-ink-400">{t.statNew}</p>
+          <p className="mt-2 flex items-center gap-2 text-5xl font-semibold tabular-nums text-ink-900">
+            <Icon
+              name="bell"
+              size={28}
+              className={unreadIds.length > 0 ? 'text-accent-500' : 'text-ink-300'}
+            />
+            {unreadIds.length}
+          </p>
+        </div>
+        <div className="sm:px-8">
+          <p className="text-xs font-medium uppercase tracking-wide text-ink-400">{t.statTotal}</p>
+          <p className="mt-2 text-2xl font-semibold tabular-nums text-ink-900">{ANNOUNCEMENTS.length}</p>
+        </div>
+        <div className="sm:px-8">
+          <p className="text-xs font-medium uppercase tracking-wide text-ink-400">{t.statPinned}</p>
+          <p className="mt-2 text-2xl font-semibold tabular-nums text-ink-900">{pinnedCount}</p>
+        </div>
+      </div>
+
+      {/* Фильтры лежат на голом фоне и отделены линией, а не рамкой карточки */}
+      <div className="mt-10 flex flex-wrap gap-2 border-b border-ink-200 pb-4">
         <button onClick={() => setCategory('all')} className={chip(category === 'all')}>
           {t.all}
         </button>
@@ -208,7 +241,7 @@ export default function AnnouncementsPage() {
       </div>
 
       {sorted.length === 0 ? (
-        <div className="mt-6">
+        <div className="mt-10">
           {/* Иконка стоит рядом с блоком: проп icon в EmptyState принимает строку,
               а строкой иконку из набора не передать. */}
           <div className="mb-3 flex justify-center">
@@ -219,15 +252,24 @@ export default function AnnouncementsPage() {
           <EmptyState title={t.emptyTitle} description={t.emptyText} />
         </div>
       ) : (
-        <div className="mt-6 space-y-4">
+        <div className="mt-4 space-y-4">
           {sorted.map((announcement) => {
             const meta = ANNOUNCEMENT_CATEGORIES.find((item) => item.id === announcement.category);
             const expired = isExpired(announcement);
             const unread = unreadIds.includes(announcement.id);
 
             return (
-              <Card
+              /*
+                Объявление перестало быть карточкой: карточка нужна самодостаточной
+                единице, а лента однотипных объявлений это перечисление, и решётка
+                одинаковых прямоугольников в нём не даёт глазу зацепки. Рейка слева
+                кодирует категорию цветом, но название категории всё равно стоит
+                словами над заголовком: цвет не может быть единственным носителем
+                смысла. Закреплённое выделено фоном, истёкшее приглушено.
+              */
+              <RailRow
                 key={announcement.id}
+                tone={CATEGORY_TONE[announcement.category]}
                 className={
                   expired
                     ? 'opacity-55'
@@ -236,29 +278,36 @@ export default function AnnouncementsPage() {
                       : ''
                 }
               >
-                <div className="flex flex-wrap items-center gap-2">
-                  {announcement.pinned && (
-                    <Badge tone="brand">
-                      <Icon name="pin" size={14} />
-                      {t.pinned}
-                    </Badge>
-                  )}
-                  <Badge tone={CATEGORY_TONE[announcement.category]}>
-                    {meta && <Icon name={meta.icon} size={14} />}
-                    {meta?.title[state.language]}
-                  </Badge>
-                  {/* Непрочитанное помечаем и точкой, и словом: одна точка теряется
-                      на экране телефона, одно слово теряется среди других плашек. */}
-                  {unread && !expired && (
-                    <Badge tone="accent">
-                      <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-accent-700" />
-                      {t.isNew}
-                    </Badge>
-                  )}
-                  {expired && <Badge tone="neutral">{t.expired}</Badge>}
+                <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+                  <div className="min-w-0">
+                    <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-ink-400">
+                      {meta && <Icon name={meta.icon} size={14} />}
+                      {meta?.title[state.language]}
+                    </p>
+                    <h2 className="mt-2 text-lg font-bold text-ink-900">{announcement.title}</h2>
+                  </div>
+
+                  {/* В шапке не больше двух плашек: остальное ушло в строку
+                      подробностей ниже обычным текстом. */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    {announcement.pinned && (
+                      <Badge tone="brand">
+                        <Icon name="pin" size={14} />
+                        {t.pinned}
+                      </Badge>
+                    )}
+                    {/* Непрочитанное помечаем и точкой, и словом: одна точка теряется
+                        на экране телефона, одно слово теряется среди других плашек. */}
+                    {unread && !expired && (
+                      <Badge tone="accent">
+                        <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-accent-700" />
+                        {t.isNew}
+                      </Badge>
+                    )}
+                    {expired && <Badge tone="neutral">{t.expired}</Badge>}
+                  </div>
                 </div>
 
-                <h2 className="mt-3 text-lg font-bold text-ink-900">{announcement.title}</h2>
                 <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-ink-600">
                   {announcement.body}
                 </p>
@@ -282,7 +331,7 @@ export default function AnnouncementsPage() {
                     </>
                   )}
                 </div>
-              </Card>
+              </RailRow>
             );
           })}
         </div>

@@ -16,11 +16,14 @@ import type { EventStatus, EventType, SchoolEvent } from '@/lib/events';
 import type { Dict } from '@/lib/i18n';
 import { useStore } from '@/components/StoreProvider';
 import { Icon } from '@/components/Icon';
-import { Badge, Button, Card, EmptyState } from '@/components/ui';
+import { Badge, Button, Card, EmptyState, Kicker } from '@/components/ui';
 
 const TEXT: Dict<{
+  kicker: string;
   title: string;
   subtitle: string;
+  nearestDeadline: string;
+  daysWord: (n: number) => string;
   all: string;
   myEvents: string;
   register: string;
@@ -43,8 +46,11 @@ const TEXT: Dict<{
   statusClosing: string;
 }> = {
   ru: {
+    kicker: 'Олимпиады и конкурсы',
     title: 'Афиша',
     subtitle: 'Олимпиады, конкурсы и события. Главное: не пропустить срок регистрации.',
+    nearestDeadline: 'Ближайший дедлайн',
+    daysWord: (n) => (n === 1 ? 'день' : n > 1 && n < 5 ? 'дня' : 'дней'),
     all: 'Все',
     myEvents: 'Мои записи',
     register: 'Записаться',
@@ -67,8 +73,11 @@ const TEXT: Dict<{
     statusClosing: 'Регистрация закрывается',
   },
   kk: {
+    kicker: 'Олимпиадалар мен байқаулар',
     title: 'Афиша',
     subtitle: 'Олимпиадалар, байқаулар және іс-шаралар. Ең бастысы: тіркелу мерзімін өткізіп алмау.',
+    nearestDeadline: 'Жақын мерзім',
+    daysWord: () => 'күн қалды',
     all: 'Барлығы',
     myEvents: 'Менің жазылымдарым',
     register: 'Тіркелу',
@@ -91,8 +100,11 @@ const TEXT: Dict<{
     statusClosing: 'Тіркелу жабылып жатыр',
   },
   en: {
+    kicker: 'Olympiads and contests',
     title: 'Events',
     subtitle: 'Olympiads, contests and events. The point is not to miss the registration deadline.',
+    nearestDeadline: 'Closest deadline',
+    daysWord: (n) => (n === 1 ? 'day left' : 'days left'),
     all: 'All',
     myEvents: 'My registrations',
     register: 'Register',
@@ -160,13 +172,56 @@ export default function EventsPage() {
     past: t.past,
   };
 
+  /**
+   * Событие, до закрытия регистрации которого осталось меньше всего времени.
+   *
+   * Считается по всей афише, а не по отфильтрованному списку: срок не перестаёт
+   * гореть оттого, что ученик переключил вкладку категории.
+   */
+  const nearest = EVENTS.filter((event) => {
+    const status = eventStatus(event);
+    return status === 'open' || status === 'closing-soon';
+  }).sort((a, b) => a.registrationDeadline.localeCompare(b.registrationDeadline))[0];
+  const nearestDays = nearest ? daysLeftUntil(nearest.registrationDeadline) : 0;
+
   return (
     <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
-      <h1 className="text-2xl font-bold text-ink-900 sm:text-3xl">{t.title}</h1>
-      <p className="mt-2 text-ink-500">{t.subtitle}</p>
+      <Kicker>{t.kicker}</Kicker>
+      <h1 className="mt-2 text-3xl font-semibold text-ink-900 sm:text-4xl">{t.title}</h1>
+
+      {/*
+        Обратный отсчёт вынесен из списка наверх и набран крупнее всего на экране.
+
+        Ученик проигрывает олимпиаду не в задачах, а в том, что узнаёт о ней после
+        закрытия регистрации. Поэтому первое, за что цепляется глаз, это число
+        оставшихся дней, а не заголовок страницы и не сетка карточек.
+        Число лежит на голом фоне между волосяными линиями: ещё одна карточка
+        здесь сравняла бы срок по весу с обычным событием.
+      */}
+      {nearest && (
+        <div className="mt-10 flex flex-wrap items-end gap-x-10 gap-y-4 border-y border-ink-200 py-6">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-ink-400">{t.nearestDeadline}</p>
+            <p className="mt-2 flex items-baseline gap-2 text-5xl font-semibold tabular-nums text-ink-900 sm:text-6xl">
+              {nearestDays}
+              <span className="text-base font-medium text-ink-400">{t.daysWord(nearestDays)}</span>
+            </p>
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold text-ink-900">{nearest.title}</p>
+            <p className="mt-2 text-sm tabular-nums text-ink-500">
+              {t.deadline} {formatEventDate(nearest.registrationDeadline, state.language)}
+            </p>
+            {nearestDays === 0 && <p className="mt-2 text-sm font-semibold text-danger-600">{t.lastDay}</p>}
+          </div>
+        </div>
+      )}
+
+      {/* Вводный абзац: на голом фоне, отдельно от заголовка */}
+      <p className="mt-4 max-w-2xl text-sm text-ink-500">{t.subtitle}</p>
 
       {/* Фильтры */}
-      <div className="mt-6 flex flex-wrap gap-2">
+      <div className="mt-10 flex flex-wrap gap-2">
         <button onClick={() => setFilter('all')} className={chip(filter === 'all')}>
           {t.all}
         </button>
@@ -186,11 +241,11 @@ export default function EventsPage() {
       </div>
 
       {sorted.length === 0 ? (
-        <div className="mt-6">
+        <div className="mt-4">
           <EmptyState title={filter === 'mine' ? t.emptyMine : t.empty} description="" />
         </div>
       ) : (
-        <div className="mt-6 space-y-4">
+        <div className="mt-4 space-y-4">
           {sorted.map((event) => {
             const status = eventStatus(event);
             const meta = EVENT_TYPES.find((type) => type.id === event.type);
@@ -200,52 +255,63 @@ export default function EventsPage() {
 
             return (
               <Card key={event.id} className={status === 'past' ? 'opacity-60' : ''}>
+                {/*
+                  В шапке ровно две плашки: вид события и состояние регистрации.
+                  Формат участия, цена и классы раньше висели такими же плашками,
+                  и шапка превращалась в гроздь из четырёх цветных пятен, в которой
+                  состояние регистрации терялось. Теперь они идут строкой подробностей
+                  ниже обычным текстом.
+                */}
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge tone="brand">
                     {meta && <Icon name={meta.icon} size={14} />}
                     {meta?.title[state.language]}
                   </Badge>
                   <Badge tone={STATUS_TONE[status]}>{statusLabel[status]}</Badge>
-                  {event.online && <Badge>{t.online}</Badge>}
-                  <Badge tone={event.free ? 'success' : 'neutral'}>{event.free ? t.free : t.paid}</Badge>
                 </div>
 
-                <h2 className="mt-3 text-lg font-bold text-ink-900">{event.title}</h2>
-                <p className="mt-1 text-sm text-ink-400">{event.organizer}</p>
+                <h2 className="mt-4 text-lg font-bold text-ink-900">{event.title}</h2>
+                <p className="mt-2 text-sm text-ink-400">{event.organizer}</p>
                 <p className="mt-2 text-sm text-ink-600">{event.description}</p>
 
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-xl bg-ink-50 px-4 py-3">
-                    <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-ink-400">
+                <p className="mt-2 text-sm tabular-nums text-ink-500">
+                  {[
+                    event.online ? t.online : null,
+                    event.free ? t.free : t.paid,
+                    t.grades(event.grades.join(', ')),
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </p>
+
+                {/* Сроки: голая строка с волосяной линией, без вложенных плашек */}
+                <div className="mt-4 flex flex-wrap items-baseline justify-between gap-x-8 gap-y-2 border-t border-ink-200 pt-4">
+                  <div>
+                    <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-ink-400">
                       <Icon name="calendar" size={14} />
                       {t.deadline}
                     </p>
-                    <p className="mt-1 font-bold tabular-nums text-ink-900">
+                    <p className="mt-2 font-semibold tabular-nums text-ink-900">
                       {formatEventDate(event.registrationDeadline, state.language)}
+                      {canRegister && (
+                        <span
+                          className={`ml-2 text-sm font-semibold ${
+                            status === 'closing-soon' ? 'text-danger-600' : 'text-ink-500'
+                          }`}
+                        >
+                          {daysLeft === 0 ? t.lastDay : t.daysLeft(daysLeft)}
+                        </span>
+                      )}
                     </p>
-                    {/* Обратный отсчёт — то, ради чего вся страница */}
-                    {canRegister && (
-                      <p
-                        className={`mt-0.5 text-sm font-semibold tabular-nums ${
-                          status === 'closing-soon' ? 'text-danger-600' : 'text-ink-500'
-                        }`}
-                      >
-                        {daysLeft === 0 ? t.lastDay : t.daysLeft(daysLeft)}
-                      </p>
-                    )}
                   </div>
 
-                  <div className="rounded-xl bg-ink-50 px-4 py-3">
-                    <p className="text-xs font-semibold uppercase tracking-wide tabular-nums text-ink-400">
-                      {formatEventDate(event.startsAt, state.language)}
-                    </p>
-                    <p className="mt-1 text-sm text-ink-700">{event.location}</p>
-                    <p className="mt-0.5 text-xs tabular-nums text-ink-400">{t.grades(event.grades.join(', '))}</p>
-                  </div>
+                  <p className="text-sm tabular-nums text-ink-500">
+                    {formatEventDate(event.startsAt, state.language)} · {event.location}
+                  </p>
                 </div>
 
                 {event.prize && (
-                  <p className="mt-3 text-sm text-ink-600">
+                  <p className="mt-2 text-sm text-ink-600">
                     <span className="font-semibold text-ink-800">{t.prize}: </span>
                     {event.prize}
                   </p>

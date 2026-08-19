@@ -3,10 +3,10 @@
 /**
  * Персональный план — витрина персонализации.
  *
- * На экране два источника: слева объяснение от языковой модели, справа —
- * сами рекомендации, посчитанные движком. Порядок именно такой, потому что
- * модель объясняет ровно те цифры, которые ученик видит рядом. Если бы модель
- * считала сама, текст и список могли бы разойтись.
+ * На экране два источника: сверху объяснение от языковой модели, ниже — сами
+ * рекомендации, посчитанные движком. Порядок именно такой, потому что модель
+ * объясняет ровно те темы, которые ученик видит следом. Если бы модель считала
+ * сама, текст и список могли бы разойтись.
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -17,9 +17,24 @@ import { useStore } from '@/components/StoreProvider';
 import type { Dict } from '@/lib/i18n';
 import { AiBadge } from '@/components/AiBadge';
 import { Icon } from '@/components/Icon';
-import { Alert, Badge, Button, ButtonLink, Card, EmptyState, ProgressBar, Skeleton } from '@/components/ui';
+import {
+  Alert,
+  Button,
+  ButtonLink,
+  EmptyState,
+  Kicker,
+  Panel,
+  ProgressBar,
+  RailRow,
+  Skeleton,
+} from '@/components/ui';
 
-/** Цвета для статуса темы. Подписи — в TEXT, потому что зависят от языка. */
+/**
+ * Цвет рейки для статуса темы. Подписи — в TEXT, потому что зависят от языка.
+ *
+ * Цвет здесь не единственный носитель смысла: рядом с каждой рейкой стоит
+ * та же подпись словами, поэтому список читается и без различения цветов.
+ */
 const STATUS = {
   weak: { tone: 'danger' as const },
   'in-progress': { tone: 'accent' as const },
@@ -30,7 +45,6 @@ const STATUS = {
 /** Подписи страницы на трёх языках. Ключи одинаковые — за этим следит TypeScript. */
 const TEXT: Dict<{
   title: string;
-  subtitle: string;
   noProfileTitle: string;
   noProfileText: string;
   createProfile: string;
@@ -43,7 +57,6 @@ const TEXT: Dict<{
   mastered: string;
   minutes: string;
   study: string;
-  untilGoal: string;
   daysLeft: (n: number) => string;
   weakSpots: string;
   weakEmpty: string;
@@ -52,7 +65,6 @@ const TEXT: Dict<{
 }> = {
   ru: {
     title: 'Мой план',
-    subtitle: 'Темы отобраны под твой уровень, класс и цель.',
     noProfileTitle: 'Сначала нужен профиль',
     noProfileText: 'Укажите класс, предметы и цель: без этого план построить не из чего.',
     createProfile: 'Создать профиль',
@@ -65,7 +77,6 @@ const TEXT: Dict<{
     mastered: 'Освоено',
     minutes: 'мин',
     study: 'Изучать',
-    untilGoal: 'До цели',
     daysLeft: (n: number) => {
       const last = n % 10;
       const teen = n % 100 >= 11 && n % 100 <= 14;
@@ -86,7 +97,6 @@ const TEXT: Dict<{
   },
   kk: {
     title: 'Жоспарым',
-    subtitle: 'Тақырыптар сенің деңгейіңе, сыныбыңа және мақсатыңа қарай таңдалды.',
     noProfileTitle: 'Алдымен профиль қажет',
     noProfileText: 'Сыныбыңды, пәндерді және мақсатыңды көрсет, онсыз жоспар құруға негіз жоқ.',
     createProfile: 'Профиль құру',
@@ -99,7 +109,6 @@ const TEXT: Dict<{
     mastered: 'Меңгерілді',
     minutes: 'мин',
     study: 'Оқу',
-    untilGoal: 'Мақсатқа дейін',
     daysLeft: () => 'күн қалды',
     weakSpots: 'Әлсіз тұстар',
     weakEmpty:
@@ -114,7 +123,6 @@ const TEXT: Dict<{
   },
   en: {
     title: 'My plan',
-    subtitle: 'Topics picked for your level, grade and goal.',
     noProfileTitle: 'A profile is needed first',
     noProfileText: 'Set your grade, subjects and goal: without them there is nothing to build a plan from.',
     createProfile: 'Create profile',
@@ -127,7 +135,6 @@ const TEXT: Dict<{
     mastered: 'Mastered',
     minutes: 'min',
     study: 'Learn',
-    untilGoal: 'Until your goal',
     daysLeft: (n: number) => (n === 1 ? 'day left' : 'days left'),
     weakSpots: 'Weak spots',
     weakEmpty:
@@ -269,8 +276,8 @@ export default function PlanPage() {
 
   if (!hydrated) {
     return (
-      <div className="mx-auto max-w-6xl space-y-4 px-4 py-10 sm:px-6">
-        <Skeleton className="h-8 w-64" />
+      <div className="mx-auto max-w-4xl space-y-4 px-4 py-10 sm:px-6">
+        <Skeleton className="h-10 w-64" />
         <Skeleton className="h-40 w-full" />
         <Skeleton className="h-64 w-full" />
       </div>
@@ -299,24 +306,44 @@ export default function PlanPage() {
   /* ---------------- Основной экран ---------------- */
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-      <h1 className="text-2xl font-bold text-ink-900 sm:text-3xl">{t.title}</h1>
-      <p className="mt-2 text-ink-500">{t.subtitle}</p>
+    <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
+      {/*
+        Страница открывается заголовком с подписью в строку: предмет и остаток
+        дней стоят рядом мелко, на той же базовой линии. Раньше здесь была
+        отдельная строка описания, из-за которой план начинался ровно так же,
+        как все остальные экраны, и вдобавок отдельная карточка с обратным
+        отсчётом, которая размером спорила с главным элементом страницы.
+      */}
+      <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+        <h1 className="text-3xl font-semibold text-ink-900 sm:text-4xl">{t.title}</h1>
+        <p className="text-sm text-ink-400">
+          {subject.title}
+          {daysLeft !== null && daysLeft >= 0 && ` · ${daysLeft} ${t.daysLeft(daysLeft)}`}
+        </p>
+      </div>
 
-      {/* Переключатель предметов появляется, только если их больше одного */}
+      {/*
+        Переключатель предметов появляется, только если их больше одного.
+        Это панель фильтра, а не содержимое: она лежит на голом фоне и отделена
+        волосяной линией, чтобы не выглядеть ещё одним рядом карточек.
+        Выбранный предмет помечен не только цветом, но и подчёркиванием
+        и состоянием aria-pressed.
+      */}
       {profile.subjectIds.length > 1 && (
-        <div className="mt-6 flex flex-wrap gap-2">
+        <div className="mt-4 flex flex-wrap gap-x-6 border-b border-ink-200">
           {profile.subjectIds.map((id) => {
             const item = getSubject(id);
             if (!item) return null;
+            const active = id === subjectId;
             return (
               <button
                 key={id}
                 onClick={() => setSubjectId(id)}
-                className={`flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
-                  id === subjectId
-                    ? 'border-brand-500 bg-brand-50 text-brand-700'
-                    : 'border-ink-200 bg-white text-ink-600 hover:border-brand-300 hover:shadow-[var(--shadow-lift)]'
+                aria-pressed={active}
+                className={`-mb-px flex min-h-11 items-center gap-2 border-b-2 px-1 text-sm font-semibold transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
+                  active
+                    ? 'border-brand-500 text-brand-700'
+                    : 'border-transparent text-ink-500 hover:text-ink-800'
                 }`}
               >
                 <Icon name={item.icon} size={18} />
@@ -328,7 +355,7 @@ export default function PlanPage() {
       )}
 
       {!diagnostic && (
-        <div className="mt-6">
+        <div className="mt-4">
           <Alert>
             {t.alertBefore}{' '}
             <a href={`/diagnostics/${subject.id}`} className="font-semibold underline">
@@ -339,101 +366,101 @@ export default function PlanPage() {
         </div>
       )}
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-3">
-        {/* Левая колонка: объяснение и темы */}
-        <div className="space-y-4 lg:col-span-2">
-          <Card>
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-lg font-bold text-ink-900">{t.mentorSays}</h2>
-              <div className="flex items-center gap-2">
-                {plan && <AiBadge live={plan.live} reason={plan.fallbackReason} />}
-                <Button size="sm" variant="ghost" onClick={loadPlan} disabled={loading}>
-                  {t.refresh}
-                </Button>
-              </div>
-            </div>
-
-            {loading || !plan ? (
-              <div className="mt-4 space-y-2">
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-11/12" />
-                <Skeleton className="h-4 w-9/12" />
-              </div>
-            ) : (
-              // whitespace-pre-line сохраняет переносы строк из ответа модели
-              <p className="mt-4 whitespace-pre-line leading-relaxed text-ink-700">{plan.text}</p>
-            )}
-          </Card>
-
-          <div>
-            <h2 className="mb-3 text-lg font-bold text-ink-900">{t.recommendedTopics}</h2>
-            <ul className="space-y-3">
-              {ranked.slice(0, 5).map((item) => (
-                <Card
-                  as="li"
-                  key={item.topic.id}
-                  className="transition-all duration-150 hover:border-brand-300 hover:shadow-[var(--shadow-lift)]"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <h3 className="font-bold text-ink-900">{item.topic.title}</h3>
-                    <Badge tone={STATUS[item.status].tone}>{t.status[item.status]}</Badge>
-                  </div>
-                  <p className="mt-1.5 text-sm text-ink-500">{item.topic.summary}</p>
-
-                  <ProgressBar className="mt-4" label={t.mastered} value={item.mastery} />
-
-                  {/* Причины — самое ценное для защиты: видно, что рекомендация
-                      не случайная, а посчитанная */}
-                  <ul className="mt-3 space-y-1">
-                    {item.reasons.map((reason) => (
-                      <li key={reason} className="flex items-start gap-2 text-xs text-ink-400">
-                        <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-ink-300" aria-hidden />
-                        {reason}
-                      </li>
-                    ))}
-                  </ul>
-
-                  <div className="mt-4 flex items-center justify-between gap-3">
-                    <span className="flex items-center gap-2 text-xs text-ink-400">
-                      <Icon name="clock" size={14} />
-                      <span className="tabular-nums">
-                        ≈ {item.topic.estimatedMinutes} {t.minutes}
-                      </span>
-                    </span>
-                    <ButtonLink href={`/learn/${item.topic.id}`} size="sm">
-                      {t.study}
-                    </ButtonLink>
-                  </div>
-                </Card>
-              ))}
-            </ul>
+      {/*
+        Объяснение наставника — главный элемент экрана, поэтому оно набрано
+        заметно крупнее всего остального и лежит прямо на фоне, без рамки.
+        Карточкой оно быть не может: этот текст посчитан под конкретный предмет
+        и конкретного ученика, перенести его на другой экран целиком нельзя.
+      */}
+      <section className="mt-10">
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+          <Kicker>{t.mentorSays}</Kicker>
+          <div className="flex items-center gap-2">
+            {plan && <AiBadge live={plan.live} reason={plan.fallbackReason} />}
+            <Button size="sm" variant="ghost" onClick={loadPlan} disabled={loading}>
+              {t.refresh}
+            </Button>
           </div>
         </div>
 
-        {/* Правая колонка: слабые места и цель */}
-        <div className="space-y-4">
-          {daysLeft !== null && daysLeft >= 0 && (
-            <Card>
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-400">{t.untilGoal}</h2>
-              <p className="mt-2 text-4xl font-black tabular-nums text-ink-900">{daysLeft}</p>
-              <p className="text-sm text-ink-500">{t.daysLeft(daysLeft)}</p>
-            </Card>
-          )}
+        {loading || !plan ? (
+          <div className="mt-4 max-w-3xl space-y-3">
+            <Skeleton className="h-7 w-full" />
+            <Skeleton className="h-7 w-11/12" />
+            <Skeleton className="h-7 w-8/12" />
+          </div>
+        ) : (
+          // whitespace-pre-line сохраняет переносы строк из ответа модели
+          <p className="mt-4 max-w-3xl whitespace-pre-line text-xl leading-relaxed text-ink-800 sm:text-2xl sm:leading-[1.55]">
+            {plan.text}
+          </p>
+        )}
+      </section>
 
-          <Card>
-            <h2 className="text-lg font-bold text-ink-900">{t.weakSpots}</h2>
-            {weak.length === 0 ? (
-              <p className="mt-3 text-sm text-ink-500">{t.weakEmpty}</p>
-            ) : (
-              <div className="mt-4 space-y-4">
-                {weak.map((item) => (
-                  <ProgressBar key={item.skill.id} label={item.skill.title} value={item.mastery} />
-                ))}
+      {/*
+        Список рекомендаций начинается новой областью, далеко от объяснения.
+        Строки с рейкой вместо карточек: цвет рейки кодирует статус темы,
+        и список читается сканированием по левому краю. Подпись статуса словами
+        стоит справа в шапке строки, поэтому смысл не держится на одном цвете.
+      */}
+      <section className="mt-16">
+        <h2 className="text-lg font-bold text-ink-900">{t.recommendedTopics}</h2>
+        <ul className="mt-4 space-y-2">
+          {ranked.slice(0, 5).map((item) => (
+            <li key={item.topic.id}>
+              <RailRow tone={STATUS[item.status].tone} interactive>
+                <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                  <h3 className="font-bold text-ink-900">{item.topic.title}</h3>
+                  <span className="text-xs font-semibold uppercase tracking-wide text-ink-500">
+                    {t.status[item.status]}
+                  </span>
+                </div>
+                <p className="mt-2 text-sm text-ink-500">{item.topic.summary}</p>
+
+                <ProgressBar className="mt-4" label={t.mastered} value={item.mastery} />
+
+                {/*
+                  Время и причины идут одной строкой подробностей обычным текстом.
+                  Причины важны: по ним видно, что рекомендация посчитана, а не
+                  выдана наугад. Отдельными плашками они превращали шапку строки
+                  в гроздь ярлыков.
+                */}
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+                  <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-ink-400">
+                    <Icon name="clock" size={14} className="shrink-0" />
+                    <span className="tabular-nums">
+                      ≈ {item.topic.estimatedMinutes} {t.minutes}
+                    </span>
+                    {item.reasons.length > 0 && <span>· {item.reasons.join(' · ')}</span>}
+                  </p>
+                  <ButtonLink href={`/learn/${item.topic.id}`} size="sm">
+                    {t.study}
+                  </ButtonLink>
+                </div>
+              </RailRow>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      {/*
+        Слабые места это плотные данные, а не самостоятельная единица: панель
+        без тени, строки разделены волосяными линиями.
+      */}
+      <section className="mt-16">
+        <h2 className="text-lg font-bold text-ink-900">{t.weakSpots}</h2>
+        {weak.length === 0 ? (
+          <p className="mt-4 max-w-2xl text-sm text-ink-500">{t.weakEmpty}</p>
+        ) : (
+          <Panel className="mt-4 divide-y divide-ink-200">
+            {weak.map((item) => (
+              <div key={item.skill.id} className="p-4">
+                <ProgressBar label={item.skill.title} value={item.mastery} />
               </div>
-            )}
-          </Card>
-        </div>
-      </div>
+            ))}
+          </Panel>
+        )}
+      </section>
     </div>
   );
 }

@@ -16,7 +16,7 @@ import { GRADES, LEARNING_GOALS } from '@/lib/types';
 import type { Grade, LearningGoal, Profile, Role } from '@/lib/types';
 import type { Dict } from '@/lib/i18n';
 import { SUBJECTS } from '@/data';
-import { Alert, Button, Card } from '@/components/ui';
+import { Alert, Button } from '@/components/ui';
 import { Icon, type IconName } from '@/components/Icon';
 
 const TOTAL_STEPS = 4;
@@ -49,6 +49,8 @@ const TEXT: Dict<{
   back: string;
   next: string;
   finish: string;
+  /** Подпись словами у выбранной строки: цвет рейки не может быть единственным признаком. */
+  selected: string;
   goals: Record<LearningGoal, { title: string; description: string }>;
 }> = {
   ru: {
@@ -73,6 +75,7 @@ const TEXT: Dict<{
     back: 'Назад',
     next: 'Далее',
     finish: 'Начать обучение',
+    selected: 'Выбрано',
     goals: {
       ent: {
         title: 'Подготовка к ЕНТ',
@@ -114,6 +117,7 @@ const TEXT: Dict<{
     back: 'Артқа',
     next: 'Әрі қарай',
     finish: 'Оқуды бастау',
+    selected: 'Таңдалды',
     goals: {
       ent: {
         title: 'ҰБТ-ға дайындық',
@@ -155,6 +159,7 @@ const TEXT: Dict<{
     back: 'Back',
     next: 'Next',
     finish: 'Start learning',
+    selected: 'Selected',
     goals: {
       ent: {
         title: 'Preparing for the ENT',
@@ -228,26 +233,52 @@ export default function OnboardingPage() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
-      {/* Индикатор прогресса: ученик должен видеть, сколько осталось */}
-      <p className="text-sm font-semibold tabular-nums text-brand-600">{t.stepOf(step, TOTAL_STEPS)}</p>
-      <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-ink-200">
-        <div
-          className="h-full rounded-full bg-brand-500 transition-all duration-300"
-          style={{ width: `${(step / TOTAL_STEPS) * 100}%` }}
-        />
+      {/*
+        Мастер лежит на голом фоне, а не в карточке.
+
+        Карточка нужна там, где элемент можно мысленно перенести на другой экран
+        целиком. Мастер занимать целиком весь экран и переносить его некуда,
+        поэтому рамка вокруг него ничего не отделяет от фона, а только добавляет
+        лишнюю ступень вложенности перед строками выбора, у которых своя рамка.
+      */}
+
+      {/*
+        Индикатор прогресса: ученик должен видеть, сколько осталось.
+        Полоса разбита на четыре отрезка по числу шагов, поэтому оставшееся
+        читается сразу, без чтения подписи, а сама подпись набрана мелко,
+        чтобы не спорить с вопросом шага.
+      */}
+      <p className="text-xs font-medium uppercase tracking-wide text-ink-400">{t.stepOf(step, TOTAL_STEPS)}</p>
+      <div
+        className="mt-2 flex gap-1.5"
+        role="progressbar"
+        aria-valuemin={1}
+        aria-valuemax={TOTAL_STEPS}
+        aria-valuenow={step}
+        aria-label={t.stepOf(step, TOTAL_STEPS)}
+      >
+        {Array.from({ length: TOTAL_STEPS }, (_, index) => (
+          <span
+            key={index}
+            aria-hidden
+            className={`h-2 flex-1 rounded-full transition-colors duration-300 ${
+              index < step ? 'bg-brand-500' : 'bg-ink-200'
+            }`}
+          />
+        ))}
       </div>
 
       {state.profile && step === 1 && (
-        <div className="mt-6">
+        <div className="mt-10">
           <Alert>{t.profileExists}</Alert>
         </div>
       )}
 
-      <Card className="mt-6">
+      <div className="mt-10">
         {/* Шаг 1: имя и роль */}
         {step === 1 && (
           <div>
-            <h1 className="text-2xl font-bold text-ink-900 sm:text-3xl">{t.nameTitle}</h1>
+            <h1 className="text-3xl font-semibold text-ink-900 sm:text-4xl">{t.nameTitle}</h1>
             <p className="mt-2 text-ink-500">{t.nameHint}</p>
 
             <input
@@ -255,20 +286,22 @@ export default function OnboardingPage() {
               value={name}
               onChange={(event) => setName(event.target.value)}
               placeholder={t.namePlaceholder}
-              className="mt-6 w-full rounded-xl border border-ink-200 px-4 py-3 text-ink-900 outline-none transition-all duration-150 focus:border-brand-500 focus-visible:ring-2 focus-visible:ring-brand-500"
+              className="mt-4 w-full rounded-xl border border-ink-200 px-4 py-3 text-ink-900 outline-none transition-all duration-150 focus:border-brand-500 focus-visible:ring-2 focus-visible:ring-brand-500"
             />
 
-            <p className="mt-6 font-semibold text-ink-800">{t.whoAreYou}</p>
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              <ChoiceCard
+            <p className="mt-10 text-xs font-medium uppercase tracking-wide text-ink-400">{t.whoAreYou}</p>
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              <ChoiceRow
                 selected={role === 'student'}
+                selectedLabel={t.selected}
                 onClick={() => setRole('student')}
                 icon="backpack"
                 title={t.roleStudent}
                 description={t.roleStudentDesc}
               />
-              <ChoiceCard
+              <ChoiceRow
                 selected={role === 'teacher'}
+                selectedLabel={t.selected}
                 onClick={() => setRole('teacher')}
                 icon="presentation"
                 title={t.roleTeacher}
@@ -281,15 +314,15 @@ export default function OnboardingPage() {
         {/* Шаг 2: класс */}
         {step === 2 && (
           <div>
-            <h1 className="text-2xl font-bold text-ink-900 sm:text-3xl">{t.gradeTitle}</h1>
+            <h1 className="text-3xl font-semibold text-ink-900 sm:text-4xl">{t.gradeTitle}</h1>
             <p className="mt-2 text-ink-500">{t.gradeHint}</p>
 
-            <div className="mt-6 grid grid-cols-3 gap-3 sm:grid-cols-6">
+            <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-6">
               {GRADES.map((item) => (
                 <button
                   key={item}
                   onClick={() => setGrade(item)}
-                  className={`rounded-xl border-2 py-4 text-lg font-bold tabular-nums transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
+                  className={`min-h-14 rounded-xl border-2 py-4 text-lg font-bold tabular-nums transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
                     grade === item
                       ? 'border-brand-500 bg-brand-50 text-brand-700'
                       : 'border-ink-200 bg-white text-ink-700 hover:border-brand-300 hover:shadow-[var(--shadow-lift)]'
@@ -305,14 +338,15 @@ export default function OnboardingPage() {
         {/* Шаг 3: предметы */}
         {step === 3 && (
           <div>
-            <h1 className="text-2xl font-bold text-ink-900 sm:text-3xl">{t.subjectsTitle}</h1>
+            <h1 className="text-3xl font-semibold text-ink-900 sm:text-4xl">{t.subjectsTitle}</h1>
             <p className="mt-2 text-ink-500">{t.subjectsHint}</p>
 
-            <div className="mt-6 grid gap-3">
+            <div className="mt-4 grid gap-2">
               {SUBJECTS.map((subject) => (
-                <ChoiceCard
+                <ChoiceRow
                   key={subject.id}
                   selected={subjectIds.includes(subject.id)}
+                  selectedLabel={t.selected}
                   onClick={() => toggleSubject(subject.id)}
                   icon={subject.icon}
                   title={subject.title}
@@ -326,14 +360,15 @@ export default function OnboardingPage() {
         {/* Шаг 4: цель */}
         {step === 4 && (
           <div>
-            <h1 className="text-2xl font-bold text-ink-900 sm:text-3xl">{t.goalTitle}</h1>
+            <h1 className="text-3xl font-semibold text-ink-900 sm:text-4xl">{t.goalTitle}</h1>
             <p className="mt-2 text-ink-500">{t.goalHint}</p>
 
-            <div className="mt-6 grid gap-3">
+            <div className="mt-4 grid gap-2">
               {LEARNING_GOALS.map((item) => (
-                <ChoiceCard
+                <ChoiceRow
                   key={item.id}
                   selected={goal === item.id}
+                  selectedLabel={t.selected}
                   onClick={() => setGoal(item.id)}
                   icon={item.icon}
                   title={t.goals[item.id].title}
@@ -342,9 +377,11 @@ export default function OnboardingPage() {
               ))}
             </div>
 
-            <label className="mt-6 block">
-              <span className="font-semibold text-ink-800">{t.targetDateLabel}</span>
-              <span className="ml-2 text-sm text-ink-400">{t.optional}</span>
+            <label className="mt-10 block">
+              <span className="text-xs font-medium uppercase tracking-wide text-ink-400">
+                {t.targetDateLabel}
+              </span>
+              <span className="ml-2 text-xs text-ink-400">{t.optional}</span>
               <input
                 type="date"
                 value={targetDate}
@@ -355,8 +392,9 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {/* Навигация по шагам */}
-        <div className="mt-8 flex justify-between gap-3">
+        {/* Навигация по шагам. Волосяная линия заменяет рамку карточки:
+            на голом фоне она отделяет управление от содержимого шага. */}
+        <div className="mt-16 flex justify-between gap-3 border-t border-ink-200 pt-6">
           <Button variant="secondary" onClick={() => setStep(step - 1)} disabled={step === 1}>
             {t.back}
           </Button>
@@ -371,25 +409,36 @@ export default function OnboardingPage() {
             </Button>
           )}
         </div>
-      </Card>
+      </div>
     </div>
   );
 }
 
 /**
- * Карточка выбора. Вынесена отдельно, потому что используется на трёх шагах:
+ * Строка выбора. Вынесена отдельно, потому что используется на трёх шагах:
  * роль, предметы и цель выглядят одинаково, и дублировать разметку незачем.
+ *
+ * Раньше это была карточка, и каждый шаг превращался в решётку одинаковых
+ * прямоугольников внутри ещё одной карточки. Теперь это перечисление со строкой
+ * и цветной рейкой слева: рейка кодирует выбор, и список читается сканированием
+ * по левому краю.
+ *
+ * Цвет тут не единственный носитель смысла: у выбранной строки справа стоит
+ * галочка и подпись словами, а состояние продублировано в aria-pressed
+ * для тех, кто идёт по странице с клавиатуры или через экранный диктор.
  *
  * Всё, что в фигурных скобках у компонента — это props, входные данные.
  */
-function ChoiceCard({
+function ChoiceRow({
   selected,
+  selectedLabel,
   onClick,
   icon,
   title,
   description,
 }: {
   selected: boolean;
+  selectedLabel: string;
   onClick: () => void;
   icon: IconName;
   title: string;
@@ -399,23 +448,36 @@ function ChoiceCard({
     <button
       onClick={onClick}
       aria-pressed={selected}
-      className={`flex items-start gap-3 rounded-xl border-2 p-4 text-left transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
+      className={`relative flex w-full items-start gap-3 overflow-hidden rounded-xl border py-4 pl-5 pr-4 text-left transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 sm:pl-6 ${
         selected
-          ? 'border-brand-500 bg-brand-50'
-          : 'border-ink-200 bg-white hover:border-brand-300 hover:shadow-[var(--shadow-lift)]'
+          ? 'border-brand-200 bg-brand-50'
+          : 'border-ink-200 bg-white hover:border-ink-300 hover:shadow-[var(--shadow-lift)]'
       }`}
     >
       <span
+        aria-hidden
+        className={`absolute inset-y-0 left-0 w-[3px] ${selected ? 'bg-brand-500' : 'bg-ink-200'}`}
+      />
+
+      <span
         className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
-          selected ? 'bg-white text-brand-600' : 'bg-brand-50 text-brand-600'
+          selected ? 'bg-white text-brand-600' : 'bg-ink-50 text-ink-400'
         }`}
       >
         <Icon name={icon} size={20} />
       </span>
-      <span>
+
+      <span className="min-w-0 flex-1">
         <span className="block font-bold text-ink-900">{title}</span>
         <span className="mt-0.5 block text-sm text-ink-500">{description}</span>
       </span>
+
+      {selected && (
+        <span className="flex shrink-0 items-center gap-1 text-xs font-semibold text-brand-600">
+          <Icon name="check" size={14} />
+          {selectedLabel}
+        </span>
+      )}
     </button>
   );
 }

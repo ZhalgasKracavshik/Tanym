@@ -18,7 +18,7 @@ import type { Dict } from '@/lib/i18n';
 import { useStore } from '@/components/StoreProvider';
 import { AiBadge } from '@/components/AiBadge';
 import { Icon } from '@/components/Icon';
-import { Badge, Button, ButtonLink, Card, EmptyState, Skeleton } from '@/components/ui';
+import { Badge, Button, ButtonLink, EmptyState, Panel, RailRow, Skeleton } from '@/components/ui';
 
 const TEXT: Dict<{
   notFound: string;
@@ -208,26 +208,32 @@ export function MaterialClient({ materialId }: { materialId: string }) {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
+      {/*
+        Страница материала открывается контекстной строкой, а не заголовком:
+        сначала ученик видит, куда попал (категория и сложность), и только
+        потом название. Плашек ровно две, источник ушёл строкой ниже обычным
+        текстом. Гроздь из трёх плашек и была тем, что делало шапку шаблонной.
+      */}
       <div className="flex flex-wrap items-center gap-2">
         <Badge tone="brand">
           {meta && <Icon name={meta.icon} size={14} />}
           {meta?.title[state.language]}
         </Badge>
         <Badge>{t.difficulty[material.difficulty]}</Badge>
-        <span className="text-xs text-ink-400">{material.source}</span>
       </div>
 
-      <h1 className="mt-3 text-2xl font-bold text-ink-900 sm:text-3xl">{material.title}</h1>
+      <h1 className="mt-2 text-xl font-semibold text-ink-900 sm:text-3xl">{material.title}</h1>
+      <p className="mt-2 text-xs text-ink-400">{material.source}</p>
 
       {/* Переключатель заданий */}
-      <div className="mt-6">
-        <p className="mb-3 text-sm font-semibold text-ink-500">{t.chooseTask}</p>
-        <div className="flex flex-wrap gap-2">
+      <div className="mt-10">
+        <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-ink-400">{t.chooseTask}</p>
+        <div className="mt-2 flex flex-wrap gap-2">
           {material.tasks.map((item, index) => (
             <button
               key={item.id}
               onClick={() => openTask(index)}
-              className={`h-10 w-10 rounded-xl border-2 font-bold tabular-nums transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
+              className={`h-11 w-11 rounded-xl border-2 font-bold tabular-nums transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
                 index === taskIndex
                   ? 'border-brand-500 bg-brand-50 text-brand-700'
                   : 'border-ink-200 bg-white text-ink-600 hover:border-brand-300 hover:shadow-[var(--shadow-lift)]'
@@ -239,20 +245,26 @@ export function MaterialClient({ materialId }: { materialId: string }) {
         </div>
       </div>
 
-      {/* Условие */}
-      <Card className="mt-6">
-        <p className="text-sm font-semibold tabular-nums text-ink-400">
+      {/*
+        Условие это главный элемент экрана, и раньше оно ничем не отличалось
+        от остальных белых прямоугольников: та же карточка, тот же кегль, что
+        у реплик наставника. Теперь оно лежит на голом фоне между волосяными
+        линиями и набрано втрое крупнее подписи над ним, так что при открытии
+        страницы глаз цепляется за задачу, а не за оформление.
+      */}
+      <div className="mt-4 border-y border-ink-200 py-6">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] tabular-nums text-ink-400">
           {t.taskNumber(taskIndex + 1, material.tasks.length)}
         </p>
         {/* whitespace-pre-line сохраняет переносы: у заданий IELTS отрывок
             и утверждение должны стоять разными абзацами */}
-        <p className="mt-2 whitespace-pre-line text-lg font-semibold leading-relaxed text-ink-900">
+        <p className="mt-2 whitespace-pre-line text-2xl font-semibold leading-snug text-ink-900 sm:text-4xl">
           {task.prompt}
         </p>
-      </Card>
+      </div>
 
       {/* Диалог */}
-      <div className="mt-6 space-y-3">
+      <div className="mt-10 space-y-2">
         {/* Первый вопрос заготовлен в контенте: он не требует обращения к модели
             и задаёт разговору верный тон с первой секунды */}
         <div className="rounded-2xl border border-ink-200 bg-white px-4 py-3">
@@ -293,29 +305,32 @@ export function MaterialClient({ materialId }: { materialId: string }) {
         <div ref={bottomRef} />
       </div>
 
-      {/* Успех */}
+      {/* Успех. Зелёная рейка кодирует состояние, но рядом всегда стоят
+          слово «решено» и галочка: цвет здесь ничего не несёт в одиночку. */}
       {solved && (
-        <Card className="mt-6 border-success-500/40 bg-success-50">
-          <p className="flex items-center gap-2 font-bold text-success-700">
-            <Icon name="check" size={18} />
-            {t.solved}
-          </p>
-          <p className="mt-3 text-sm text-success-700">{t.solvedHint}</p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            {taskIndex + 1 < material.tasks.length && (
-              <Button onClick={() => openTask(taskIndex + 1)}>{t.nextTask}</Button>
-            )}
-            <Button variant="secondary" onClick={() => openTask(taskIndex)}>
-              {t.restart}
-            </Button>
-          </div>
-        </Card>
+        <div className="mt-10">
+          <RailRow tone="success">
+            <p className="flex items-center gap-2 font-bold text-success-700">
+              <Icon name="check" size={18} />
+              {t.solved}
+            </p>
+            <p className="mt-2 text-sm text-ink-500">{t.solvedHint}</p>
+            <div className="mt-4 flex flex-wrap gap-3">
+              {taskIndex + 1 < material.tasks.length && (
+                <Button onClick={() => openTask(taskIndex + 1)}>{t.nextTask}</Button>
+              )}
+              <Button variant="secondary" onClick={() => openTask(taskIndex)}>
+                {t.restart}
+              </Button>
+            </div>
+          </RailRow>
+        </div>
       )}
 
       {/* Поле ввода */}
       {!solved && (
-        <div className="mt-6">
-          <p className="mb-3 text-sm text-ink-400">{messages.length === 0 ? t.startHint : t.yourTurn}</p>
+        <div className="mt-10">
+          <p className="mb-2 text-sm text-ink-400">{messages.length === 0 ? t.startHint : t.yourTurn}</p>
           <div className="flex items-end gap-2 rounded-2xl border border-ink-200 bg-white p-2 shadow-[var(--shadow-rest)] transition-all duration-150 focus-within:border-brand-300 focus-within:shadow-[var(--shadow-lift)]">
             <textarea
               value={draft}
@@ -340,12 +355,14 @@ export function MaterialClient({ materialId }: { materialId: string }) {
 
       {/* Сдаться. Кнопка нужна: без выхода метод Сократа превращается
           в ловушку для того, кто действительно не понимает */}
-      <div className="mt-6">
+      <div className="mt-4">
         {showSolution ? (
-          <Card>
-            <h2 className="font-bold text-ink-900">{t.solution}</h2>
-            <p className="mt-3 leading-relaxed text-ink-700">{task.explanation}</p>
-          </Card>
+          /* Разбор это плотный текст, а не самодостаточная единица: панель
+             без тени, чтобы он не спорил по весу с условием задачи. */
+          <Panel className="p-5">
+            <h2 className="text-lg font-bold text-ink-900">{t.solution}</h2>
+            <p className="mt-2 leading-relaxed text-ink-700">{task.explanation}</p>
+          </Panel>
         ) : (
           <Button
             variant="ghost"

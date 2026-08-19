@@ -16,7 +16,7 @@ import type { Dict } from '@/lib/i18n';
 import type { FeedbackRequest, FeedbackResponse } from '@/lib/ai/contracts';
 import { useStore } from '@/components/StoreProvider';
 import { AiBadge } from '@/components/AiBadge';
-import { Badge, Button, ButtonLink, Card, EmptyState, Skeleton } from '@/components/ui';
+import { Badge, Button, ButtonLink, Card, EmptyState, Panel, RailRow, Skeleton } from '@/components/ui';
 import { Icon } from '@/components/Icon';
 
 /**
@@ -211,7 +211,7 @@ export function LearnClient({ topicId }: { topicId: string }) {
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-ink-100 text-ink-400">
           <Icon name="book" size={28} />
         </div>
-        <div className="mt-3">
+        <div className="mt-4">
           <EmptyState
            
             title={t.notFoundTitle}
@@ -305,6 +305,12 @@ export function LearnClient({ topicId }: { topicId: string }) {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+      {/*
+        Страница открывается контекстной строкой, а не заголовком: ученик приходит
+        сюда из плана и уже знает, куда попал. Сначала предмет, потом название темы.
+        Заголовок здесь намеренно сдержанный: главный элемент экрана это условие
+        задания, и оно должно быть крупнее всего остального.
+      */}
       <div className="flex flex-wrap items-center gap-2">
         <Badge tone="brand">
           <Icon name={subject.icon} size={14} />
@@ -312,11 +318,11 @@ export function LearnClient({ topicId }: { topicId: string }) {
         </Badge>
         {topic.custom && <Badge tone="accent">{t.teacherTopic}</Badge>}
       </div>
-      <h1 className="mt-3 text-2xl font-bold text-ink-900 sm:text-3xl">{topic.title}</h1>
+      <h1 className="mt-2 text-xl font-semibold text-ink-900 sm:text-2xl">{topic.title}</h1>
       <p className="mt-2 text-ink-500">{topic.summary}</p>
 
       {/* Вкладки */}
-      <div className="mt-6 flex gap-2 border-b border-ink-200">
+      <div className="mt-10 flex gap-2 border-b border-ink-200">
         {(['theory', 'tasks'] as const).map((item) => (
           <button
             key={item}
@@ -334,27 +340,38 @@ export function LearnClient({ topicId }: { topicId: string }) {
 
       {/* ---------------- Теория ---------------- */}
       {tab === 'theory' && (
-        <div className="mt-6 space-y-4">
-          <Card>
-            <p className="leading-relaxed text-ink-700">{topic.material.intro}</p>
-          </Card>
+        <div className="mt-4">
+          {/*
+            Теория перестала быть стопкой одинаковых карточек. Вводный абзац и
+            разделы это сплошной текст одной темы, их нельзя перенести на другой
+            экран поодиночке, поэтому они лежат на голом фоне и разделены
+            волосяными линиями. Карточка осталась только там, где содержимое
+            действительно самодостаточно.
+          */}
+          <p className="border-b border-ink-200 pb-6 text-lg leading-relaxed text-ink-700">
+            {topic.material.intro}
+          </p>
 
-          {topic.material.sections.map((section) => (
-            <Card key={section.heading}>
-              <h2 className="font-bold text-ink-900">{section.heading}</h2>
-              <p className="mt-2 leading-relaxed text-ink-700">{section.body}</p>
-              {section.formula && (
-                <p className="mt-3 rounded-xl bg-ink-50 px-4 py-3 font-mono text-sm text-ink-800">
-                  {section.formula}
-                </p>
-              )}
-            </Card>
-          ))}
+          {topic.material.sections.length > 0 && (
+            <div className="mt-10 divide-y divide-ink-200">
+              {topic.material.sections.map((section) => (
+                <section key={section.heading} className="py-6 first:pt-0">
+                  <h2 className="text-lg font-bold text-ink-900">{section.heading}</h2>
+                  <p className="mt-2 leading-relaxed text-ink-700">{section.body}</p>
+                  {section.formula && (
+                    <p className="mt-4 rounded-xl bg-ink-50 px-4 py-3 font-mono text-sm text-ink-800">
+                      {section.formula}
+                    </p>
+                  )}
+                </section>
+              ))}
+            </div>
+          )}
 
           {topic.material.keyPoints.length > 0 && (
-            <Card className="border-brand-200 bg-brand-50">
-              <h2 className="font-bold text-brand-800">{t.keyPoints}</h2>
-              <ul className="mt-3 space-y-2">
+            <Panel className="mt-10 border-brand-200 bg-brand-50 p-5">
+              <h2 className="text-lg font-bold text-brand-800">{t.keyPoints}</h2>
+              <ul className="mt-4 space-y-2">
                 {topic.material.keyPoints.map((point) => (
                   <li key={point} className="flex items-start gap-2 text-sm text-brand-800">
                     <Icon name="check" size={16} className="mt-0.5 text-brand-600" />
@@ -362,58 +379,77 @@ export function LearnClient({ topicId }: { topicId: string }) {
                   </li>
                 ))}
               </ul>
-            </Card>
+            </Panel>
           )}
 
-          {topic.material.examples.map((example, i) => (
-            <Card key={example.problem}>
-              <h2 className="font-bold text-ink-900">{t.example(i + 1)}</h2>
-              <p className="mt-2 font-medium text-ink-800">{example.problem}</p>
-              <p className="mt-2 leading-relaxed text-ink-600">{example.solution}</p>
-            </Card>
-          ))}
+          {/*
+            Разобранные примеры это перечисление, поэтому они идут строками
+            с рейкой, а не карточками. Цвет рейки не единственный носитель смысла:
+            рядом стоит подпись «Пример N».
+          */}
+          {topic.material.examples.length > 0 && (
+            <div className="mt-10 space-y-4">
+              {topic.material.examples.map((example, i) => (
+                <RailRow key={example.problem} tone="accent">
+                  <p className="text-xs font-medium uppercase tracking-wide text-ink-400">{t.example(i + 1)}</p>
+                  <p className="mt-2 font-medium text-ink-800">{example.problem}</p>
+                  <p className="mt-2 leading-relaxed text-ink-600">{example.solution}</p>
+                </RailRow>
+              ))}
+            </div>
+          )}
 
-          <Button size="lg" className="w-full" onClick={() => setTab('tasks')}>
-            {t.goToTasks}
-          </Button>
+          <div className="mt-16">
+            <Button size="lg" className="w-full" onClick={() => setTab('tasks')}>
+              {t.goToTasks}
+            </Button>
+          </div>
         </div>
       )}
 
       {/* ---------------- Задания ---------------- */}
       {tab === 'tasks' && (
-        <div className="mt-6">
+        <div className="mt-4">
           {!task ? (
-            // Задания закончились — итог
-            <Card className="text-center">
-              <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-success-50 text-success-700">
-                <Icon name="crosshair" size={32} />
+            // Задания закончились, показываем итог. Карточка тут не нужна: на экране больше
+            // ничего нет, обводить единственный блок рамкой значит спорить с ним.
+            <div className="py-6">
+              <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-success-50 text-success-700">
+                <Icon name="crosshair" size={28} />
               </span>
-              <h2 className="mt-4 text-xl font-bold text-ink-900">{t.topicDone}</h2>
+              <h2 className="mt-4 text-3xl font-semibold text-ink-900">{t.topicDone}</h2>
               <p className="mt-2 tabular-nums text-ink-500">{t.solved(solved, tasks.length)}</p>
               {difficultyExplanation(subject.id, state) && (
-                <p className="mt-3 text-sm text-brand-700">{difficultyExplanation(subject.id, state)}</p>
+                <p className="mt-4 border-t border-ink-200 pt-4 text-sm text-brand-700">
+                  {difficultyExplanation(subject.id, state)}
+                </p>
               )}
-              <div className="mt-6 flex flex-wrap justify-center gap-3">
+              <div className="mt-10 flex flex-wrap gap-3">
                 <ButtonLink href="/plan">{t.backToPlan}</ButtonLink>
                 <Button variant="secondary" onClick={restart}>
                   {t.restart}
                 </Button>
               </div>
-            </Card>
+            </div>
           ) : (
             <Card>
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-sm font-semibold tabular-nums text-ink-400">
+                <span className="text-xs font-medium uppercase tracking-wide tabular-nums text-ink-400">
                   {t.taskCounter(index + 1, tasks.length)}
                 </span>
                 <Badge>{t.difficulty[task.difficulty]}</Badge>
               </div>
 
-              <p className="mt-4 text-lg font-semibold text-ink-900">{task.prompt}</p>
+              {/*
+                Условие это главный элемент экрана, за него цепляется глаз при первом
+                взгляде. Поэтому оно набрано заметно крупнее счётчика над ним
+                и крупнее названия темы в шапке страницы.
+              */}
+              <p className="mt-4 text-2xl font-semibold leading-snug text-ink-900 sm:text-3xl">{task.prompt}</p>
 
               {/* Варианты ответа или поле ввода — в зависимости от типа задания */}
               {task.kind === 'single' && task.options && (
-                <div className="mt-5 grid gap-2.5">
+                <div className="mt-10 grid gap-2.5">
                   {task.options.map((option, i) => (
                     <button
                       key={option}
@@ -440,7 +476,7 @@ export function LearnClient({ topicId }: { topicId: string }) {
                   disabled={feedback !== null}
                   onChange={(event) => setAnswer(event.target.value)}
                   placeholder={t.numericPlaceholder}
-                  className="mt-5 w-full rounded-xl border border-ink-200 px-4 py-3 outline-none focus:border-brand-500 disabled:bg-ink-50"
+                  className="mt-10 w-full rounded-xl border border-ink-200 px-4 py-3 outline-none focus:border-brand-500 disabled:bg-ink-50"
                 />
               )}
 
@@ -461,14 +497,14 @@ export function LearnClient({ topicId }: { topicId: string }) {
               )}
 
               {loading && (
-                <div className="mt-5 space-y-2">
+                <div className="mt-10 space-y-2">
                   <Skeleton className="h-4 w-full" />
                   <Skeleton className="h-4 w-10/12" />
                 </div>
               )}
 
               {failed && !loading && (
-                <p className="mt-5 flex items-center gap-2 rounded-xl bg-danger-50 px-4 py-3 text-sm font-semibold text-danger-700">
+                <p className="mt-10 flex items-center gap-2 rounded-xl bg-danger-50 px-4 py-3 text-sm font-semibold text-danger-700">
                   <Icon name="alert" size={16} />
                   {t.networkError}
                 </p>
@@ -476,7 +512,12 @@ export function LearnClient({ topicId }: { topicId: string }) {
 
               {/* Результат проверки */}
               {feedback && !loading && (
-                <div className="mt-5">
+                /*
+                  Разбор отделён от условия линией, а не только отступом: это уже
+                  другой этап работы, ответ принят и обсуждается, а не решается.
+                  Одного пустого места для такой границы мало.
+                */
+                <div className="mt-10 border-t border-ink-200 pt-6">
                   <div
                     className={`flex flex-wrap items-center gap-2 rounded-xl px-4 py-3 font-bold ${
                       feedback.correct ? 'bg-success-50 text-success-700' : 'bg-danger-50 text-danger-700'
@@ -491,17 +532,17 @@ export function LearnClient({ topicId }: { topicId: string }) {
                     )}
                   </div>
 
-                  <div className="mt-4 rounded-xl border border-ink-200 p-4">
-                    <div className="mb-2 flex items-center justify-between gap-2">
-                      <span className="text-sm font-bold text-ink-800">{t.explanation}</span>
+                  <div className="mt-4">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-medium uppercase tracking-wide text-ink-400">{t.explanation}</span>
                       <AiBadge live={feedback.live} reason={feedback.fallbackReason} />
                     </div>
-                    <p className="whitespace-pre-line leading-relaxed text-ink-700">{feedback.text}</p>
+                    <p className="mt-2 whitespace-pre-line leading-relaxed text-ink-700">{feedback.text}</p>
                   </div>
                 </div>
               )}
 
-              <div className="mt-6">
+              <div className="mt-10">
                 {feedback ? (
                   <Button size="lg" className="w-full" onClick={next}>
                     {index + 1 < tasks.length ? t.nextTask : t.finishTopic}

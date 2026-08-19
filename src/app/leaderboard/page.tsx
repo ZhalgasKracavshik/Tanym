@@ -16,7 +16,7 @@ import { summarize } from '@/lib/personalization';
 import type { Dict } from '@/lib/i18n';
 import { useStore } from '@/components/StoreProvider';
 import { Icon } from '@/components/Icon';
-import { Badge, ButtonLink, Card, EmptyState, Skeleton } from '@/components/ui';
+import { Badge, ButtonLink, EmptyState, Panel, Skeleton } from '@/components/ui';
 
 /**
  * Цвет медали для первых трёх мест. Место всё равно показано числом, медаль
@@ -30,7 +30,9 @@ const MEDAL_TONE: Record<number, string> = {
 
 const TEXT: Dict<{
   title: string;
-  subtitle: string;
+  myPlace: string;
+  participants: string;
+  topScore: string;
   colRank: string;
   colStudent: string;
   colPoints: string;
@@ -50,7 +52,9 @@ const TEXT: Dict<{
 }> = {
   ru: {
     title: 'Рейтинг школы',
-    subtitle: 'Очки начисляются за решённые задания. Быть в списке под именем необязательно.',
+    myPlace: 'Ваше место',
+    participants: 'Участников',
+    topScore: 'Лучший результат',
     colRank: 'Место',
     colStudent: 'Ученик',
     colPoints: 'Очки',
@@ -72,7 +76,9 @@ const TEXT: Dict<{
   },
   kk: {
     title: 'Мектеп рейтингі',
-    subtitle: 'Ұпай шешілген тапсырмалар үшін беріледі. Тізімде өз атыңызбен тұру міндетті емес.',
+    myPlace: 'Сіздің орныңыз',
+    participants: 'Қатысушы',
+    topScore: 'Үздік нәтиже',
     colRank: 'Орын',
     colStudent: 'Оқушы',
     colPoints: 'Ұпай',
@@ -94,7 +100,9 @@ const TEXT: Dict<{
   },
   en: {
     title: 'School leaderboard',
-    subtitle: 'Points come from solved tasks. Appearing under your real name is optional.',
+    myPlace: 'Your place',
+    participants: 'Participants',
+    topScore: 'Top score',
     colRank: 'Place',
     colStudent: 'Student',
     colPoints: 'Points',
@@ -156,58 +164,69 @@ export default function LeaderboardPage() {
   const visibleName = (entry: LeaderboardEntry): string =>
     entry.anonymous ? pseudonym(entry.id, state.language) : entry.name;
 
+  // Строка текущего ученика уже с посчитанным местом: она же главный элемент экрана.
+  const myRow = rows.find((entry) => entry.isCurrentUser) ?? null;
+
   return (
     <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
-      <h1 className="text-2xl font-bold text-ink-900 sm:text-3xl">{t.title}</h1>
-      <p className="mt-2 text-ink-500">{t.subtitle}</p>
+      {/*
+        Заголовок без описания: ученик приходит сюда за своим местом, а не
+        за объяснением, что такое рейтинг. Сразу под заголовком идут цифры.
+      */}
+      <h1 className="text-3xl font-semibold text-ink-900 sm:text-4xl">{t.title}</h1>
 
-      {/* Переключатель анонимности — рядом с таблицей, а не в настройках */}
-      {me ? (
-        <Card className="mt-6">
-          <p className="text-sm font-semibold uppercase tracking-wide text-ink-400">{t.anonymityTitle}</p>
-          <label className="mt-3 flex cursor-pointer items-start gap-3">
-            <input
-              type="checkbox"
-              checked={state.leaderboardAnonymous}
-              onChange={(event) => setLeaderboardAnonymous(event.target.checked)}
-              className="mt-0.5 h-5 w-5 shrink-0 rounded border-ink-300 accent-brand-500"
-            />
-            <span>
-              <span className="font-semibold text-ink-900">{t.anonymityToggle}</span>
-              <span className="mt-1 block text-sm text-ink-500">{t.anonymityHelp}</span>
-            </span>
-          </label>
-          <p className="mt-3 text-sm text-ink-600">
-            {t.seenAs(visibleName(me))}
-          </p>
-        </Card>
-      ) : profile ? (
-        <div className="mt-6">
-          <Card>
-            <p className="text-sm text-ink-600">{t.teacherNote}</p>
-          </Card>
-        </div>
-      ) : (
-        <div className="mt-6">
-          {/* Иконка вынесена рядом: проп icon в EmptyState принимает строку,
-              а строкой иконку из набора не передать. */}
-          <div className="mb-3 flex justify-center">
-            <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-ink-200 bg-white text-ink-400">
-              <Icon name="trophy" size={24} />
-            </span>
-          </div>
-          <EmptyState
-           
-            title={t.noProfileTitle}
-            description={t.noProfileText}
-            action={<ButtonLink href="/onboarding">{t.createProfile}</ButtonLink>}
-          />
-        </div>
-      )}
+      {/*
+        Показатели лежат на голом фоне между волосяными линиями. Место набрано
+        крупнее всего: остальные цифры это подробности того же самого места.
+      */}
+      <div className="mt-10 grid grid-cols-2 gap-x-8 gap-y-6 border-y border-ink-200 py-6 sm:grid-cols-4 sm:divide-x sm:divide-ink-200">
+        {myRow ? (
+          <>
+            <div className="sm:pr-8">
+              <p className="text-xs font-medium uppercase tracking-wide text-ink-400">{t.myPlace}</p>
+              <p className="mt-2 text-5xl font-semibold tabular-nums text-ink-900">{myRow.rank}</p>
+            </div>
+            <div className="sm:px-8">
+              <p className="text-xs font-medium uppercase tracking-wide text-ink-400">{t.colPoints}</p>
+              <p className="mt-2 text-2xl font-semibold tabular-nums text-ink-900">{myRow.points}</p>
+            </div>
+            <div className="sm:px-8">
+              <p className="text-xs font-medium uppercase tracking-wide text-ink-400">{t.colTopics}</p>
+              <p className="mt-2 text-2xl font-semibold tabular-nums text-ink-900">{myRow.topicsMastered}</p>
+            </div>
+            <div className="sm:px-8">
+              <p className="text-xs font-medium uppercase tracking-wide text-ink-400">{t.colStreak}</p>
+              <p className="mt-2 flex items-center gap-1.5 text-2xl font-semibold tabular-nums text-ink-900">
+                <Icon
+                  name="flame"
+                  size={20}
+                  className={myRow.streak > 0 ? 'text-accent-500' : 'text-ink-300'}
+                />
+                {myRow.streak}
+              </p>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="sm:pr-8">
+              <p className="text-xs font-medium uppercase tracking-wide text-ink-400">{t.participants}</p>
+              <p className="mt-2 text-5xl font-semibold tabular-nums text-ink-900">{rows.length}</p>
+            </div>
+            <div className="sm:px-8">
+              <p className="text-xs font-medium uppercase tracking-wide text-ink-400">{t.topScore}</p>
+              <p className="mt-2 text-2xl font-semibold tabular-nums text-ink-900">{rows[0]?.points ?? 0}</p>
+            </div>
+          </>
+        )}
+      </div>
 
-      {/* Таблица прокручивается вбок отдельно от страницы — иначе на телефоне
-          пять колонок растянули бы весь макет */}
-      <div className="mt-6 overflow-x-auto rounded-2xl border border-ink-200 bg-white shadow-[var(--shadow-rest)]">
+      {/*
+        Таблица лежит в панели, а не в карточке: у карточки тень и радиус,
+        которые обещают самодостаточный объект, а таблица это плотные данные.
+        Прокручивается вбок отдельно от страницы — иначе на телефоне пять
+        колонок растянули бы весь макет.
+      */}
+      <Panel className="mt-10 overflow-x-auto">
         <table className="w-full min-w-[36rem] border-collapse text-sm">
           <thead>
             <tr className="border-b border-ink-200 text-left text-xs font-semibold uppercase tracking-wide text-ink-400">
@@ -233,14 +252,28 @@ export default function LeaderboardPage() {
               const medalTone = MEDAL_TONE[entry.rank];
 
               return (
+                /*
+                  Своя строка выделена фоном и полосой слева, а рядом стоит слово
+                  «вы»: по одному фону ученик не обязан догадываться, что это он.
+                */
                 <tr
                   key={entry.id}
                   className={`border-b border-ink-100 transition-colors duration-150 last:border-b-0 ${
                     entry.isCurrentUser ? 'bg-brand-50' : 'hover:bg-ink-50'
                   }`}
                 >
-                  <td className="px-4 py-3">
-                    <span className="flex items-center gap-2 font-bold tabular-nums text-ink-900">
+                  <td
+                    className={`px-4 py-3 ${
+                      entry.isCurrentUser ? 'border-l-[3px] border-brand-500 pl-[13px]' : ''
+                    }`}
+                  >
+                    <span
+                      className={`flex items-center gap-2 tabular-nums ${
+                        entry.isCurrentUser
+                          ? 'text-xl font-semibold text-brand-700'
+                          : 'font-bold text-ink-900'
+                      }`}
+                    >
                       {medalTone && <Icon name="medal" size={18} className={medalTone} />}
                       {entry.rank}
                     </span>
@@ -262,7 +295,13 @@ export default function LeaderboardPage() {
                       {t.gradeLabel(entry.grade)}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-right font-bold tabular-nums text-ink-900">{entry.points}</td>
+                  <td
+                    className={`px-4 py-3 text-right tabular-nums ${
+                      entry.isCurrentUser ? 'text-xl font-semibold text-brand-700' : 'font-bold text-ink-900'
+                    }`}
+                  >
+                    {entry.points}
+                  </td>
                   <td className="px-4 py-3 text-right tabular-nums text-ink-600">{entry.topicsMastered}</td>
                   <td className="px-4 py-3 text-right tabular-nums text-ink-600">
                     <span className="flex items-center justify-end gap-2">
@@ -275,7 +314,49 @@ export default function LeaderboardPage() {
             })}
           </tbody>
         </table>
-      </div>
+      </Panel>
+
+      {/*
+        Всё, что не таблица, ушло вниз в отдельную область: переключатель
+        анонимности это настройка, а не данные, и над таблицей он перебивал
+        собой главное. Решение всё равно принимается здесь, а не в дальних
+        настройках, — сразу после того, как ученик увидел себя в списке.
+      */}
+      {me ? (
+        <div className="mt-16 border-t border-ink-200 pt-6">
+          <p className="text-xs font-medium uppercase tracking-wide text-ink-400">{t.anonymityTitle}</p>
+          <label className="mt-4 flex cursor-pointer items-start gap-3">
+            <input
+              type="checkbox"
+              checked={state.leaderboardAnonymous}
+              onChange={(event) => setLeaderboardAnonymous(event.target.checked)}
+              className="mt-0.5 h-5 w-5 shrink-0 rounded border-ink-300 accent-brand-500"
+            />
+            <span>
+              <span className="font-semibold text-ink-900">{t.anonymityToggle}</span>
+              <span className="mt-2 block text-sm text-ink-500">{t.anonymityHelp}</span>
+            </span>
+          </label>
+          <p className="mt-2 text-sm text-ink-600">{t.seenAs(visibleName(me))}</p>
+        </div>
+      ) : profile ? (
+        <p className="mt-16 border-t border-ink-200 pt-6 text-sm text-ink-600">{t.teacherNote}</p>
+      ) : (
+        <div className="mt-16">
+          {/* Иконка вынесена рядом: проп icon в EmptyState принимает строку,
+              а строкой иконку из набора не передать. */}
+          <div className="mb-3 flex justify-center">
+            <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-ink-200 bg-white text-ink-400">
+              <Icon name="trophy" size={24} />
+            </span>
+          </div>
+          <EmptyState
+            title={t.noProfileTitle}
+            description={t.noProfileText}
+            action={<ButtonLink href="/onboarding">{t.createProfile}</ButtonLink>}
+          />
+        </div>
+      )}
 
       {/* Честное примечание: лучше сказать про демо-данные прямо,
           чем оставить ученика гадать, откуда взялись одноклассники */}

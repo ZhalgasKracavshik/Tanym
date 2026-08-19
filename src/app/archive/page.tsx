@@ -16,9 +16,10 @@ import type { Difficulty } from '@/lib/types';
 import type { Dict } from '@/lib/i18n';
 import { useStore } from '@/components/StoreProvider';
 import { Icon } from '@/components/Icon';
-import { Badge, ButtonLink, Card, EmptyState } from '@/components/ui';
+import { Badge, ButtonLink, EmptyState, Kicker, RailRow } from '@/components/ui';
 
 const TEXT: Dict<{
+  kicker: string;
   title: string;
   subtitle: string;
   all: string;
@@ -31,6 +32,7 @@ const TEXT: Dict<{
   difficulty: Record<Difficulty, string>;
 }> = {
   ru: {
+    kicker: 'Материалы',
     title: 'Архив заданий',
     subtitle: 'Задания прошлых лет и подготовка к экзаменам с наставником, который не даёт ответ.',
     all: 'Все',
@@ -44,6 +46,7 @@ const TEXT: Dict<{
     difficulty: { 1: 'Базовый', 2: 'Простой', 3: 'Средний', 4: 'Продвинутый', 5: 'Олимпиадный' },
   },
   kk: {
+    kicker: 'Материалдар',
     title: 'Тапсырмалар мұрағаты',
     subtitle: 'Өткен жылдардың тапсырмалары және емтиханға дайындық, жауап бермейтін тәлімгермен.',
     all: 'Барлығы',
@@ -57,6 +60,7 @@ const TEXT: Dict<{
     difficulty: { 1: 'Бастапқы', 2: 'Жеңіл', 3: 'Орташа', 4: 'Күрделі', 5: 'Олимпиадалық' },
   },
   en: {
+    kicker: 'Materials',
     title: 'Task archive',
     subtitle: 'Past papers and exam prep with a mentor that refuses to hand you the answer.',
     all: 'All',
@@ -71,6 +75,21 @@ const TEXT: Dict<{
   },
 };
 
+/**
+ * Цвет рейки кодирует категорию материала.
+ *
+ * Категорий пять и оттенков ровно пять, так что соответствие однозначное:
+ * список читается сканированием по левому краю. Цвет при этом ничего не решает
+ * сам по себе: название категории стоит словами в первой же строке.
+ */
+const CATEGORY_TONE: Record<ArchiveCategory, 'brand' | 'accent' | 'success' | 'danger' | 'neutral'> = {
+  ent: 'brand',
+  olympiad: 'accent',
+  ielts: 'success',
+  sat: 'danger',
+  'sor-soch': 'neutral',
+};
+
 export default function ArchivePage() {
   const { state } = useStore();
   const t = TEXT[state.language];
@@ -81,32 +100,41 @@ export default function ArchivePage() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
-      <h1 className="text-2xl font-bold text-ink-900 sm:text-3xl">{t.title}</h1>
-      <p className="mt-2 text-ink-500">{t.subtitle}</p>
+      {/*
+        Страница открывается микроподписью над заголовком, а не заголовком
+        с серой строкой под ним. Архив это раздел, а не очередной экран,
+        и открытие должно отличаться от кабинета, куда ученик ходит каждый день.
+      */}
+      <Kicker>{t.kicker}</Kicker>
+      <h1 className="mt-2 text-3xl font-semibold text-ink-900 sm:text-4xl">{t.title}</h1>
+      <p className="mt-2 max-w-2xl text-sm text-ink-500">{t.subtitle}</p>
 
-      {/* Пояснение метода — иначе ученик решит, что наставник сломался */}
-      <div className="mt-6 rounded-2xl border border-brand-200 bg-brand-50 p-4">
-        <p className="flex items-center gap-2 font-bold text-brand-800">
-          <Icon name="columns" size={18} />
+      {/*
+        Главный элемент экрана.
+
+        Метод Сократа это единственное, чем архив отличается от папки с PDF,
+        и раньше объяснение лежало в цветной коробке между заголовком и фильтром,
+        то есть ровно там, куда взгляд не попадает. Теперь оно набрано крупнее
+        всего остального и стоит на голом фоне между двумя волосяными линиями:
+        без коробки фраза читается как утверждение продукта, а не как сноска.
+      */}
+      <section className="mt-10 border-y border-ink-200 py-8">
+        <p className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.2em] text-brand-600">
+          <Icon name="columns" size={14} />
           {t.socratic}
         </p>
-        <p className="mt-3 text-sm text-brand-800">{t.socraticHint}</p>
-      </div>
+        <p className="mt-4 max-w-3xl text-2xl font-semibold leading-snug text-ink-900 sm:text-4xl">
+          {t.socraticHint}
+        </p>
+      </section>
 
-      {/* Фильтр по категориям */}
-      <div className="mt-6 flex flex-wrap gap-2">
-        <button
-          onClick={() => setCategory('all')}
-          className={chip(category === 'all')}
-        >
+      {/* Фильтр по категориям: голый фон, снизу волосяная линия */}
+      <div className="mt-10 flex flex-wrap gap-2 border-b border-ink-200 pb-4">
+        <button onClick={() => setCategory('all')} className={chip(category === 'all')}>
           {t.all}
         </button>
         {ARCHIVE_CATEGORIES.map((item) => (
-          <button
-            key={item.id}
-            onClick={() => setCategory(item.id)}
-            className={chip(category === item.id)}
-          >
+          <button key={item.id} onClick={() => setCategory(item.id)} className={chip(category === item.id)}>
             <Icon name={item.icon} size={16} />
             {item.title[state.language]}
           </button>
@@ -114,46 +142,56 @@ export default function ArchivePage() {
       </div>
 
       {materials.length === 0 ? (
-        <div className="mt-6">
+        <div className="mt-10">
           <EmptyState title={t.empty} description="" />
         </div>
       ) : (
-        <div className="mt-6 grid gap-4 sm:grid-cols-2">
+        /*
+          Материалы это перечисление, а не набор самодостаточных единиц:
+          сетка из одинаковых карточек превращала список в решётку, где все
+          строки весят одинаково. Строка с рейкой держит тот же объём данных
+          плотнее, а левый край сразу показывает категорию.
+        */
+        <ul className="mt-4 space-y-2">
           {materials.map((material) => {
             const meta = ARCHIVE_CATEGORIES.find((item) => item.id === material.category);
             return (
-              <Card
-                key={material.id}
-                className="transition-all duration-150 hover:border-brand-300 hover:shadow-[var(--shadow-lift)]"
-              >
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge tone="brand">
-                    {meta && <Icon name={meta.icon} size={14} />}
-                    {meta?.title[state.language]}
-                  </Badge>
-                  <Badge>{t.difficulty[material.difficulty]}</Badge>
-                  <span className="text-xs tabular-nums text-ink-400">
-                    {material.year} {t.year}
-                  </span>
-                </div>
+              <li key={material.id}>
+                <RailRow tone={CATEGORY_TONE[material.category]}>
+                  <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
+                    <div className="min-w-0 flex-1">
+                      {/* В шапке строки не больше двух плашек. Год, источник
+                          и число заданий ушли в строку подробностей ниже. */}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge tone="brand">
+                          {meta && <Icon name={meta.icon} size={14} />}
+                          {meta?.title[state.language]}
+                        </Badge>
+                        <Badge>{t.difficulty[material.difficulty]}</Badge>
+                      </div>
 
-                <h2 className="mt-3 font-bold text-ink-900">{material.title}</h2>
-                <p className="mt-3 text-sm text-ink-500">{material.description}</p>
+                      <h2 className="mt-2 font-bold text-ink-900">{material.title}</h2>
+                      <p className="mt-2 text-sm text-ink-500">{material.description}</p>
+                      <p className="mt-2 text-xs text-ink-400">
+                        <span className="tabular-nums">
+                          {material.year} {t.year}
+                        </span>
+                        {' · '}
+                        {material.source}
+                        {' · '}
+                        <span className="tabular-nums">{t.tasks(material.tasks.length)}</span>
+                      </p>
+                    </div>
 
-                <p className="mt-3 text-xs text-ink-400">{material.source}</p>
-
-                <div className="mt-6 flex items-center justify-between gap-3">
-                  <span className="text-sm font-semibold tabular-nums text-brand-600">
-                    {t.tasks(material.tasks.length)}
-                  </span>
-                  <ButtonLink href={`/archive/${material.id}`} size="sm">
-                    {t.open}
-                  </ButtonLink>
-                </div>
-              </Card>
+                    <ButtonLink href={`/archive/${material.id}`} size="sm" variant="secondary">
+                      {t.open}
+                    </ButtonLink>
+                  </div>
+                </RailRow>
+              </li>
             );
           })}
-        </div>
+        </ul>
       )}
     </div>
   );
