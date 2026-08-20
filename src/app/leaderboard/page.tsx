@@ -15,7 +15,7 @@ import { summarize } from '@/lib/personalization';
 import type { Dict } from '@/lib/i18n';
 import { useStore } from '@/components/StoreProvider';
 import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
-import { useSchoolLeaderboard } from '@/lib/supabase/leaderboard';
+import { useOwnStreakPoints, useSchoolLeaderboard } from '@/lib/supabase/leaderboard';
 import { portfolioPoints, usePortfolio } from '@/components/Portfolio';
 import { Icon } from '@/components/Icon';
 import { Badge, ButtonLink, EmptyState, Panel, Skeleton } from '@/components/ui';
@@ -129,6 +129,7 @@ export default function LeaderboardPage() {
   const realEntries = useSchoolLeaderboard(schoolProfile?.id ?? null);
   const myAchievements = usePortfolio(schoolProfile?.id ?? null);
   const myAchievementPoints = portfolioPoints(myAchievements);
+  const myStreakPoints = useOwnStreakPoints(schoolProfile?.id ?? null);
   const t = TEXT[state.language];
 
   if (!hydrated || realEntries === null) {
@@ -157,10 +158,11 @@ export default function LeaderboardPage() {
           id: schoolProfile?.id ?? profile.id,
           name: profile.name,
           grade: profile.grade,
-          // Свои баллы складываются из тех же двух источников, что и у
-          // остальных строк (задания + подтверждённые достижения), иначе
-          // собственное место считалось бы по другим правилам.
-          points: summary.points + myAchievementPoints,
+          // Свои баллы складываются из тех же трёх источников, что и у
+          // остальных строк (задания + подтверждённые достижения + бонусы
+          // за серии), иначе собственное место считалось бы по другим
+          // правилам, чем чужие.
+          points: summary.points + myAchievementPoints + myStreakPoints,
           topicsMastered: summary.topicsMastered,
           streak: state.streak.current,
           isCurrentUser: true,

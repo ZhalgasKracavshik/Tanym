@@ -39,12 +39,16 @@ export function useSchoolLeaderboard(excludeStudentId: string | null) {
         не годится как условие попадания в рейтинг: победитель олимпиады,
         не трогавший тренажёр, обязан быть в списке.
       */
-      const [{ data: progress }, { data: achievements }] = await Promise.all([
+      const [{ data: progress }, { data: achievements }, { data: streaks }] = await Promise.all([
         supabase.from('student_progress').select('student_id, points, topics_mastered, streak_current'),
         supabase
           .from('portfolio_achievements')
           .select('student_id, points')
           .eq('status', 'approved'),
+        // Третий источник баллов: бонусы за серии. Фильтровать по статусу
+        // не нужно — в таблицу вообще не попадает ничего, кроме уже
+        // начисленного триггером.
+        supabase.from('streak_bonuses').select('student_id, points'),
       ]);
 
       if (cancelled) return;
@@ -53,13 +57,26 @@ export function useSchoolLeaderboard(excludeStudentId: string | null) {
         ((progress as ProgressRow[] | null) ?? []).map((row) => [row.student_id, row]),
       );
 
-      const achievementPointsById: Record<string, number> = {};
-      for (const row of (achievements as { student_id: string; points: number }[] | null) ?? []) {
-        achievementPointsById[row.student_id] = (achievementPointsById[row.student_id] ?? 0) + row.points;
+      /** Складывает баллы по ученику из произвольного источника. */
+      function sumByStudent(rows: { student_id: string; points: number }[] | null): Record<string, number> {
+        const totals: Record<string, number> = {};
+        for (const row of rows ?? []) {
+          totals[row.student_id] = (totals[row.student_id] ?? 0) + row.points;
+        }
+        return totals;
       }
 
+      const achievementPointsById = sumByStudent(
+        achievements as { student_id: string; points: number }[] | null,
+      );
+      const streakPointsById = sumByStudent(streaks as { student_id: string; points: number }[] | null);
+
       const ids = [
-        ...new Set([...Object.keys(progressById), ...Object.keys(achievementPointsById)]),
+        ...new Set([
+          ...Object.keys(progressById),
+          ...Object.keys(achievementPointsById),
+          ...Object.keys(streakPointsById),
+        ]),
       ].filter((id) => id !== excludeStudentId);
 
       if (ids.length === 0) {
@@ -84,7 +101,8 @@ export function useSchoolLeaderboard(excludeStudentId: string | null) {
               // Класс пока не собирается при входе через провайдера — 0
               // читается честнее, чем выдумывать значение.
               grade: (profile.grade ?? 0) as Grade,
-              points: (p?.points ?? 0) + (achievementPointsById[id] ?? 0),
+              points:
+                (p?.points ?? 0) + (achievementPointsById[id] ?? 0) + (streakPointsById[id] ?? 0),
               topicsMastered: p?.topics_mastered ?? 0,
               streak: p?.streak_current ?? 0,
             };
@@ -102,4 +120,40 @@ export function useSchoolLeaderboard(excludeStudentId: string | null) {
   }, [excludeStudentId]);
 
   return entries;
+}
+
+/**
+ * Бонусы за серии у одного ученика.
+ *
+ * Нужен отдельно, потому что своя строка в рейтинге собирается на клиенте
+ * из локального прогресса (он свежее базы: ProgressSync шлёт снимок раз
+ * в 4 секунды). Баллы за серии при этом живут только в базе — без этого
+ * запроса собственное место считалось бы по другим правилам, чем чужие.
+ */
+export function useOwnStreakPoints(studentId: string | null): number {
+  const [points, setPoints] = useState(0);
+
+  useEffect(() => {
+    if (!studentId) {
+      setPoints(0);
+      return;
+    }
+    const supabase = createClient();
+    let cancelled = false;
+
+    supabase
+      .from('streak_bonuses')
+      .select('points')
+      .eq('student_id', studentId)
+      .then(({ data }) => {
+        if (cancelled) return;
+        setPoints(((data as { points: number }[] | null) ?? []).reduce((sum, r) => sum + r.points, 0));
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [studentId]);
+
+  return points;
 }

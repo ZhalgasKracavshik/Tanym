@@ -33,31 +33,30 @@ export interface PortfolioAchievement {
   createdAt: string;
 }
 
-/** Базовая стоимость уровня. Городской = 10 при первом месте. */
-const LEVEL_BASE: Record<AchievementLevel, number> = {
-  school: 4,
-  city: 10,
-  region: 20,
-  national: 40,
-  international: 80,
-};
-
 /**
- * Доля от базы за место.
+ * Таблица баллов: уровень × место.
  *
- * Участие оценивается в четверть: дойти до республиканского этапа и ничего
- * не занять — это всё равно результат, который стоит показать в портфолио.
+ * Раньше здесь была формула «база уровня × доля за место», и она физически
+ * не могла выдать нужные числа: город/1 = 10 и город/2 = 7 задают долю
+ * второго места 0.7, но тогда республика/3 обязана быть 20, а не 40.
+ * Одна доля на все уровни — это и есть ограничение формулы, поэтому таблица
+ * задана явно. Опорные точки (10, 7, 40) — из требований, остальное
+ * достроено так, чтобы шаг между уровнями оставался ощутимым.
+ *
+ * Разрыв между областным и республиканским намеренно большой: республика —
+ * это уже отбор в сборную страны, и он не должен стоить как две области.
  */
-const PLACE_FACTOR: Record<AchievementPlace, number> = {
-  first: 1,
-  second: 0.7,
-  third: 0.5,
-  participant: 0.25,
+const POINTS: Record<AchievementLevel, Record<AchievementPlace, number>> = {
+  school: { first: 5, second: 3, third: 2, participant: 1 },
+  city: { first: 10, second: 7, third: 5, participant: 2 },
+  region: { first: 20, second: 14, third: 10, participant: 4 },
+  national: { first: 80, second: 56, third: 40, participant: 16 },
+  international: { first: 150, second: 105, third: 75, participant: 30 },
 };
 
-/** Сколько баллов даёт достижение. Округление вверх, чтобы не было нулей. */
+/** Сколько баллов даёт достижение. */
 export function achievementPoints(level: AchievementLevel, place: AchievementPlace): number {
-  return Math.ceil(LEVEL_BASE[level] * PLACE_FACTOR[place]);
+  return POINTS[level][place];
 }
 
 export const LEVEL_TITLES: Record<AchievementLevel, Record<Language, string>> = {
