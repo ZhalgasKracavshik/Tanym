@@ -10,10 +10,10 @@
 
 import Link from 'next/link';
 import { SUBJECTS } from '@/data';
-import { ButtonLink, Card } from '@/components/ui';
 import { Icon, type IconName } from '@/components/Icon';
 import { useLang, type Dict } from '@/lib/i18n';
 import { LandingAuthBanner } from '@/components/LandingAuthBanner';
+import { LiftCard, PressLink, Reveal, StaggerGroup, StaggerItem, motion } from '@/components/motion';
 
 /** Подписи лендинга на трёх языках. Ключи одинаковые — за этим следит TypeScript. */
 const TEXT: Dict<{
@@ -214,8 +214,9 @@ export default function HomePage() {
     0,
   );
 
+
   return (
-    <div>
+    <div className="overflow-x-hidden">
       {/*
         Вход для школьного аккаунта — сразу под шапкой, видно без прокрутки.
         Раньше кнопка входа была спрятана внутри разделов архива и достижений.
@@ -225,48 +226,58 @@ export default function HomePage() {
       {/*
         Первый экран.
 
-        Композиция построена на вертикальных линиях, которые продолжают поля
-        контейнера сверху донизу. Приём из редакционной вёрстки: линии задают
-        колонку и удерживают взгляд по центру, поэтому крупный заголовок
-        не расползается по ширине экрана.
-
-        Под текстом стоит макет самого продукта. Ученик и жюри видят, что внутри,
-        не нажимая ни одной кнопки, и это снимает главный вопрос любого лендинга:
-        что там вообще происходит.
+        Под заголовком лежит мягкое тёплое свечение, а не плоская заливка:
+        цвет уходит к краям, поэтому центр экрана кажется освещённым, и взгляд
+        сам приходит к заголовку. Пятно уводится в absolute с pointer-events-none,
+        чтобы оно не перехватывало клики по кнопкам под ним.
       */}
-      <section className="border-b border-ink-200 bg-white">
-        <div className="mx-auto max-w-6xl border-x border-ink-200 px-6 py-14 text-center sm:py-20">
-          <p className="animate-fade-up text-xs font-bold uppercase tracking-[0.2em] text-brand-600">
-            {t.kicker}
-          </p>
+      <section className="relative isolate overflow-hidden border-b border-ink-200/70 bg-white">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 -top-40 -z-10 h-[36rem] opacity-70 blur-3xl"
+          style={{
+            background:
+              'radial-gradient(42% 52% at 50% 40%, rgb(229 117 69 / 0.28) 0%, rgb(253 243 238 / 0.55) 45%, transparent 72%)',
+          }}
+        />
 
-          <h1
-            className="animate-fade-up mx-auto mt-6 max-w-4xl text-4xl font-semibold leading-[1.08] text-ink-900 sm:text-6xl"
-            style={{ animationDelay: '60ms' }}
-          >
-            {t.heroTitle}
-          </h1>
+        <div className="mx-auto max-w-6xl px-6 py-20 text-center sm:py-28">
+          <Reveal>
+            <span className="inline-flex items-center gap-2 rounded-[var(--radius-pill)] border border-brand-200 bg-brand-50/80 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-brand-700 backdrop-blur">
+              <Icon name="sparkles" size={14} />
+              {t.kicker}
+            </span>
+          </Reveal>
 
-          <p
-            className="animate-fade-up mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-ink-400"
-            style={{ animationDelay: '120ms' }}
-          >
-            {t.heroText}
-          </p>
+          <Reveal delay={0.06}>
+            <h1 className="mx-auto mt-7 max-w-4xl text-[2.6rem] font-semibold leading-[1.05] tracking-tight text-ink-900 sm:text-6xl">
+              {t.heroTitle}
+            </h1>
+          </Reveal>
 
-          <div
-            className="animate-fade-up mt-9 flex flex-wrap justify-center gap-3"
-            style={{ animationDelay: '180ms' }}
-          >
-            {/* Скруглённая до предела кнопка: форма отличает главное действие
-                от прямоугольных кнопок внутри продукта */}
-            <ButtonLink href="/onboarding" size="lg" className="rounded-full px-9">
-              {t.ctaStart}
-            </ButtonLink>
-            <ButtonLink href="/onboarding" size="lg" variant="secondary" className="rounded-full px-9">
-              {t.ctaDiagnostics}
-            </ButtonLink>
-          </div>
+          <Reveal delay={0.12}>
+            <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-ink-500">{t.heroText}</p>
+          </Reveal>
+
+          <Reveal delay={0.18}>
+            <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
+              <PressLink
+                href="/onboarding"
+                className="inline-flex h-14 items-center gap-2 rounded-[var(--radius-control)] px-8 text-base font-bold text-white shadow-[var(--shadow-glow)] transition-shadow duration-200 hover:shadow-[0_12px_32px_-8px_rgb(216_95_46_/_0.65)]"
+                style={{ background: 'var(--gradient-brand)' }}
+              >
+                {t.ctaStart}
+                <Icon name="arrowRight" size={18} />
+              </PressLink>
+
+              <PressLink
+                href="/onboarding"
+                className="inline-flex h-14 items-center gap-2 rounded-[var(--radius-control)] border border-ink-200 bg-white px-8 text-base font-bold text-ink-700 shadow-[var(--shadow-rest)] transition-colors duration-200 hover:border-brand-300 hover:text-brand-700"
+              >
+                {t.ctaDiagnostics}
+              </PressLink>
+            </div>
+          </Reveal>
 
           {/*
             В исходном образце здесь стояло «нас уже 80 000» с чужими аватарками.
@@ -274,168 +285,217 @@ export default function HomePage() {
             поэтому вместо него настоящий состав продукта: он проверяется за две
             секунды переходом в каталог.
           */}
-          <div className="animate-fade-up mt-9" style={{ animationDelay: '240ms' }}>
-            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-ink-300">{t.proofLabel}</p>
-            <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
-              {SUBJECTS.map((subject) => (
+          <Reveal delay={0.24}>
+            <div className="mt-12">
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-ink-300">{t.proofLabel}</p>
+              <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                {SUBJECTS.map((subject) => (
+                  <span
+                    key={subject.id}
+                    className="inline-flex items-center gap-1.5 rounded-[var(--radius-pill)] border border-ink-200 bg-white px-4 py-2 text-xs font-semibold text-ink-600 shadow-[var(--shadow-rest)]"
+                  >
+                    <Icon name={subject.icon} size={14} className="text-brand-500" />
+                    {subject.title}
+                  </span>
+                ))}
                 <span
-                  key={subject.id}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-ink-200 bg-white px-3 py-1.5 text-xs font-semibold text-ink-600"
+                  className="rounded-[var(--radius-pill)] px-4 py-2 text-xs font-semibold tabular-nums text-white"
+                  style={{ background: 'var(--gradient-ink)' }}
                 >
-                  <Icon name={subject.icon} size={14} className="text-brand-500" />
-                  {subject.title}
+                  {t.counts(totalTopics, totalTasks)}
                 </span>
-              ))}
-              <span className="rounded-full bg-ink-900 px-3 py-1.5 text-xs font-semibold tabular-nums text-white">
-                {t.counts(totalTopics, totalTasks)}
-              </span>
+              </div>
             </div>
-          </div>
-        </div>
-      </section>
+          </Reveal>
 
-      {/* Макет продукта: показываем экран плана так, как его увидит ученик */}
-      <section className="border-b border-ink-200 bg-white pb-16">
-        <div className="mx-auto max-w-6xl border-x border-ink-200 px-6">
-          <div
-            className="animate-fade-up rounded-3xl border border-ink-200 bg-white p-2 shadow-[0_40px_100px_-30px_rgb(13_27_38_/_0.25)]"
-            style={{ animationDelay: '300ms' }}
-          >
-            <div className="rounded-[1.25rem] bg-gradient-to-b from-ink-100 to-brand-200 px-4 pt-14 sm:px-10 sm:pt-20">
-              {/* Две подложки создают ощущение стопки экранов позади основного */}
-              <div className="relative mx-auto max-w-3xl">
-                <div className="absolute -top-7 left-[7%] h-full w-[86%] rounded-t-2xl border border-ink-200 bg-ink-50" />
-                <div className="absolute -top-3.5 left-[3%] h-full w-[94%] rounded-t-2xl border border-ink-200 bg-white/70" />
-
-                <div className="relative rounded-t-2xl border border-ink-200 bg-white p-5 text-left sm:p-7">
+          {/*
+            Макет продукта под текстом: ученик и жюри видят, что внутри,
+            не нажимая ни одной кнопки. Это снимает главный вопрос любого
+            лендинга — что там вообще происходит.
+          */}
+          <Reveal delay={0.3}>
+            <div className="mx-auto mt-16 max-w-3xl">
+              <div className="rounded-[var(--radius-card)] border border-ink-200/80 bg-white p-2 shadow-[var(--shadow-float)]">
+                <div className="rounded-[18px] bg-ink-50/70 p-6 text-left sm:p-8">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-bold text-ink-900">{t.mockPlanTitle}</span>
-                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-accent-100 text-xs font-bold text-accent-700">
+                    <p className="text-sm font-bold text-ink-900">{t.mockPlanTitle}</p>
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 text-xs font-bold text-brand-700">
                       А
                     </span>
                   </div>
 
-                  <div className="mt-5 rounded-xl border border-ink-200 p-4">
-                    <div className="flex items-center gap-2">
-                      <Icon name="sparkles" size={14} className="text-brand-500" />
-                      <span className="text-xs font-bold uppercase tracking-wide text-ink-400">
-                        {t.mockMentor}
-                      </span>
-                    </div>
-                    <p className="mt-2 text-sm leading-relaxed text-ink-700">{t.mockMentorText}</p>
+                  <div className="mt-6 rounded-[var(--radius-control)] border border-ink-200 bg-white p-4">
+                    <p className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-brand-600">
+                      <Icon name="columns" size={13} />
+                      {t.mockMentor}
+                    </p>
+                    <p className="mt-2 text-sm leading-relaxed text-ink-600">{t.mockMentorText}</p>
                   </div>
 
-                  <div className="mt-3 rounded-xl border border-ink-200 p-4">
+                  <div className="mt-4 rounded-[var(--radius-control)] border border-ink-200 bg-white p-4">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="text-sm font-bold text-ink-900">Линейные уравнения и неравенства</span>
-                      <span className="rounded-full bg-danger-50 px-2.5 py-1 text-xs font-semibold text-danger-700">
+                      <p className="font-semibold text-ink-900">Линейные уравнения и неравенства</p>
+                      <span className="rounded-[var(--radius-pill)] bg-danger-50 px-3 py-1 text-xs font-bold text-danger-700">
                         {t.mockWeak}
                       </span>
                     </div>
-                    <div className="mt-4 flex items-center justify-between text-xs font-semibold text-ink-500">
-                      <span>{t.mockMastered}</span>
-                      <span className="tabular-nums">34%</span>
+                    {/* Полоса едет от нуля до реального значения при появлении:
+                        статичная полоса читается как картинка, едущая — как данные */}
+                    <div className="mt-3 h-2 overflow-hidden rounded-full bg-ink-100">
+                      <motion.div
+                        className="h-full rounded-full"
+                        style={{ background: 'var(--gradient-brand)' }}
+                        initial={{ width: 0 }}
+                        whileInView={{ width: '34%' }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
+                      />
                     </div>
-                    <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-ink-100">
-                      <div className="h-full w-[34%] rounded-full bg-brand-500" />
-                    </div>
+                    <p className="mt-2 text-xs font-semibold tabular-nums text-ink-400">34%</p>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
+          </Reveal>
         </div>
       </section>
 
-      <div className="mx-auto max-w-6xl space-y-16 px-4 py-16 sm:px-6">
-        {/* Проблема */}
-        <section>
-          <h2 className="text-center text-2xl font-bold text-ink-900 sm:text-3xl">{t.problemsTitle}</h2>
-          <div className="mt-6 grid gap-4 sm:grid-cols-3">
-            {/* map превращает массив данных в массив карточек.
-                key нужен React, чтобы отличать элементы списка друг от друга. */}
+      {/* Проблемы: ради чего продукт существует */}
+      <section className="border-b border-ink-200/70 bg-ink-50/60">
+        <div className="mx-auto max-w-6xl px-6 py-20 sm:py-24">
+          <Reveal>
+            <h2 className="text-center text-3xl font-semibold text-ink-900 sm:text-4xl">{t.problemsTitle}</h2>
+          </Reveal>
+
+          <StaggerGroup className="mt-12 grid gap-5 md:grid-cols-3">
             {t.problems.map((problem) => (
-              <Card
-                key={problem.title}
-                className="transition-all duration-150 hover:border-brand-300 hover:shadow-[var(--shadow-lift)]"
-              >
-                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
-                  <Icon name={problem.icon} size={22} />
-                </span>
-                <h3 className="mt-3 font-bold text-ink-900">{problem.title}</h3>
-                <p className="mt-2 text-sm text-ink-500">{problem.text}</p>
-              </Card>
+              <StaggerItem key={problem.title}>
+                <LiftCard className="h-full rounded-[var(--radius-card)] border border-ink-200/80 bg-white p-7 shadow-[var(--shadow-rest)]">
+                  <span
+                    className="flex h-12 w-12 items-center justify-center rounded-[var(--radius-control)] text-white"
+                    style={{ background: 'var(--gradient-brand)' }}
+                  >
+                    <Icon name={problem.icon} size={22} />
+                  </span>
+                  <h3 className="mt-5 font-bold text-ink-900">{problem.title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-ink-500">{problem.text}</p>
+                </LiftCard>
+              </StaggerItem>
             ))}
-          </div>
-        </section>
+          </StaggerGroup>
+        </div>
+      </section>
 
-        {/* Как работает */}
-        <section>
-          <h2 className="text-center text-2xl font-bold text-ink-900 sm:text-3xl">{t.stepsTitle}</h2>
-          <ol className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {/* Как это работает: четыре шага */}
+      <section className="border-b border-ink-200/70 bg-white">
+        <div className="mx-auto max-w-6xl px-6 py-20 sm:py-24">
+          <Reveal>
+            <h2 className="text-center text-3xl font-semibold text-ink-900 sm:text-4xl">{t.stepsTitle}</h2>
+          </Reveal>
+
+          <StaggerGroup className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {t.steps.map((step, index) => (
-              <li
-                key={step.title}
-                className="rounded-2xl border border-ink-200 bg-white p-5 transition-all duration-150 hover:border-brand-300 hover:shadow-[var(--shadow-lift)]"
-              >
-                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-500 font-bold tabular-nums text-white">
-                  {index + 1}
-                </span>
-                <h3 className="mt-3 font-bold text-ink-900">{step.title}</h3>
-                <p className="mt-1.5 text-sm text-ink-500">{step.text}</p>
-              </li>
+              <StaggerItem key={step.title}>
+                <LiftCard className="h-full rounded-[var(--radius-card)] border border-ink-200/80 bg-white p-6 shadow-[var(--shadow-rest)]">
+                  <span className="text-4xl font-semibold tabular-nums text-brand-200">
+                    {String(index + 1).padStart(2, '0')}
+                  </span>
+                  <h3 className="mt-3 font-bold text-ink-900">{step.title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-ink-500">{step.text}</p>
+                </LiftCard>
+              </StaggerItem>
             ))}
-          </ol>
-        </section>
+          </StaggerGroup>
+        </div>
+      </section>
 
-        {/* Предметы: берём из реестра контента, а не пишем руками —
-            добавится предмет, страница обновится сама */}
-        <section>
-          <h2 className="text-center text-2xl font-bold text-ink-900 sm:text-3xl">{t.subjectsTitle}</h2>
-          <div className="mt-6 grid gap-4 sm:grid-cols-3">
-            {SUBJECTS.map((subject) => (
-              <Card
-                key={subject.id}
-                className="transition-all duration-150 hover:border-brand-300 hover:shadow-[var(--shadow-lift)]"
+      {/* Предметы */}
+      <section className="border-b border-ink-200/70 bg-ink-50/60">
+        <div className="mx-auto max-w-6xl px-6 py-20 sm:py-24">
+          <Reveal>
+            <h2 className="text-center text-3xl font-semibold text-ink-900 sm:text-4xl">{t.subjectsTitle}</h2>
+          </Reveal>
+
+          <StaggerGroup className="mt-12 grid gap-5 md:grid-cols-3">
+            {SUBJECTS.map((subject) => {
+              const tasks =
+                subject.diagnostic.length +
+                subject.topics.reduce((count, topic) => count + topic.tasks.length, 0);
+
+              return (
+                <StaggerItem key={subject.id}>
+                  <Link href="/onboarding" className="block h-full">
+                    <LiftCard className="group h-full rounded-[var(--radius-card)] border border-ink-200/80 bg-white p-7 shadow-[var(--shadow-rest)]">
+                      <span
+                        className="flex h-12 w-12 items-center justify-center rounded-[var(--radius-control)] text-white"
+                        style={{ backgroundColor: subject.accent }}
+                      >
+                        <Icon name={subject.icon} size={22} />
+                      </span>
+                      <h3 className="mt-5 font-bold text-ink-900">{subject.title}</h3>
+                      <p className="mt-2 text-sm leading-relaxed text-ink-500">{subject.description}</p>
+                      <p className="mt-4 text-xs font-semibold tabular-nums text-ink-400">
+                        {t.counts(subject.topics.length, tasks)}
+                      </p>
+                    </LiftCard>
+                  </Link>
+                </StaggerItem>
+              );
+            })}
+          </StaggerGroup>
+        </div>
+      </section>
+
+      {/* Учителю */}
+      <section className="border-b border-ink-200/70 bg-white">
+        <div className="mx-auto max-w-6xl px-6 py-20 sm:py-24">
+          <Reveal>
+            <div
+              className="relative overflow-hidden rounded-[var(--radius-card)] p-10 text-white shadow-[var(--shadow-float)] sm:p-14"
+              style={{ background: 'var(--gradient-ink)' }}
+            >
+              <div
+                aria-hidden
+                className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full opacity-25 blur-3xl"
+                style={{ background: 'var(--gradient-brand)' }}
+              />
+              <div className="relative max-w-2xl">
+                <h2 className="text-3xl font-semibold sm:text-4xl">{t.teacherTitle}</h2>
+                <p className="mt-4 text-base leading-relaxed text-white/70">{t.teacherText}</p>
+                <div className="mt-8">
+                  <PressLink
+                    href="/teacher"
+                    className="inline-flex h-13 items-center gap-2 rounded-[var(--radius-control)] bg-white px-7 py-3.5 text-sm font-bold text-ink-900 shadow-[var(--shadow-lift)]"
+                  >
+                    {t.teacherCta}
+                    <Icon name="arrowRight" size={17} />
+                  </PressLink>
+                </div>
+              </div>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* Финальный призыв */}
+      <section className="bg-ink-50/60">
+        <div className="mx-auto max-w-3xl px-6 py-20 text-center sm:py-28">
+          <Reveal>
+            <h2 className="text-3xl font-semibold text-ink-900 sm:text-5xl">{t.finalTitle}</h2>
+            <p className="mt-4 text-lg text-ink-500">{t.finalText}</p>
+            <div className="mt-9 flex justify-center">
+              <PressLink
+                href="/onboarding"
+                className="inline-flex h-14 items-center gap-2 rounded-[var(--radius-control)] px-9 text-base font-bold text-white shadow-[var(--shadow-glow)]"
+                style={{ background: 'var(--gradient-brand)' }}
               >
-                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
-                  <Icon name={subject.icon} size={22} />
-                </span>
-                <h3 className="mt-3 font-bold text-ink-900">{subject.title}</h3>
-                <p className="mt-2 text-sm text-ink-500">{subject.description}</p>
-                <p className="mt-3 text-xs font-semibold tabular-nums text-brand-600">
-                  {t.counts(
-                    subject.topics.length,
-                    subject.topics.reduce((sum, topic) => sum + topic.tasks.length, 0),
-                  )}
-                </p>
-              </Card>
-            ))}
-          </div>
-        </section>
-
-        {/* Блок для учителя */}
-        <section className="rounded-2xl bg-ink-900 px-6 py-10 text-center sm:px-12">
-          <h2 className="text-2xl font-bold text-white sm:text-3xl">{t.teacherTitle}</h2>
-          <p className="mx-auto mt-3 max-w-2xl text-ink-300">{t.teacherText}</p>
-          <Link
-            href="/teacher"
-            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3 font-semibold text-ink-900 transition-all duration-150 hover:bg-ink-100 hover:shadow-[var(--shadow-lift)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-900"
-          >
-            <Icon name="chart" size={18} />
-            {t.teacherCta}
-          </Link>
-        </section>
-
-        {/* Финальный призыв */}
-        <section className="text-center">
-          <h2 className="text-2xl font-bold text-ink-900 sm:text-3xl">{t.finalTitle}</h2>
-          <p className="mt-3 text-ink-500">{t.finalText}</p>
-          <ButtonLink href="/onboarding" size="lg" className="mt-6">
-            {t.ctaStart}
-          </ButtonLink>
-        </section>
-      </div>
+                {t.ctaStart}
+                <Icon name="arrowRight" size={18} />
+              </PressLink>
+            </div>
+          </Reveal>
+        </div>
+      </section>
     </div>
   );
 }

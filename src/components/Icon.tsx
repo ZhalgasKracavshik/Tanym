@@ -60,7 +60,8 @@ export type IconName =
   | 'calendar'
   | 'rocket'
   | 'chat'
-  | 'menu';
+  | 'menu'
+  | 'arrowRight';
 
 /**
  * Контуры иконок. Каждая нарисована в квадрате 24 на 24 без заливки,
@@ -317,6 +318,7 @@ const PATHS: Record<IconName, React.ReactNode> = {
     </>
   ),
   menu: <path d="M4 7h16M4 12h16M4 17h16" />,
+  arrowRight: <path d="M5 12h14M13 6l6 6-6 6" />,
 };
 
 interface IconProps extends Omit<SVGProps<SVGSVGElement>, 'name'> {
