@@ -2,8 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { StoreProvider } from '@/components/StoreProvider';
-import { SiteHeader } from '@/components/SiteHeader';
-import { SiteFooter } from '@/components/SiteFooter';
+import { AppShell } from '@/components/AppShell';
 
 /**
  * Шрифт подключаем с кириллическим набором символов.
@@ -31,9 +30,7 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
     <html lang="ru" className={`${inter.variable} h-full`}>
       <body className="flex min-h-full flex-col">
         <StoreProvider>
-          <SiteHeader />
-          <main className="flex-1">{children}</main>
-          <SiteFooter />
+          <AppShell>{children}</AppShell>
         </StoreProvider>
       </body>
     </html>
