@@ -8,7 +8,7 @@
  * и незакрытые достижения работают там, где не работает рациональный аргумент.
  */
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { evaluateAchievements, freshlyUnlocked } from '@/lib/achievements';
 import type { AchievementStatus } from '@/lib/achievements';
 import { summarize } from '@/lib/personalization';
@@ -16,7 +16,10 @@ import { almatyDateIso, almatyYesterdayIso } from '@/lib/date';
 import type { Dict } from '@/lib/i18n';
 import { useStore } from '@/components/StoreProvider';
 import { Icon } from '@/components/Icon';
-import { ButtonLink, EmptyState, ProgressBar, RailRow, Skeleton } from '@/components/ui';
+import { ButtonLink, EmptyState, Kicker, ProgressBar, RailRow, Skeleton } from '@/components/ui';
+import { SchoolAuthGate } from '@/components/SchoolAuthGate';
+import { AchievementPublishForm } from '@/components/AchievementPublishForm';
+import { AchievementFeed } from '@/components/AchievementFeed';
 
 const TEXT: Dict<{
   title: string;
@@ -35,6 +38,8 @@ const TEXT: Dict<{
   locked: string;
   done: string;
   ofTarget: (current: number, target: number) => string;
+  shareTitle: string;
+  feedTitle: string;
 }> = {
   ru: {
     title: 'Достижения',
@@ -53,6 +58,8 @@ const TEXT: Dict<{
     locked: 'Ещё не получено',
     done: 'Получено',
     ofTarget: (current, target) => `${current} из ${target}`,
+    shareTitle: 'Поделиться достижением',
+    feedTitle: 'Лента достижений школы',
   },
   kk: {
     title: 'Жетістіктер',
@@ -71,6 +78,8 @@ const TEXT: Dict<{
     locked: 'Әлі алынған жоқ',
     done: 'Алынды',
     ofTarget: (current, target) => `${target} ішінен ${current}`,
+    shareTitle: 'Жетістікпен бөлісу',
+    feedTitle: 'Мектеп жетістіктер лентасы',
   },
   en: {
     title: 'Achievements',
@@ -89,6 +98,8 @@ const TEXT: Dict<{
     locked: 'Not yet unlocked',
     done: 'Unlocked',
     ofTarget: (current, target) => `${current} of ${target}`,
+    shareTitle: 'Share an achievement',
+    feedTitle: "School achievement feed",
   },
 };
 
@@ -105,6 +116,7 @@ export default function AchievementsPage() {
    * и живёт до ухода со страницы.
    */
   const [fresh, setFresh] = useState<AchievementStatus[]>([]);
+  const [feedRefreshKey, setFeedRefreshKey] = useState(0);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -275,6 +287,36 @@ export default function AchievementsPage() {
             </div>
           </RailRow>
         ))}
+      </div>
+
+      {/*
+        Лента и форма публикации требуют настоящего аккаунта (Google, только
+        почта школьного домена), поэтому лежат в SchoolAuthGate. Просмотр
+        ленты доступен и без входа — там нет запроса на публикацию.
+      */}
+      <div className="mt-16">
+        <Kicker>{t.feedTitle}</Kicker>
+        <div className="mt-4">
+          <AchievementFeed language={state.language} refreshKey={feedRefreshKey} />
+        </div>
+      </div>
+
+      <div className="mt-10">
+        <Kicker>{t.shareTitle}</Kicker>
+        <div className="mt-4">
+          <Suspense fallback={null}>
+            <SchoolAuthGate requireRole="student" language={state.language}>
+              {(profile) => (
+                <AchievementPublishForm
+                  state={state}
+                  language={state.language}
+                  userId={profile.id}
+                  onPublished={() => setFeedRefreshKey((key) => key + 1)}
+                />
+              )}
+            </SchoolAuthGate>
+          </Suspense>
+        </div>
       </div>
     </div>
   );

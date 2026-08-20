@@ -8,7 +8,7 @@
  * выдачу значило бы мешать. Персонализация живёт на странице плана.
  */
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { ARCHIVE } from '@/data/archive';
 import { ARCHIVE_CATEGORIES } from '@/lib/archive';
 import type { ArchiveCategory } from '@/lib/archive';
@@ -17,6 +17,9 @@ import type { Dict } from '@/lib/i18n';
 import { useStore } from '@/components/StoreProvider';
 import { Icon } from '@/components/Icon';
 import { Badge, ButtonLink, EmptyState, Kicker, RailRow } from '@/components/ui';
+import { SchoolAuthGate } from '@/components/SchoolAuthGate';
+import { ArchiveMaterialPublishForm } from '@/components/ArchiveMaterialPublishForm';
+import { ArchiveMaterialFeed } from '@/components/ArchiveMaterialFeed';
 
 const TEXT: Dict<{
   kicker: string;
@@ -30,6 +33,8 @@ const TEXT: Dict<{
   socraticHint: string;
   year: string;
   difficulty: Record<Difficulty, string>;
+  teacherFeedTitle: string;
+  teacherPublishTitle: string;
 }> = {
   ru: {
     kicker: 'Материалы',
@@ -44,6 +49,8 @@ const TEXT: Dict<{
       'Наставник здесь работает иначе: он не выдаёт решение, а задаёт вопросы, пока ты не дойдёшь до ответа сам.',
     year: 'год',
     difficulty: { 1: 'Базовый', 2: 'Простой', 3: 'Средний', 4: 'Продвинутый', 5: 'Олимпиадный' },
+    teacherFeedTitle: 'Материалы от учителей',
+    teacherPublishTitle: 'Опубликовать материал',
   },
   kk: {
     kicker: 'Материалдар',
@@ -58,6 +65,8 @@ const TEXT: Dict<{
       'Мұндағы тәлімгер басқаша жұмыс істейді: ол шешімді бермейді, сен өзің жауапқа жеткенше сұрақ қояды.',
     year: 'жыл',
     difficulty: { 1: 'Бастапқы', 2: 'Жеңіл', 3: 'Орташа', 4: 'Күрделі', 5: 'Олимпиадалық' },
+    teacherFeedTitle: 'Мұғалімдердің материалдары',
+    teacherPublishTitle: 'Материал жариялау',
   },
   en: {
     kicker: 'Materials',
@@ -72,6 +81,8 @@ const TEXT: Dict<{
       'The mentor works differently here: instead of giving the solution, it asks questions until you reach the answer yourself.',
     year: 'year',
     difficulty: { 1: 'Basic', 2: 'Easy', 3: 'Medium', 4: 'Advanced', 5: 'Olympiad' },
+    teacherFeedTitle: 'Materials from teachers',
+    teacherPublishTitle: 'Publish a material',
   },
 };
 
@@ -95,6 +106,7 @@ export default function ArchivePage() {
   const t = TEXT[state.language];
 
   const [category, setCategory] = useState<ArchiveCategory | 'all'>('all');
+  const [teacherFeedRefreshKey, setTeacherFeedRefreshKey] = useState(0);
 
   const materials = category === 'all' ? ARCHIVE : ARCHIVE.filter((item) => item.category === category);
 
@@ -193,6 +205,36 @@ export default function ArchivePage() {
           })}
         </ul>
       )}
+
+      {/*
+        PDF от учителей — отдельно от структурированного архива: у файла нет
+        разбивки на задания, поэтому метод Сократа для него не работает,
+        только открыть и читать. Видно всем, публикует только вошедший учитель
+        со школьной почтой.
+      */}
+      <div className="mt-16">
+        <Kicker>{t.teacherFeedTitle}</Kicker>
+        <div className="mt-4">
+          <ArchiveMaterialFeed language={state.language} refreshKey={teacherFeedRefreshKey} />
+        </div>
+      </div>
+
+      <div className="mt-10">
+        <Kicker>{t.teacherPublishTitle}</Kicker>
+        <div className="mt-4">
+          <Suspense fallback={null}>
+            <SchoolAuthGate requireRole="teacher" language={state.language}>
+              {(profile) => (
+                <ArchiveMaterialPublishForm
+                  language={state.language}
+                  userId={profile.id}
+                  onPublished={() => setTeacherFeedRefreshKey((key) => key + 1)}
+                />
+              )}
+            </SchoolAuthGate>
+          </Suspense>
+        </div>
+      </div>
     </div>
   );
 }
