@@ -13,9 +13,23 @@ import { SiteHeader } from './SiteHeader';
 import { SiteSidebar } from './SiteSidebar';
 import { SiteFooter } from './SiteFooter';
 
+/**
+ * Экраны входа живут без навигации вообще.
+ *
+ * Боковое меню на странице входа предлагает уйти в разделы, которые всё
+ * равно потребуют аккаунта, а шапка лендинга уводит обратно на продажу
+ * продукта. И то и другое мешает единственному действию на экране.
+ */
+const AUTH_ROUTES = ['/login', '/register', '/forgot-password', '/reset-password'];
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isLanding = pathname === '/';
+  const isAuth = AUTH_ROUTES.includes(pathname);
+
+  if (isAuth) {
+    return <main className="flex-1">{children}</main>;
+  }
 
   if (isLanding) {
     return (

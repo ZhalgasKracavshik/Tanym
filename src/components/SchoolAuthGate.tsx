@@ -15,7 +15,7 @@ import { useSearchParams } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
 import type { SchoolProfile } from '@/lib/supabase/useSchoolAuth';
-import { Button } from './ui';
+import { Button, ButtonLink } from './ui';
 
 const AUTH_ERROR_TEXT: Record<string, Record<'ru' | 'kk' | 'en', string>> = {
   wrong_domain: {
@@ -53,7 +53,8 @@ interface SchoolAuthGateProps {
 
 const TEXT = {
   ru: {
-    signIn: 'Войти через Google (почта школы)',
+    signIn: 'Войти',
+    register: 'Создать аккаунт',
     domainHint: 'Публикация доступна только с почтой домена binom.edu.kz.',
     chooseRole: 'Вы ученик или учитель?',
     student: 'Я ученик',
@@ -71,7 +72,8 @@ const TEXT = {
     inClass: (name: string) => `Класс: ${name}`,
   },
   kk: {
-    signIn: 'Google арқылы кіру (мектеп поштасы)',
+    signIn: 'Кіру',
+    register: 'Аккаунт құру',
     domainHint: 'Жариялау тек binom.edu.kz домені поштасымен қолжетімді.',
     chooseRole: 'Сіз оқушысыз ба, мұғалімсіз бе?',
     student: 'Мен оқушымын',
@@ -89,7 +91,8 @@ const TEXT = {
     inClass: (name: string) => `Сынып: ${name}`,
   },
   en: {
-    signIn: 'Sign in with Google (school email)',
+    signIn: 'Sign in',
+    register: 'Create account',
     domainHint: 'Publishing is only available with a binom.edu.kz email.',
     chooseRole: 'Are you a student or a teacher?',
     student: "I'm a student",
@@ -109,7 +112,7 @@ const TEXT = {
 } as const;
 
 export function SchoolAuthGate({ requireRole, language, children }: SchoolAuthGateProps) {
-  const { loading, isSignedIn, profile, schoolClass, signInWithGoogle, signOut, chooseRole } = useSchoolAuth();
+  const { loading, isSignedIn, profile, schoolClass, signOut, chooseRole } = useSchoolAuth();
   const searchParams = useSearchParams();
   const authError = searchParams.get('authError');
   const t = TEXT[language];
@@ -123,12 +126,22 @@ export function SchoolAuthGate({ requireRole, language, children }: SchoolAuthGa
 
   if (!isSignedIn) {
     return (
-      <div className="rounded-xl border border-ink-200 bg-ink-50 p-5">
+      <div className="rounded-[var(--radius-card)] border border-ink-200 bg-ink-50/70 p-6">
         {authError && AUTH_ERROR_TEXT[authError] && (
           <p className="mb-3 text-sm font-semibold text-danger-600">{AUTH_ERROR_TEXT[authError][language]}</p>
         )}
-        <Button onClick={() => signInWithGoogle(window.location.pathname)}>{t.signIn}</Button>
-        <p className="mt-2 text-xs text-ink-400">{t.domainHint}</p>
+        {/* Способов входа теперь три (почта, Google, Apple), и держать их
+            копию в каждых воротах публикации значило бы поддерживать одну
+            и ту же форму в пяти местах. Ведём на /login. */}
+        <div className="flex flex-wrap items-center gap-2">
+          <ButtonLink href="/login" size="sm">
+            {t.signIn}
+          </ButtonLink>
+          <ButtonLink href="/register" size="sm" variant="secondary">
+            {t.register}
+          </ButtonLink>
+        </div>
+        <p className="mt-3 text-xs text-ink-400">{t.domainHint}</p>
       </div>
     );
   }

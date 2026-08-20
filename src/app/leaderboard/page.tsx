@@ -16,6 +16,7 @@ import type { Dict } from '@/lib/i18n';
 import { useStore } from '@/components/StoreProvider';
 import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
 import { useSchoolLeaderboard } from '@/lib/supabase/leaderboard';
+import { portfolioPoints, usePortfolio } from '@/components/Portfolio';
 import { Icon } from '@/components/Icon';
 import { Badge, ButtonLink, EmptyState, Panel, Skeleton } from '@/components/ui';
 
@@ -69,10 +70,10 @@ const TEXT: Dict<{
       'Одноклассники увидят псевдоним вместо имени. Очки продолжают начисляться, место сохраняется, из рейтинга вы не выпадаете.',
     seenAs: (name) => `Сейчас вас видят как «${name}».`,
     noProfileTitle: 'Вы пока вне рейтинга',
-    noProfileText: 'Создайте профиль ученика и решите первые задания, тогда строка появится сама.',
+    noProfileText: 'Создайте профиль ученика, решите первые задания или добавьте достижение в портфолио — строка появится сама.',
     createProfile: 'Создать профиль',
     teacherNote: 'Вы вошли как учитель: в ученический рейтинг ваша строка не добавляется.',
-    demoNote: 'В рейтинге видны только ученики, вошедшие через школьный Google-аккаунт и решившие хотя бы одно задание.',
+    demoNote: 'Баллы складываются из решённых заданий и подтверждённых достижений портфолио: победа на олимпиаде весит больше десятка тестов.',
   },
   kk: {
     title: 'Мектеп рейтингі',
@@ -95,7 +96,7 @@ const TEXT: Dict<{
     noProfileText: 'Оқушы профилін құрып, алғашқы тапсырмаларды шешіңіз, сонда жолыңыз өзі пайда болады.',
     createProfile: 'Профиль құру',
     teacherNote: 'Сіз мұғалім ретінде кірдіңіз: оқушылар рейтингіне сіздің жолыңыз қосылмайды.',
-    demoNote: 'Рейтингте тек мектеп Google аккаунтымен кірген және кемінде бір тапсырманы шешкен оқушылар көрінеді.',
+    demoNote: 'Ұпай шешілген тапсырмалар мен расталған портфолио жетістіктерінен жиналады: олимпиададағы жеңіс ондаған тесттен ауыр.',
   },
   en: {
     title: 'School leaderboard',
@@ -118,7 +119,7 @@ const TEXT: Dict<{
     noProfileText: 'Create a student profile and solve your first tasks, and your row will appear on its own.',
     createProfile: 'Create profile',
     teacherNote: 'You are signed in as a teacher, so your row is not added to the student ranking.',
-    demoNote: 'The leaderboard only shows students who signed in with a school Google account and solved at least one task.',
+    demoNote: 'Points come from solved tasks and verified portfolio achievements: an olympiad win outweighs dozens of quizzes.',
   },
 };
 
@@ -126,6 +127,8 @@ export default function LeaderboardPage() {
   const { state, hydrated, setLeaderboardAnonymous } = useStore();
   const { profile: schoolProfile } = useSchoolAuth();
   const realEntries = useSchoolLeaderboard(schoolProfile?.id ?? null);
+  const myAchievements = usePortfolio(schoolProfile?.id ?? null);
+  const myAchievementPoints = portfolioPoints(myAchievements);
   const t = TEXT[state.language];
 
   if (!hydrated || realEntries === null) {
@@ -154,7 +157,10 @@ export default function LeaderboardPage() {
           id: schoolProfile?.id ?? profile.id,
           name: profile.name,
           grade: profile.grade,
-          points: summary.points,
+          // Свои баллы складываются из тех же двух источников, что и у
+          // остальных строк (задания + подтверждённые достижения), иначе
+          // собственное место считалось бы по другим правилам.
+          points: summary.points + myAchievementPoints,
           topicsMastered: summary.topicsMastered,
           streak: state.streak.current,
           isCurrentUser: true,

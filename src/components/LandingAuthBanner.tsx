@@ -74,7 +74,7 @@ const TEXT = {
 } as const;
 
 export function LandingAuthBanner({ language }: { language: Language }) {
-  const { loading, isSignedIn, profile, schoolClass, signInWithGoogle, signOut, chooseRole } = useSchoolAuth();
+  const { loading, isSignedIn, profile, schoolClass, signOut, chooseRole } = useSchoolAuth();
   const t = TEXT[language];
 
   const [pendingRole, setPendingRole] = useState<'student' | 'teacher' | null>(null);
@@ -85,8 +85,10 @@ export function LandingAuthBanner({ language }: { language: Language }) {
   if (loading) return null;
 
   const shell = (children: React.ReactNode) => (
-    <div className="mx-auto max-w-6xl border-x border-ink-200 border-b px-6 py-4">
-      <div className="rounded-xl border border-brand-200 bg-brand-50 px-5 py-4">{children}</div>
+    <div className="mx-auto max-w-6xl px-6 pt-6">
+      <div className="rounded-[var(--radius-card)] border border-brand-200/70 bg-brand-50/70 px-6 py-5 shadow-[var(--shadow-rest)] backdrop-blur">
+        {children}
+      </div>
     </div>
   );
 
@@ -97,7 +99,17 @@ export function LandingAuthBanner({ language }: { language: Language }) {
           <p className="font-semibold text-ink-900">{t.guestTitle}</p>
           <p className="mt-1 text-sm text-ink-500">{t.guestText}</p>
         </div>
-        <Button onClick={() => signInWithGoogle('/')}>{t.signIn}</Button>
+        {/* Раньше здесь была одна кнопка Google. Теперь способов три,
+            и выбирать между ними человек должен на странице входа,
+            а не в узкой полосе на лендинге. */}
+        <div className="flex flex-wrap items-center gap-2">
+          <ButtonLink href="/login" variant="secondary" size="sm">
+            Войти
+          </ButtonLink>
+          <ButtonLink href="/register" size="sm">
+            Создать аккаунт
+          </ButtonLink>
+        </div>
       </div>
     );
   }

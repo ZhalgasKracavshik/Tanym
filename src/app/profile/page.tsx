@@ -15,6 +15,7 @@ import { useStore } from '@/components/StoreProvider';
 import type { Dict } from '@/lib/i18n';
 import { Icon } from '@/components/Icon';
 import { Alert, Button, ButtonLink, Card, EmptyState, Skeleton } from '@/components/ui';
+import { PortfolioSection } from '@/components/PortfolioSection';
 
 /**
  * Подписи страницы на трёх языках. Ключи одинаковые — за этим следит TypeScript.
@@ -168,6 +169,11 @@ export default function ProfilePage() {
         <h1 className="text-3xl font-semibold text-ink-900 sm:text-4xl">{t.title}</h1>
         <p className="text-sm text-ink-400">{profile.name}</p>
       </div>
+
+      {/* Портфолио стоит выше настроек: за ним сюда приходят,
+          а класс и предметы меняют раз в год. */}
+      <PortfolioSection language={state.language} />
+
 
       {saved && (
         <div className="mt-4">

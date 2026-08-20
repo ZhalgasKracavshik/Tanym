@@ -63,6 +63,8 @@ function writeCachedProfile(profile: SchoolProfile | null) {
   }
 }
 
+export type OAuthProvider = 'google' | 'apple';
+
 interface SchoolAuthValue {
   loading: boolean;
   email: string | null;
@@ -70,7 +72,17 @@ interface SchoolAuthValue {
   schoolClass: SchoolClass | null;
   isSignedIn: boolean;
   refresh: () => Promise<void>;
+  signInWithProvider: (provider: OAuthProvider, nextPath: string) => Promise<void>;
+  /** Оставлено ради существующих вызовов; внутри — signInWithProvider('google'). */
   signInWithGoogle: (nextPath: string) => Promise<void>;
+  signInWithPassword: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
+  signUpWithPassword: (
+    email: string,
+    password: string,
+    name: string,
+  ) => Promise<{ ok: boolean; error?: string; needsConfirmation?: boolean }>;
+  sendPasswordReset: (email: string) => Promise<{ ok: boolean; error?: string }>;
+  updatePassword: (password: string) => Promise<{ ok: boolean; error?: string }>;
   signOut: () => Promise<void>;
   chooseRole: (
     role: 'student' | 'teacher',
@@ -124,14 +136,61 @@ export function SchoolAuthProvider({ children }: { children: ReactNode }) {
   }, [refresh]);
 
   const value = useMemo<SchoolAuthValue>(() => {
-    async function signInWithGoogle(nextPath: string) {
+    async function signInWithProvider(provider: OAuthProvider, nextPath: string) {
       const supabase = createClient();
       await supabase.auth.signInWithOAuth({
-        provider: 'google',
+        provider,
         options: {
           redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`,
         },
       });
+    }
+
+    async function signInWithGoogle(nextPath: string) {
+      await signInWithProvider('google', nextPath);
+    }
+
+    async function signInWithPassword(emailValue: string, password: string) {
+      const supabase = createClient();
+      const { error } = await supabase.auth.signInWithPassword({ email: emailValue, password });
+      if (error) return { ok: false, error: error.message };
+      await refresh();
+      return { ok: true };
+    }
+
+    async function signUpWithPassword(emailValue: string, password: string, name: string) {
+      const supabase = createClient();
+      const { data, error } = await supabase.auth.signUp({
+        email: emailValue,
+        password,
+        // Имя кладём в метаданные пользователя: /api/profile берёт его оттуда
+        // при создании профиля, ровно как для входа через Google.
+        options: { data: { full_name: name } },
+      });
+      if (error) return { ok: false, error: error.message };
+
+      // Если подтверждение почты включено, сессии сразу не будет — и это
+      // не ошибка, а другой сценарий: человеку нужно сходить в почту.
+      const needsConfirmation = !data.session;
+      if (!needsConfirmation) await refresh();
+      return { ok: true, needsConfirmation };
+    }
+
+    async function sendPasswordReset(emailValue: string) {
+      const supabase = createClient();
+      const { error } = await supabase.auth.resetPasswordForEmail(emailValue, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) return { ok: false, error: error.message };
+      return { ok: true };
+    }
+
+    async function updatePassword(password: string) {
+      const supabase = createClient();
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) return { ok: false, error: error.message };
+      await refresh();
+      return { ok: true };
     }
 
     async function signOut() {
@@ -160,7 +219,12 @@ export function SchoolAuthProvider({ children }: { children: ReactNode }) {
       schoolClass,
       isSignedIn: email !== null,
       refresh,
+      signInWithProvider,
       signInWithGoogle,
+      signInWithPassword,
+      signUpWithPassword,
+      sendPasswordReset,
+      updatePassword,
       signOut,
       chooseRole,
     };
