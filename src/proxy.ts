@@ -1,12 +1,52 @@
 /**
- * Обновляет истекающую сессию Supabase на каждом запросе.
+ * Обновляет сессию Supabase и закрывает продукт от неавторизованных.
  *
- * Без этого access-токен в cookie истекал бы через час, и сервер продолжал
- * бы считать пользователя вошедшим, хотя токен уже недействителен.
+ * Две задачи в одном месте намеренно. Обновление токена нужно на каждом
+ * запросе (иначе access-токен протухает через час, а сервер продолжает
+ * считать пользователя вошедшим), а проверка доступа обязана стоять там же,
+ * где уже известен пользователь.
+ *
+ * Почему проверка здесь, а не на каждой странице: middleware — единственная
+ * точка, через которую проходят все маршруты. Проверки на страницах
+ * забываются при добавлении новой страницы, и новая страница по умолчанию
+ * оказывается открытой. Здесь по умолчанию закрыто всё, а исключения
+ * перечислены явным списком ниже.
  */
 
 import { createServerClient } from '@supabase/ssr';
 import { type NextRequest, NextResponse } from 'next/server';
+
+/**
+ * Страницы, доступные без входа.
+ *
+ * Лендинг и экраны входа — очевидно. Страницы для школ и центров тоже:
+ * это B2B-предложение о сотрудничестве, и требовать от директора школы
+ * регистрацию, чтобы прочитать, что мы предлагаем, — значит потерять его
+ * на первом же шаге.
+ */
+const PUBLIC_PATHS = new Set([
+  '/',
+  '/login',
+  '/register',
+  '/forgot-password',
+  '/reset-password',
+  '/for-schools',
+  '/for-centers',
+]);
+
+/**
+ * Префиксы, которые обязаны работать до появления сессии.
+ *
+ * /auth/callback — точка возврата OAuth, вызывается ровно тогда, когда
+ * сессии ещё нет. /api/profile — его дёргает сам провайдер авторизации
+ * со страниц входа, и он корректно отвечает {profile: null} гостю.
+ */
+const PUBLIC_PREFIXES = ['/auth/callback', '/api/profile'];
+
+function isPublic(pathname: string): boolean {
+  if (PUBLIC_PATHS.has(pathname)) return true;
+  return PUBLIC_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+}
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -28,7 +68,35 @@ export async function proxy(request: NextRequest) {
     }
   );
 
-  await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { pathname, search } = request.nextUrl;
+
+  if (!user && !isPublic(pathname)) {
+    /*
+      API отвечает кодом, а не редиректом. Клиентский fetch() молча пошёл бы
+      по 302 на HTML-страницу входа и упал бы уже на разборе JSON — ошибка
+      выглядела бы как «сломался парсинг», а не «нужно войти».
+    */
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
+    }
+
+    const loginUrl = new URL('/login', request.url);
+    loginUrl.searchParams.set('next', pathname + search);
+    const redirect = NextResponse.redirect(loginUrl);
+
+    /*
+      Куки, обновлённые выше, нужно перенести руками: NextResponse.redirect
+      создаёт новый объект ответа, и свежий токен, выданный на этом же
+      запросе, иначе потерялся бы — пользователь получил бы разлогинивание
+      ровно в тот момент, когда токен успешно обновился.
+    */
+    response.cookies.getAll().forEach((cookie) => redirect.cookies.set(cookie));
+    return redirect;
+  }
 
   return response;
 }

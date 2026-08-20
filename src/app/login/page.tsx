@@ -7,8 +7,8 @@
  * у каждой школы, а требовать пароль от того, у кого она есть, — лишний шаг.
  */
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   AuthLink,
   AuthShell,
@@ -28,9 +28,36 @@ function translateError(message: string): string {
   return message;
 }
 
+/**
+ * Обёртка ради useSearchParams: без Suspense Next.js отказывается
+ * статически рендерить страницу, потому что параметры адреса известны
+ * только на клиенте.
+ */
 export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { signInWithPassword, signInWithProvider } = useSchoolAuth();
+
+  /*
+    Куда вернуть после входа. Middleware, отправляя гостя сюда с закрытой
+    страницы, кладёт её адрес в next — без этого человек, который шёл в
+    рейтинг, после входа оказывался бы в кабинете и искал бы дорогу заново.
+
+    Принимаем только внутренние пути: со значением вида https://чужой-сайт
+    параметр next превратился бы в открытый редирект.
+  */
+  const nextParam = searchParams.get('next');
+  const nextPath = nextParam && nextParam.startsWith('/') && !nextParam.startsWith('//')
+    ? nextParam
+    : '/dashboard';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -53,7 +80,7 @@ export default function LoginPage() {
     }
 
     setStatus('success');
-    router.push('/dashboard');
+    router.push(nextPath);
   }
 
   return (
@@ -105,8 +132,8 @@ export default function LoginPage() {
       <div className="mt-7">
         <ProviderButtons
           dividerLabel="или"
-          onGoogle={() => signInWithProvider('google', '/dashboard')}
-          onApple={() => signInWithProvider('apple', '/dashboard')}
+          onGoogle={() => signInWithProvider('google', nextPath)}
+          onApple={() => signInWithProvider('apple', nextPath)}
         />
       </div>
     </AuthShell>
