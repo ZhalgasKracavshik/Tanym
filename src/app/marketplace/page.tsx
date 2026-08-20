@@ -128,6 +128,18 @@ const TEXT: Dict<{
   },
 };
 
+/**
+ * Цвет баннера карточки по виду объявления.
+ * Фотографий у объявлений нет — вместо них цветная плашка с иконкой вида,
+ * тот же приём, что и на афише.
+ */
+const TYPE_BANNER: Record<ListingType, string> = {
+  'school-club': 'bg-success-600',
+  'teacher-course': 'bg-brand-500',
+  'student-service': 'bg-accent-500',
+  'external-center': 'bg-ink-700',
+};
+
 export default function MarketplacePage() {
   const { state, removeListing } = useStore();
   const t = TEXT[state.language];
@@ -199,101 +211,114 @@ export default function MarketplacePage() {
           <EmptyState title={filter === 'mine' ? t.emptyMine : t.empty} description="" />
         </div>
       ) : (
-        <div className="mt-10 grid gap-4 sm:grid-cols-2">
+        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {sorted.map((listing) => {
             const meta = LISTING_TYPES.find((type) => type.id === listing.type);
             return (
-              <Card key={listing.id} className={listing.pending ? 'border-accent-200 bg-accent-50' : ''}>
-                {/*
-                  В шапке ровно две плашки: вид объявления и цена. Состояние
-                  «на модерации» раньше стояло третьей плашкой, хотя оно и так
-                  видно по фону карточки и по пояснению внизу, поэтому ушло
-                  в строку подробностей словами.
-                */}
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge tone="brand">
+              <Card
+                key={listing.id}
+                className={`group flex flex-col overflow-hidden p-0 transition-all duration-300 hover:shadow-[var(--shadow-lift)] ${
+                  listing.pending ? 'border-accent-200 bg-accent-50' : ''
+                }`}
+              >
+                {/* Цветной баннер с иконкой вида объявления, цена поверх — как на афише */}
+                <div className={`relative flex h-24 items-center justify-center ${TYPE_BANNER[listing.type]}`}>
+                  {meta && (
+                    <Icon
+                      name={meta.icon}
+                      size={34}
+                      className="text-white/85 transition-transform duration-500 group-hover:scale-110"
+                    />
+                  )}
+                  <span className="absolute right-3 top-3">
+                    <Badge tone={listing.price === null ? 'success' : 'neutral'} className="tabular-nums">
+                      {listing.price === null
+                        ? t.free
+                        : `${listing.price.toLocaleString('ru-RU')} ${t.perLesson}${
+                            listing.priceNote ? ` / ${listing.priceNote}` : ''
+                          }`}
+                    </Badge>
+                  </span>
+                </div>
+
+                <div className="flex flex-1 flex-col p-5 sm:p-6">
+                  <Badge tone="brand" className="w-fit">
                     {meta && <Icon name={meta.icon} size={14} />}
                     {meta?.title[state.language]}
                   </Badge>
-                  <Badge tone={listing.price === null ? 'success' : 'neutral'} className="tabular-nums">
-                    {listing.price === null
-                      ? t.free
-                      : `${listing.price.toLocaleString('ru-RU')} ${t.perLesson}${
-                          listing.priceNote ? ` / ${listing.priceNote}` : ''
-                        }`}
-                  </Badge>
-                </div>
 
-                <h2 className="mt-4 font-bold text-ink-900">{listing.title}</h2>
-                <p className="mt-2 text-sm text-ink-400">
-                  {listing.authorName} · {listing.authorRole}
-                </p>
-                <p className="mt-2 text-sm text-ink-600">{listing.description}</p>
+                  <h2 className="mt-3 line-clamp-2 font-bold text-ink-900">{listing.title}</h2>
+                  <p className="mt-2 text-sm text-ink-400">
+                    {listing.authorName} · {listing.authorRole}
+                  </p>
+                  <p className="mt-2 line-clamp-2 text-sm text-ink-600">{listing.description}</p>
 
-                {/* Строка подробностей вместо ряда серых пилюль */}
-                <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink-500">
-                  {listing.pending && (
-                    <>
-                      <span className="font-semibold text-accent-700">{t.pending}</span>
-                      <span aria-hidden>·</span>
-                    </>
-                  )}
-                  <span>{listing.category}</span>
-                  <span aria-hidden>·</span>
-                  <span>{formatLabel[listing.format]}</span>
-                  {listing.spots !== undefined && (
-                    <>
-                      <span aria-hidden>·</span>
-                      <span
-                        className={`tabular-nums ${
-                          listing.spots > 0 ? 'font-semibold text-success-700' : 'text-ink-400'
-                        }`}
-                      >
-                        {listing.spots > 0 ? t.spots(listing.spots) : t.noSpots}
-                      </span>
-                    </>
-                  )}
-                </p>
+                  <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink-500">
+                    {listing.pending && (
+                      <>
+                        <span className="font-semibold text-accent-700">{t.pending}</span>
+                        <span aria-hidden>·</span>
+                      </>
+                    )}
+                    <span>{listing.category}</span>
+                    <span aria-hidden>·</span>
+                    <span>{formatLabel[listing.format]}</span>
+                    {listing.spots !== undefined && (
+                      <>
+                        <span aria-hidden>·</span>
+                        <span
+                          className={`tabular-nums ${
+                            listing.spots > 0 ? 'font-semibold text-success-700' : 'text-ink-400'
+                          }`}
+                        >
+                          {listing.spots > 0 ? t.spots(listing.spots) : t.noSpots}
+                        </span>
+                      </>
+                    )}
+                  </p>
 
-                <dl className="mt-4 space-y-2 border-t border-ink-200 pt-4 text-sm">
-                  <div className="flex gap-2">
-                    <dt className="shrink-0 text-ink-400">{t.schedule}:</dt>
-                    <dd className="text-ink-700">{listing.schedule}</dd>
-                  </div>
-                  <div className="flex gap-2">
-                    <dt className="shrink-0 text-ink-400">{t.contact}:</dt>
-                    <dd className="text-ink-700">{listing.contact}</dd>
-                  </div>
-                </dl>
+                  {/* Подробности и действие прибиты к низу — карточки в ряду
+                      выравниваются по нижнему краю независимо от длины текста */}
+                  <div className="mt-auto pt-4">
+                    <dl className="space-y-2 border-t border-ink-200 pt-4 text-sm">
+                      <div className="flex gap-2">
+                        <dt className="shrink-0 text-ink-400">{t.schedule}:</dt>
+                        <dd className="text-ink-700">{listing.schedule}</dd>
+                      </div>
+                      <div className="flex gap-2">
+                        <dt className="shrink-0 text-ink-400">{t.contact}:</dt>
+                        <dd className="text-ink-700">{listing.contact}</dd>
+                      </div>
+                    </dl>
 
-                {/* Отметка о проверке — ученик должен видеть разницу между
-                    школьной секцией и предложением постороннего человека */}
-                <p
-                  className={`mt-4 flex items-center gap-2 text-xs ${
-                    listing.verified ? 'font-semibold text-success-700' : 'text-ink-400'
-                  }`}
-                >
-                  <Icon name={listing.verified ? 'check' : 'close'} size={14} />
-                  {listing.verified ? t.verified : t.unverified}
-                </p>
-                {!listing.verified && !listing.pending && (
-                  <p className="mt-2 text-xs text-ink-400">{t.unverifiedHint}</p>
-                )}
-                {listing.pending && <p className="mt-2 text-xs text-accent-700">{t.pendingHint}</p>}
-
-                {listing.pending && (
-                  <div className="mt-4">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        if (window.confirm(t.confirmRemove(listing.title))) removeListing(listing.id);
-                      }}
+                    <p
+                      className={`mt-4 flex items-center gap-2 text-xs ${
+                        listing.verified ? 'font-semibold text-success-700' : 'text-ink-400'
+                      }`}
                     >
-                      {t.remove}
-                    </Button>
+                      <Icon name={listing.verified ? 'check' : 'close'} size={14} />
+                      {listing.verified ? t.verified : t.unverified}
+                    </p>
+                    {!listing.verified && !listing.pending && (
+                      <p className="mt-2 text-xs text-ink-400">{t.unverifiedHint}</p>
+                    )}
+                    {listing.pending && <p className="mt-2 text-xs text-accent-700">{t.pendingHint}</p>}
+
+                    {listing.pending && (
+                      <div className="mt-4">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            if (window.confirm(t.confirmRemove(listing.title))) removeListing(listing.id);
+                          }}
+                        >
+                          {t.remove}
+                        </Button>
+                      </div>
+                    )}
                   </div>
-                )}
+                </div>
               </Card>
             );
           })}

@@ -136,6 +136,18 @@ const STATUS_TONE: Record<EventStatus, 'success' | 'accent' | 'neutral'> = {
   past: 'neutral',
 };
 
+/**
+ * Цвет баннера карточки по виду события.
+ * Настоящих фотографий у событий нет — вместо них цветная плашка с иконкой
+ * вида события, тот же приём, что и заглушка без фото на карточке услуги.
+ */
+const TYPE_BANNER: Record<EventType, string> = {
+  olympiad: 'bg-brand-500',
+  contest: 'bg-accent-500',
+  school: 'bg-success-600',
+  course: 'bg-ink-700',
+};
+
 export default function EventsPage() {
   const { state, toggleEventRegistration } = useStore();
   const t = TEXT[state.language];
@@ -245,7 +257,7 @@ export default function EventsPage() {
           <EmptyState title={filter === 'mine' ? t.emptyMine : t.empty} description="" />
         </div>
       ) : (
-        <div className="mt-4 space-y-4">
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {sorted.map((event) => {
             const status = eventStatus(event);
             const meta = EVENT_TYPES.find((type) => type.id === event.type);
@@ -254,91 +266,106 @@ export default function EventsPage() {
             const canRegister = status === 'open' || status === 'closing-soon';
 
             return (
-              <Card key={event.id} className={status === 'past' ? 'opacity-60' : ''}>
+              <Card
+                key={event.id}
+                className={`group flex flex-col overflow-hidden p-0 transition-all duration-300 hover:shadow-[var(--shadow-lift)] ${
+                  status === 'past' ? 'opacity-60' : ''
+                }`}
+              >
                 {/*
-                  В шапке ровно две плашки: вид события и состояние регистрации.
-                  Формат участия, цена и классы раньше висели такими же плашками,
-                  и шапка превращалась в гроздь из четырёх цветных пятен, в которой
-                  состояние регистрации терялось. Теперь они идут строкой подробностей
-                  ниже обычным текстом.
+                  Настоящих фотографий у события нет, поэтому баннер — цветная
+                  плашка с иконкой вида события, а не пустое место. Плашка
+                  состояния регистрации лежит поверх, как цена на карточке услуги.
                 */}
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge tone="brand">
+                <div className={`relative flex h-24 items-center justify-center ${TYPE_BANNER[event.type]}`}>
+                  {meta && (
+                    <Icon
+                      name={meta.icon}
+                      size={34}
+                      className="text-white/85 transition-transform duration-500 group-hover:scale-110"
+                    />
+                  )}
+                  <span className="absolute right-3 top-3">
+                    <Badge tone={STATUS_TONE[status]}>{statusLabel[status]}</Badge>
+                  </span>
+                </div>
+
+                <div className="flex flex-1 flex-col p-5 sm:p-6">
+                  <Badge tone="brand" className="w-fit">
                     {meta && <Icon name={meta.icon} size={14} />}
                     {meta?.title[state.language]}
                   </Badge>
-                  <Badge tone={STATUS_TONE[status]}>{statusLabel[status]}</Badge>
-                </div>
 
-                <h2 className="mt-4 text-lg font-bold text-ink-900">{event.title}</h2>
-                <p className="mt-2 text-sm text-ink-400">{event.organizer}</p>
-                <p className="mt-2 text-sm text-ink-600">{event.description}</p>
+                  <h2 className="mt-3 line-clamp-2 text-lg font-bold text-ink-900">{event.title}</h2>
+                  <p className="mt-2 text-sm text-ink-400">{event.organizer}</p>
+                  <p className="mt-2 line-clamp-2 text-sm text-ink-600">{event.description}</p>
 
-                <p className="mt-2 text-sm tabular-nums text-ink-500">
-                  {[
-                    event.online ? t.online : null,
-                    event.free ? t.free : t.paid,
-                    t.grades(event.grades.join(', ')),
-                  ]
-                    .filter(Boolean)
-                    .join(' · ')}
-                </p>
-
-                {/* Сроки: голая строка с волосяной линией, без вложенных плашек */}
-                <div className="mt-4 flex flex-wrap items-baseline justify-between gap-x-8 gap-y-2 border-t border-ink-200 pt-4">
-                  <div>
-                    <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-ink-400">
-                      <Icon name="calendar" size={14} />
-                      {t.deadline}
-                    </p>
-                    <p className="mt-2 font-semibold tabular-nums text-ink-900">
-                      {formatEventDate(event.registrationDeadline, state.language)}
-                      {canRegister && (
-                        <span
-                          className={`ml-2 text-sm font-semibold ${
-                            status === 'closing-soon' ? 'text-danger-600' : 'text-ink-500'
-                          }`}
-                        >
-                          {daysLeft === 0 ? t.lastDay : t.daysLeft(daysLeft)}
-                        </span>
-                      )}
-                    </p>
-                  </div>
-
-                  <p className="text-sm tabular-nums text-ink-500">
-                    {formatEventDate(event.startsAt, state.language)} · {event.location}
+                  <p className="mt-2 text-sm tabular-nums text-ink-500">
+                    {[
+                      event.online ? t.online : null,
+                      event.free ? t.free : t.paid,
+                      t.grades(event.grades.join(', ')),
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
                   </p>
-                </div>
 
-                {event.prize && (
-                  <p className="mt-2 text-sm text-ink-600">
-                    <span className="font-semibold text-ink-800">{t.prize}: </span>
-                    {event.prize}
-                  </p>
-                )}
-
-                <div className="mt-4">
-                  {registered ? (
-                    <div className="flex flex-wrap items-center gap-3">
-                      <span className="flex items-center gap-2 font-semibold text-success-700">
-                        <Icon name="check" size={18} />
-                        {t.registered}
-                      </span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          if (window.confirm(t.confirmCancel(event.title))) toggleEventRegistration(event.id);
-                        }}
-                      >
-                        {t.cancel}
-                      </Button>
-                    </div>
-                  ) : (
-                    canRegister && (
-                      <Button onClick={() => toggleEventRegistration(event.id)}>{t.register}</Button>
-                    )
+                  {event.prize && (
+                    <p className="mt-2 text-sm text-ink-600">
+                      <span className="font-semibold text-ink-800">{t.prize}: </span>
+                      {event.prize}
+                    </p>
                   )}
+
+                  {/* Сроки и действие прибиты к низу, чтобы карточки в ряду
+                      выравнивались по нижнему краю независимо от длины текста */}
+                  <div className="mt-auto pt-4">
+                    <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2 border-t border-ink-200 pt-4">
+                      <div>
+                        <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-ink-400">
+                          <Icon name="calendar" size={14} />
+                          {t.deadline}
+                        </p>
+                        <p className="mt-2 font-semibold tabular-nums text-ink-900">
+                          {formatEventDate(event.registrationDeadline, state.language)}
+                        </p>
+                        {canRegister && (
+                          <p
+                            className={`mt-1 text-sm font-semibold ${
+                              status === 'closing-soon' ? 'text-danger-600' : 'text-ink-500'
+                            }`}
+                          >
+                            {daysLeft === 0 ? t.lastDay : t.daysLeft(daysLeft)}
+                          </p>
+                        )}
+                      </div>
+                      <p className="text-sm tabular-nums text-ink-500">{event.location}</p>
+                    </div>
+
+                    <div className="mt-4">
+                      {registered ? (
+                        <div className="flex flex-wrap items-center gap-3">
+                          <span className="flex items-center gap-2 font-semibold text-success-700">
+                            <Icon name="check" size={18} />
+                            {t.registered}
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              if (window.confirm(t.confirmCancel(event.title))) toggleEventRegistration(event.id);
+                            }}
+                          >
+                            {t.cancel}
+                          </Button>
+                        </div>
+                      ) : (
+                        canRegister && (
+                          <Button onClick={() => toggleEventRegistration(event.id)}>{t.register}</Button>
+                        )
+                      )}
+                    </div>
+                  </div>
                 </div>
               </Card>
             );
