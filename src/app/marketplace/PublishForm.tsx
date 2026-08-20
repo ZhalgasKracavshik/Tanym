@@ -1,56 +1,27 @@
 'use client';
 
 /**
- * Размещение собственного объявления.
+ * Размещение собственного объявления учеником или учителем.
  *
- * Доступно и ученику, и учителю: старшеклассник может предложить помощь младшим
- * или собрать волонтёрскую команду ровно так же, как учитель объявляет курс.
- * Это осознанное решение — в школе полезное знание есть не только у взрослых.
- *
- * Любое созданное объявление помечается pending: в реальной школе публикация
- * без проверки завуча закончится тем, что через платформу начнут продавать
- * что угодно. Здесь модерации нет, но состояние «ждёт проверки» показывается
- * честно, а не имитируется мгновенной публикацией.
+ * Уходит на модерацию в Supabase (status='pending'), а не сразу в общий
+ * список: admin одобряет или отклоняет прямо на сайте (/admin), без выхода
+ * в Supabase Dashboard. Раньше это было чисто локальным состоянием
+ * (state.myListings) — «отправлено на проверку» никуда не доходило,
+ * потому что проверять было некому.
  */
 
 import { useState } from 'react';
-import { createId } from '@/lib/storage';
 import { LISTING_TYPES } from '@/lib/listings';
-import type { Listing, ListingType } from '@/lib/listings';
-import type { Dict } from '@/lib/i18n';
-import { useStore } from '@/components/StoreProvider';
+import type { ListingType } from '@/lib/listings';
+import type { Language } from '@/lib/types';
+import { createClient } from '@/lib/supabase/client';
 import { Icon } from '@/components/Icon';
 import { Alert, Button, Panel } from '@/components/ui';
 
-const TEXT: Dict<{
-  open: string;
-  heading: string;
-  needProfile: string;
-  typeLabel: string;
-  titleLabel: string;
-  titlePlaceholder: string;
-  descriptionLabel: string;
-  descriptionPlaceholder: string;
-  categoryLabel: string;
-  categoryPlaceholder: string;
-  formatLabel: string;
-  online: string;
-  offline: string;
-  both: string;
-  freeLabel: string;
-  priceLabel: string;
-  pricePlaceholder: string;
-  scheduleLabel: string;
-  schedulePlaceholder: string;
-  submit: string;
-  cancel: string;
-  published: string;
-  studentTypesOnly: string;
-}> = {
+const TEXT = {
   ru: {
     open: 'Разместить своё объявление',
     heading: 'Новое объявление',
-    needProfile: 'Чтобы разместить объявление, сначала создайте профиль.',
     typeLabel: 'Тип объявления',
     titleLabel: 'Заголовок',
     titlePlaceholder: 'Например, помогу с алгеброй, 7–9 класс',
@@ -71,75 +42,36 @@ const TEXT: Dict<{
     cancel: 'Отмена',
     published: 'Объявление отправлено на проверку школе.',
     studentTypesOnly: 'Ученики размещают объявления в разделах «От учеников» и «Секции школы».',
+    error: 'Не получилось отправить. Проверьте поля.',
   },
-  kk: {
-    open: 'Өз хабарландыруымды жариялау',
-    heading: 'Жаңа хабарландыру',
-    needProfile: 'Хабарландыру жариялау үшін алдымен профиль құрыңыз.',
-    typeLabel: 'Хабарландыру түрі',
-    titleLabel: 'Тақырып',
-    titlePlaceholder: 'Мысалы, алгебрадан көмектесемін, 7–9 сынып',
-    descriptionLabel: 'Сипаттама',
-    descriptionPlaceholder: 'Нақты не ұсынасың, кімге және неге саған сенуге болады',
-    categoryLabel: 'Бағыт',
-    categoryPlaceholder: 'Математика, спорт, волонтёрлық…',
-    formatLabel: 'Формат',
-    online: 'Онлайн',
-    offline: 'Қатысып',
-    both: 'Қатысып және онлайн',
-    freeLabel: 'Тегін',
-    priceLabel: 'Бір сабақтың бағасы, тг',
-    pricePlaceholder: '1500',
-    scheduleLabel: 'Қашан',
-    schedulePlaceholder: 'Мысалы, сенбі 11:00–13:00',
-    submit: 'Тексеруге жіберу',
-    cancel: 'Болдырмау',
-    published: 'Хабарландыру мектеп тексеруіне жіберілді.',
-    studentTypesOnly: 'Оқушылар «Оқушылардан» және «Мектеп үйірмелері» бөлімдеріне жариялайды.',
-  },
-  en: {
-    open: 'Post your own listing',
-    heading: 'New listing',
-    needProfile: 'Create a profile first to post a listing.',
-    typeLabel: 'Listing type',
-    titleLabel: 'Title',
-    titlePlaceholder: 'For example, I can help with algebra, grades 7–9',
-    descriptionLabel: 'Description',
-    descriptionPlaceholder: 'What exactly you offer, for whom, and why you can be trusted',
-    categoryLabel: 'Area',
-    categoryPlaceholder: 'Maths, sport, volunteering…',
-    formatLabel: 'Format',
-    online: 'Online',
-    offline: 'In person',
-    both: 'In person and online',
-    freeLabel: 'Free',
-    priceLabel: 'Price per lesson, KZT',
-    pricePlaceholder: '1500',
-    scheduleLabel: 'When',
-    schedulePlaceholder: 'For example, Saturday 11:00–13:00',
-    submit: 'Send for review',
-    cancel: 'Cancel',
-    published: 'Your listing has been sent to the school for review.',
-    studentTypesOnly: 'Students post under “From students” and “School clubs”.',
-  },
-};
+} as const;
 
 const INPUT =
   'w-full rounded-xl border border-ink-200 px-4 py-2.5 text-ink-900 outline-none transition-all duration-150 focus:border-brand-500 focus-visible:ring-2 focus-visible:ring-brand-500';
 
-export function PublishForm() {
-  const { state, addListing } = useStore();
-  const t = TEXT[state.language];
-  const profile = state.profile;
+interface Profile {
+  id: string;
+  name: string;
+  // SchoolAuthGate типизирует роль как student|teacher|admin в общем случае,
+  // хотя сюда admin никогда не попадёт — requireRole на странице это
+  // гарантирует раньше, чем этот компонент вообще отрендерится.
+  role: 'student' | 'teacher' | 'admin';
+  grade: number | null;
+}
+
+export function PublishForm({ language, profile }: { language: Language; profile: Profile }) {
+  const t = TEXT.ru;
 
   const [open, setOpen] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState(false);
+  const [sending, setSending] = useState(false);
 
   const [type, setType] = useState<ListingType>('student-service');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
-  const [format, setFormat] = useState<Listing['format']>('offline');
+  const [format, setFormat] = useState<'online' | 'offline' | 'both'>('offline');
   const [free, setFree] = useState(true);
   const [price, setPrice] = useState('');
   const [schedule, setSchedule] = useState('');
@@ -150,7 +82,7 @@ export function PublishForm() {
    * отправки формы, а не после отказа модерации.
    */
   const allowedTypes = LISTING_TYPES.filter((item) =>
-    profile?.role === 'teacher'
+    profile.role === 'teacher'
       ? item.id !== 'external-center'
       : item.id === 'student-service' || item.id === 'school-club',
   );
@@ -162,28 +94,33 @@ export function PublishForm() {
     schedule.trim() !== '' &&
     (free || Number(price) > 0);
 
-  function save() {
-    if (!profile) return;
+  async function save() {
+    setSending(true);
+    setError(false);
 
-    const listing: Listing = {
-      id: createId('listing'),
+    const supabase = createClient();
+    const { error: insertError } = await supabase.from('published_listings').insert({
+      admin_id: profile.id,
+      status: 'pending',
       type,
       title: title.trim(),
-      authorName: profile.name,
-      authorRole:
-        profile.role === 'teacher' ? 'учитель' : `ученик ${profile.grade} класса`,
+      author_name: profile.name,
+      author_role: profile.role === 'teacher' ? 'учитель' : `ученик ${profile.grade ?? ''} класса`,
       description: description.trim(),
       category: category.trim(),
       price: free ? null : Number(price),
-      priceNote: free ? undefined : 'за час',
+      price_note: free ? null : 'за час',
       format,
       schedule: schedule.trim(),
       contact: 'Через платформу',
       verified: false,
-      pending: true,
-    };
+    });
 
-    addListing(listing);
+    setSending(false);
+    if (insertError) {
+      setError(true);
+      return;
+    }
 
     setTitle('');
     setDescription('');
@@ -203,14 +140,10 @@ export function PublishForm() {
             <Alert tone="success">{t.published}</Alert>
           </div>
         )}
-        {profile ? (
-          <Button onClick={() => setOpen(true)}>
-            <Icon name="plus" size={18} />
-            {t.open}
-          </Button>
-        ) : (
-          <Alert>{t.needProfile}</Alert>
-        )}
+        <Button onClick={() => setOpen(true)}>
+          <Icon name="plus" size={18} />
+          {t.open}
+        </Button>
       </div>
     );
   }
@@ -241,11 +174,11 @@ export function PublishForm() {
               }`}
             >
               <Icon name={item.icon} size={18} />
-              <span className="text-sm font-semibold text-ink-800">{item.title[state.language]}</span>
+              <span className="text-sm font-semibold text-ink-800">{item.title[language]}</span>
             </button>
           ))}
         </div>
-        {profile?.role !== 'teacher' && <p className="mt-2 text-xs text-ink-400">{t.studentTypesOnly}</p>}
+        {profile.role !== 'teacher' && <p className="mt-2 text-xs text-ink-400">{t.studentTypesOnly}</p>}
       </div>
 
       <label className="block">
@@ -286,7 +219,7 @@ export function PublishForm() {
           <span className="mb-2 block text-sm font-semibold text-ink-800">{t.formatLabel}</span>
           <select
             value={format}
-            onChange={(event) => setFormat(event.target.value as Listing['format'])}
+            onChange={(event) => setFormat(event.target.value as 'online' | 'offline' | 'both')}
             className={INPUT}
           >
             <option value="offline">{t.offline}</option>
@@ -333,8 +266,10 @@ export function PublishForm() {
         )}
       </div>
 
+      {error && <Alert tone="danger">{t.error}</Alert>}
+
       <div className="flex flex-wrap gap-3">
-        <Button onClick={save} disabled={!canSave}>
+        <Button onClick={save} disabled={!canSave || sending}>
           {t.submit}
         </Button>
         <Button variant="secondary" onClick={() => setOpen(false)}>

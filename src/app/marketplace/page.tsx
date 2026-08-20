@@ -19,7 +19,7 @@ import type { Dict } from '@/lib/i18n';
 import { useStore } from '@/components/StoreProvider';
 import { PublishForm } from './PublishForm';
 import { Icon } from '@/components/Icon';
-import { Badge, Button, Card, EmptyState, Kicker } from '@/components/ui';
+import { Badge, Card, EmptyState, Kicker } from '@/components/ui';
 import { createClient } from '@/lib/supabase/client';
 import { SchoolAuthGate } from '@/components/SchoolAuthGate';
 import { ListingPublishForm } from '@/components/ListingPublishForm';
@@ -60,7 +60,7 @@ function rowToListing(row: PublishedListingRow): Listing {
   };
 }
 
-/** Реальные объявления из Supabase — раньше здесь был захардкоженный массив. */
+/** Реальные одобренные объявления из Supabase — раньше здесь был захардкоженный массив. */
 function usePublishedListings(refreshKey: number) {
   const [listings, setListings] = useState<Listing[] | null>(null);
 
@@ -71,6 +71,10 @@ function usePublishedListings(refreshKey: number) {
     supabase
       .from('published_listings')
       .select('*')
+      // Отфильтровано явно, а не только через RLS: если страницу смотрит
+      // сам admin или автор заявки, RLS вернёт им и pending-строки тоже —
+      // а общая лента должна показывать только одобренное, без исключений.
+      .eq('status', 'approved')
       .order('created_at', { ascending: false })
       .then(({ data }) => {
         if (!cancelled) setListings((data ?? []).map(rowToListing));
@@ -89,14 +93,11 @@ const TEXT: Dict<{
   title: string;
   subtitle: string;
   all: string;
-  mine: string;
   free: string;
   perLesson: string;
   verified: string;
   unverified: string;
   unverifiedHint: string;
-  pending: string;
-  pendingHint: string;
   spots: (n: number) => string;
   noSpots: string;
   schedule: string;
@@ -104,10 +105,7 @@ const TEXT: Dict<{
   online: string;
   offline: string;
   both: string;
-  remove: string;
-  confirmRemove: (title: string) => string;
   empty: string;
-  emptyMine: string;
   safety: string;
 }> = {
   ru: {
@@ -115,14 +113,11 @@ const TEXT: Dict<{
     title: 'Возможности',
     subtitle: 'Секции, курсы, помощь старших и волонтёрство: всё, что есть вокруг школы.',
     all: 'Все',
-    mine: 'Мои объявления',
     free: 'Бесплатно',
     perLesson: 'тг',
     verified: 'Проверено школой',
     unverified: 'Без проверки школы',
     unverifiedHint: 'Школа не проверяла это предложение. Обсуди с родителями, прежде чем платить.',
-    pending: 'На модерации',
-    pendingHint: 'Объявление увидят другие после проверки школой.',
     spots: (n) => (n === 1 ? 'осталось 1 место' : n < 5 ? `осталось ${n} места` : `осталось ${n} мест`),
     noSpots: 'мест нет',
     schedule: 'Когда',
@@ -130,10 +125,7 @@ const TEXT: Dict<{
     online: 'Онлайн',
     offline: 'Очно',
     both: 'Очно и онлайн',
-    remove: 'Снять',
-    confirmRemove: (title) => `Снять объявление «${title}»?`,
     empty: 'В этой категории пока нет объявлений.',
-    emptyMine: 'Вы пока ничего не размещали.',
     safety: 'Никогда не переводи деньги вперёд незнакомым людям и не встречайся один. Скажи об этом родителям.',
   },
   kk: {
@@ -141,14 +133,11 @@ const TEXT: Dict<{
     title: 'Мүмкіндіктер',
     subtitle: 'Үйірмелер, курстар, үлкендердің көмегі және волонтёрлық: мектеп айналасындағының бәрі.',
     all: 'Барлығы',
-    mine: 'Менің хабарландыруларым',
     free: 'Тегін',
     perLesson: 'тг',
     verified: 'Мектеп тексерген',
     unverified: 'Мектеп тексермеген',
     unverifiedHint: 'Мектеп бұл ұсынысты тексерген жоқ. Төлемес бұрын ата-анаңмен ақылдас.',
-    pending: 'Модерацияда',
-    pendingHint: 'Хабарландыруды мектеп тексергеннен кейін басқалар көреді.',
     spots: (n) => `${n} орын қалды`,
     noSpots: 'орын жоқ',
     schedule: 'Қашан',
@@ -156,10 +145,7 @@ const TEXT: Dict<{
     online: 'Онлайн',
     offline: 'Қатысып',
     both: 'Қатысып және онлайн',
-    remove: 'Алып тастау',
-    confirmRemove: (title) => `«${title}» хабарландыруы алынсын ба?`,
     empty: 'Бұл санатта әзірге хабарландыру жоқ.',
-    emptyMine: 'Сіз әзірге ештеңе жарияламадыңыз.',
     safety: 'Бейтаныс адамдарға ақшаны алдын ала аударма және жалғыз кездеспе. Бұл туралы ата-анаңа айт.',
   },
   en: {
@@ -167,14 +153,11 @@ const TEXT: Dict<{
     title: 'Opportunities',
     subtitle: 'Clubs, courses, peer tutoring and volunteering: everything around the school.',
     all: 'All',
-    mine: 'My listings',
     free: 'Free',
     perLesson: 'KZT',
     verified: 'Verified by school',
     unverified: 'Not verified by school',
     unverifiedHint: 'The school has not vetted this offer. Talk to your parents before paying.',
-    pending: 'Under review',
-    pendingHint: 'Others will see your listing once the school reviews it.',
     spots: (n) => (n === 1 ? '1 spot left' : `${n} spots left`),
     noSpots: 'no spots left',
     schedule: 'When',
@@ -182,10 +165,7 @@ const TEXT: Dict<{
     online: 'Online',
     offline: 'In person',
     both: 'In person and online',
-    remove: 'Remove',
-    confirmRemove: (title) => `Remove the listing “${title}”?`,
     empty: 'No listings in this category yet.',
-    emptyMine: 'You have not posted anything yet.',
     safety: 'Never send money upfront to strangers and never meet alone. Tell your parents about it.',
   },
 };
@@ -203,10 +183,10 @@ const TYPE_BANNER: Record<ListingType, string> = {
 };
 
 export default function MarketplacePage() {
-  const { state, removeListing } = useStore();
+  const { state } = useStore();
   const t = TEXT[state.language];
 
-  const [filter, setFilter] = useState<ListingType | 'all' | 'mine'>('all');
+  const [filter, setFilter] = useState<ListingType | 'all'>('all');
   const [publishRefreshKey, setPublishRefreshKey] = useState(0);
   const publishedListings = usePublishedListings(publishRefreshKey);
 
@@ -214,17 +194,10 @@ export default function MarketplacePage() {
     return <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6" />;
   }
 
-  const all: Listing[] = [...state.myListings, ...publishedListings];
+  const visible = publishedListings.filter((listing) => filter === 'all' || listing.type === filter);
 
-  const visible = all.filter((listing) => {
-    if (filter === 'all') return true;
-    if (filter === 'mine') return listing.pending === true;
-    return listing.type === filter;
-  });
-
-  /** Бесплатное и проверенное — выше. Свои объявления всегда первыми. */
+  /** Бесплатное и проверенное — выше. */
   const sorted = [...visible].sort((a, b) => {
-    if (a.pending !== b.pending) return a.pending ? -1 : 1;
     if (a.verified !== b.verified) return a.verified ? -1 : 1;
     const priceA = a.price ?? 0;
     const priceB = b.price ?? 0;
@@ -259,24 +232,21 @@ export default function MarketplacePage() {
             {type.title[state.language]}
           </button>
         ))}
-        {state.myListings.length > 0 && (
-          <button onClick={() => setFilter('mine')} className={chip(filter === 'mine')}>
-            <Icon name="pencil" size={16} />
-            <span className="tabular-nums">
-              {t.mine} ({state.myListings.length})
-            </span>
-          </button>
-        )}
       </div>
 
-      {/* Форма размещения */}
+      {/* Форма размещения — только реальный вошедший ученик или учитель,
+          уходит на модерацию в Supabase, а не сразу в список. */}
       <div className="mt-4">
-        <PublishForm />
+        <Suspense fallback={null}>
+          <SchoolAuthGate requireRole={['student', 'teacher']} language={state.language}>
+            {(profile) => <PublishForm language={state.language} profile={profile} />}
+          </SchoolAuthGate>
+        </Suspense>
       </div>
 
       {sorted.length === 0 ? (
         <div className="mt-10">
-          <EmptyState title={filter === 'mine' ? t.emptyMine : t.empty} description="" />
+          <EmptyState title={t.empty} description="" />
         </div>
       ) : (
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -285,9 +255,7 @@ export default function MarketplacePage() {
             return (
               <Card
                 key={listing.id}
-                className={`group flex flex-col overflow-hidden p-0 transition-all duration-300 hover:shadow-[var(--shadow-lift)] ${
-                  listing.pending ? 'border-accent-200 bg-accent-50' : ''
-                }`}
+                className="group flex flex-col overflow-hidden p-0 transition-all duration-300 hover:shadow-[var(--shadow-lift)]"
               >
                 {/* Цветной баннер с иконкой вида объявления, цена поверх — как на афише */}
                 <div className={`relative flex h-24 items-center justify-center ${TYPE_BANNER[listing.type]}`}>
@@ -322,12 +290,6 @@ export default function MarketplacePage() {
                   <p className="mt-2 line-clamp-2 text-sm text-ink-600">{listing.description}</p>
 
                   <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink-500">
-                    {listing.pending && (
-                      <>
-                        <span className="font-semibold text-accent-700">{t.pending}</span>
-                        <span aria-hidden>·</span>
-                      </>
-                    )}
                     <span>{listing.category}</span>
                     <span aria-hidden>·</span>
                     <span>{formatLabel[listing.format]}</span>
@@ -367,24 +329,7 @@ export default function MarketplacePage() {
                       <Icon name={listing.verified ? 'check' : 'close'} size={14} />
                       {listing.verified ? t.verified : t.unverified}
                     </p>
-                    {!listing.verified && !listing.pending && (
-                      <p className="mt-2 text-xs text-ink-400">{t.unverifiedHint}</p>
-                    )}
-                    {listing.pending && <p className="mt-2 text-xs text-accent-700">{t.pendingHint}</p>}
-
-                    {listing.pending && (
-                      <div className="mt-4">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            if (window.confirm(t.confirmRemove(listing.title))) removeListing(listing.id);
-                          }}
-                        >
-                          {t.remove}
-                        </Button>
-                      </div>
-                    )}
+                    {!listing.verified && <p className="mt-2 text-xs text-ink-400">{t.unverifiedHint}</p>}
                   </div>
                 </div>
               </Card>
@@ -393,9 +338,9 @@ export default function MarketplacePage() {
         </div>
       )}
 
-      {/* Публикация проверенных объявлений — только роль admin. Форма выше
-          (PublishForm) остаётся отдельным путём для учеников: их объявления
-          сначала идут на модерацию (state.myListings), а не публикуются сразу. */}
+      {/* Публикация сразу-проверенных объявлений — только роль admin. Форма выше
+          (PublishForm) остаётся отдельным путём для учеников и учителей: их
+          объявления сначала идут на модерацию через /admin, а не публикуются сразу. */}
       <div className="mt-16">
         <Kicker>Опубликовать проверенное объявление</Kicker>
         <div className="mt-4">

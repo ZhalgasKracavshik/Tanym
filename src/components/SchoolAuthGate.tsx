@@ -14,6 +14,7 @@ import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
+import type { SchoolProfile } from '@/lib/supabase/useSchoolAuth';
 import { Button } from './ui';
 
 const AUTH_ERROR_TEXT: Record<string, Record<'ru' | 'kk' | 'en', string>> = {
@@ -47,7 +48,7 @@ type SchoolRole = 'student' | 'teacher' | 'admin';
 interface SchoolAuthGateProps {
   requireRole: SchoolRole | SchoolRole[];
   language: 'ru' | 'kk' | 'en';
-  children: (profile: { id: string; name: string }) => ReactNode;
+  children: (profile: SchoolProfile) => ReactNode;
 }
 
 const TEXT = {

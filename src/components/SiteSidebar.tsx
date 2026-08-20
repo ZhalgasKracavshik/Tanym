@@ -33,9 +33,9 @@ import { Logo, LogoMark } from './Logo';
  * панель мониторинга класса.
  */
 const HIDDEN_FOR_ROLE: Record<'student' | 'teacher' | 'admin', string[]> = {
-  student: ['/teacher'],
-  teacher: ['/plan', '/dashboard', '/chat'],
-  admin: ['/plan', '/dashboard', '/chat'],
+  student: ['/teacher', '/admin'],
+  teacher: ['/plan', '/dashboard', '/chat', '/admin'],
+  admin: ['/plan', '/dashboard', '/chat', '/teacher'],
 };
 
 const TEXT: Dict<{
@@ -49,6 +49,7 @@ const TEXT: Dict<{
   leaderboard: string;
   mentor: string;
   teacher: string;
+  admin: string;
   nav: string;
   settings: string;
   language: string;
@@ -66,6 +67,7 @@ const TEXT: Dict<{
     leaderboard: 'Рейтинг',
     mentor: 'Наставник',
     teacher: 'Учителю',
+    admin: 'Админ',
     nav: 'Основная навигация',
     settings: 'Настройки профиля',
     language: 'Язык интерфейса',
@@ -83,6 +85,7 @@ const TEXT: Dict<{
     leaderboard: 'Рейтинг',
     mentor: 'Тәлімгер',
     teacher: 'Мұғалімге',
+    admin: 'Админ',
     nav: 'Негізгі навигация',
     settings: 'Профиль параметрлері',
     language: 'Интерфейс тілі',
@@ -100,6 +103,7 @@ const TEXT: Dict<{
     leaderboard: 'Leaderboard',
     mentor: 'Mentor',
     teacher: 'For teachers',
+    admin: 'Admin',
     nav: 'Main navigation',
     settings: 'Profile settings',
     language: 'Interface language',
@@ -142,6 +146,7 @@ export function SiteSidebar() {
     { href: '/leaderboard', label: t.leaderboard, icon: 'medal' },
     { href: '/chat', label: t.mentor, icon: 'chat' },
     { href: '/teacher', label: t.teacher, icon: 'cap' },
+    { href: '/admin', label: t.admin, icon: 'building' },
   ];
   const NAV = ALL_NAV.filter(
     (item) => !schoolProfile || !HIDDEN_FOR_ROLE[schoolProfile.role].includes(item.href)
