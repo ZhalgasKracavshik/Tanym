@@ -9,8 +9,7 @@
  * внизу, непрочитанное помечено, а фильтр по классу убирает чужие объявления.
  */
 
-import { useEffect, useState } from 'react';
-import { ANNOUNCEMENTS } from '@/data/announcements';
+import { Suspense, useEffect, useState } from 'react';
 import {
   ANNOUNCEMENT_CATEGORIES,
   formatAnnouncementDate,
@@ -21,7 +20,10 @@ import type { Announcement, AnnouncementCategory } from '@/lib/announcements';
 import type { Dict } from '@/lib/i18n';
 import { useStore } from '@/components/StoreProvider';
 import { Icon } from '@/components/Icon';
-import { Badge, EmptyState, RailRow, Skeleton } from '@/components/ui';
+import { Badge, EmptyState, Kicker, RailRow, Skeleton } from '@/components/ui';
+import { usePublishedAnnouncements } from '@/lib/supabase/announcements';
+import { SchoolAuthGate } from '@/components/SchoolAuthGate';
+import { AnnouncementPublishForm } from '@/components/AnnouncementPublishForm';
 
 const TEXT: Dict<{
   title: string;
@@ -103,6 +105,9 @@ export default function AnnouncementsPage() {
   const t = TEXT[state.language];
 
   const [category, setCategory] = useState<AnnouncementCategory | 'all'>('all');
+  const [feedRefreshKey, setFeedRefreshKey] = useState(0);
+  const published = usePublishedAnnouncements(feedRefreshKey);
+  const ANNOUNCEMENTS = published ?? [];
   const [onlyMyGrade, setOnlyMyGrade] = useState(false);
 
   /**
@@ -116,7 +121,10 @@ export default function AnnouncementsPage() {
   const [unreadIds, setUnreadIds] = useState<string[]>([]);
 
   useEffect(() => {
-    if (!hydrated) return;
+    // published === null означает «ещё грузится»: без этой проверки эффект
+    // отработал бы на пустом списке, ушёл в ранний return и больше никогда
+    // не пометил бы объявления прочитанными.
+    if (!hydrated || published === null) return;
     // Истёкшие в счётчик не берём: плашку «Новое» они всё равно не получают,
     // и без этого фильтра счётчик обещал бы восемь новых там, где помечено семь.
     const unseen = ANNOUNCEMENTS.filter(
@@ -135,9 +143,10 @@ export default function AnnouncementsPage() {
     // Помечаем весь список: страница открывается без фильтров, значит ученик
     // увидел всё разом. Помечать по мере прокрутки — сложность без пользы.
     markAnnouncementsRead(everything);
-    // Намеренно только по hydrated: снимок нужен один раз за посещение страницы.
+    // Снимок нужен один раз за посещение — но только после того, как список
+    // реально пришёл из базы, отсюда published в зависимостях.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hydrated]);
+  }, [hydrated, published]);
 
   if (!hydrated) {
     return (
@@ -336,6 +345,25 @@ export default function AnnouncementsPage() {
           })}
         </div>
       )}
+
+      {/* Объявление — официальный голос школы, поэтому публикует только admin,
+          не каждый учитель. */}
+      <div className="mt-16">
+        <Kicker>Опубликовать объявление</Kicker>
+        <div className="mt-4">
+          <Suspense fallback={null}>
+            <SchoolAuthGate requireRole="admin" language={state.language}>
+              {(profile) => (
+                <AnnouncementPublishForm
+                  language={state.language}
+                  adminId={profile.id}
+                  onPublished={() => setFeedRefreshKey((key) => key + 1)}
+                />
+              )}
+            </SchoolAuthGate>
+          </Suspense>
+        </div>
+      </div>
     </div>
   );
 }

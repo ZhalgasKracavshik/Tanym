@@ -9,74 +9,16 @@
  * а события с закрывающейся регистрацией поднимаются наверх.
  */
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useState } from 'react';
 import { EVENT_TYPES, daysLeftUntil, eventStatus, formatEventDate } from '@/lib/events';
 import type { EventStatus, EventType, SchoolEvent } from '@/lib/events';
 import type { Dict } from '@/lib/i18n';
 import { useStore } from '@/components/StoreProvider';
 import { Icon } from '@/components/Icon';
 import { Badge, Button, Card, EmptyState, Kicker } from '@/components/ui';
-import { createClient } from '@/lib/supabase/client';
+import { usePublishedEvents } from '@/lib/supabase/events';
 import { SchoolAuthGate } from '@/components/SchoolAuthGate';
 import { EventPublishForm } from '@/components/EventPublishForm';
-
-interface PublishedEventRow {
-  id: string;
-  type: EventType;
-  title: string;
-  organizer: string;
-  description: string;
-  starts_at: string;
-  registration_deadline: string;
-  location: string;
-  online: boolean;
-  grades: number[];
-  subject_id: string | null;
-  prize: string | null;
-  free: boolean;
-}
-
-function rowToEvent(row: PublishedEventRow): SchoolEvent {
-  return {
-    id: row.id,
-    type: row.type,
-    title: row.title,
-    organizer: row.organizer,
-    description: row.description,
-    startsAt: row.starts_at,
-    registrationDeadline: row.registration_deadline,
-    location: row.location,
-    online: row.online,
-    grades: row.grades as SchoolEvent['grades'],
-    subjectId: row.subject_id ?? undefined,
-    prize: row.prize ?? undefined,
-    free: row.free,
-  };
-}
-
-/** Реальные события из Supabase — раньше здесь был захардкоженный массив. */
-function usePublishedEvents(refreshKey: number) {
-  const [events, setEvents] = useState<SchoolEvent[] | null>(null);
-
-  useEffect(() => {
-    const supabase = createClient();
-    let cancelled = false;
-
-    supabase
-      .from('published_events')
-      .select('*')
-      .order('registration_deadline', { ascending: true })
-      .then(({ data }) => {
-        if (!cancelled) setEvents((data ?? []).map(rowToEvent));
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [refreshKey]);
-
-  return events;
-}
 
 const TEXT: Dict<{
   kicker: string;

@@ -11,8 +11,8 @@
 import { getSubject, getTopic } from '@/data';
 import { daysUntil, rankTopics, summarize, weakestSkills } from '@/lib/personalization';
 import { almatyDateIso, almatyYesterdayIso } from '@/lib/date';
-import { EVENTS } from '@/data/events';
 import { daysLeftUntil } from '@/lib/events';
+import { usePublishedEvents } from '@/lib/supabase/events';
 import { useStore } from '@/components/StoreProvider';
 import type { Dict } from '@/lib/i18n';
 import { Icon } from '@/components/Icon';
@@ -196,6 +196,7 @@ function Metric({
 
 export default function DashboardPage() {
   const { state, hydrated } = useStore();
+  const publishedEvents = usePublishedEvents();
   const profile = state.profile;
   const t = TEXT[state.language];
 
@@ -233,9 +234,9 @@ export default function DashboardPage() {
   const streakValue =
     lastActive === almatyDateIso() || lastActive === almatyYesterdayIso() ? state.streak.current : 0;
   // Ближайшее из тех событий, на которые ученик записался и которые ещё не прошли.
-  const upcomingEvent = EVENTS.filter(
-    (event) => state.eventRegistrations.includes(event.id) && daysLeftUntil(event.startsAt) >= 0,
-  ).sort((a, b) => a.startsAt.localeCompare(b.startsAt))[0];
+  const upcomingEvent = (publishedEvents ?? [])
+    .filter((event) => state.eventRegistrations.includes(event.id) && daysLeftUntil(event.startsAt) >= 0)
+    .sort((a, b) => a.startsAt.localeCompare(b.startsAt))[0];
   const daysLeft = daysUntil(profile.targetDate);
   const primarySubject = getSubject(profile.subjectIds[0]);
   const nextTopics = primarySubject ? rankTopics(primarySubject, state, state.customTopics).slice(0, 3) : [];
