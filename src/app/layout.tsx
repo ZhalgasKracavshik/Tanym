@@ -5,6 +5,7 @@ import { StoreProvider } from '@/components/StoreProvider';
 import { AppShell } from '@/components/AppShell';
 import { ProgressSync } from '@/components/ProgressSync';
 import { SchoolAuthProvider } from '@/lib/supabase/useSchoolAuth';
+import { getServerProfile } from '@/lib/supabase/serverProfile';
 
 /**
  * Шрифт подключаем с кириллическим набором символов.
@@ -39,14 +40,26 @@ export const viewport: Viewport = {
   themeColor: '#d85f2e',
 };
 
-export default function RootLayout({ children }: LayoutProps<'/'>) {
+export default async function RootLayout({ children }: LayoutProps<'/'>) {
+  /*
+    Профиль читается здесь, на сервере, и уезжает в провайдер пропсами.
+    Это единственный способ, чтобы серверная разметка уже знала роль: иначе
+    сервер отдаёт меню гостя, браузер его рисует, и гидратация подменяет
+    список пунктов на глазах у пользователя.
+  */
+  const { profile, email, schoolClass } = await getServerProfile();
+
   return (
     <html lang="ru" className={`${inter.variable} ${playfair.variable} h-full`}>
       <body className="flex min-h-full flex-col">
         <StoreProvider>
           {/* Один запрос профиля на всё приложение вместо шести — см.
               комментарий в useSchoolAuth.tsx. */}
-          <SchoolAuthProvider>
+          <SchoolAuthProvider
+            initialProfile={profile}
+            initialEmail={email}
+            initialSchoolClass={schoolClass}
+          >
             <ProgressSync />
             <AppShell>{children}</AppShell>
           </SchoolAuthProvider>

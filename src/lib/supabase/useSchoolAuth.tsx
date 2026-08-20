@@ -13,10 +13,13 @@
  * штук подряд, и панель администратора из-за этого заметно тормозила.
  * Теперь запрос ровно один на всё приложение, остальные читают контекст.
  *
- * Роль дополнительно кладётся в localStorage. Это не кэш ради скорости,
- * а лекарство от мигания меню: без него первый кадр рисовался с ролью null,
- * то есть с полным гостевым меню, и через секунду половина пунктов исчезала
- * прямо на глазах у вошедшего учителя.
+ * Откуда берётся роль в первом кадре. Раньше здесь был кэш в localStorage,
+ * и он не решал задачу: во время серверного рендера localStorage не
+ * существует, поэтому сервер ВСЕГДА отдавал разметку с ролью null (то есть
+ * с полным меню), браузер её рисовал, и через секунду гидратация подменяла
+ * меню — то самое мигание. Теперь профиль приходит пропсами из layout,
+ * который читает его на сервере из куки сессии: серверный и первый
+ * клиентский рендер видят одно и то же значение, подменять нечего.
  */
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
@@ -33,34 +36,15 @@ export interface SchoolProfile {
   name: string;
   grade: number | null;
   class_id: string | null;
+  avatar_color: string | null;
+  subject_ids: string[] | null;
+  goal: string | null;
+  target_date: string | null;
 }
 
 export interface SchoolClass {
   name: string;
   code: string;
-}
-
-const CACHE_KEY = 'tanym.schoolProfile.v1';
-
-/** Синхронное чтение прошлой роли — до первого кадра, без ожидания сети. */
-function readCachedProfile(): SchoolProfile | null {
-  if (typeof window === 'undefined') return null;
-  try {
-    const raw = window.localStorage.getItem(CACHE_KEY);
-    return raw ? (JSON.parse(raw) as SchoolProfile) : null;
-  } catch {
-    return null;
-  }
-}
-
-function writeCachedProfile(profile: SchoolProfile | null) {
-  if (typeof window === 'undefined') return;
-  try {
-    if (profile) window.localStorage.setItem(CACHE_KEY, JSON.stringify(profile));
-    else window.localStorage.removeItem(CACHE_KEY);
-  } catch {
-    // Приватный режим или переполненное хранилище — не повод ронять вход.
-  }
 }
 
 export type OAuthProvider = 'google' | 'apple';
@@ -92,13 +76,26 @@ interface SchoolAuthValue {
 
 const SchoolAuthContext = createContext<SchoolAuthValue | null>(null);
 
-export function SchoolAuthProvider({ children }: { children: ReactNode }) {
-  const [loading, setLoading] = useState(true);
-  const [email, setEmail] = useState<string | null>(null);
-  // Ленивый инициализатор: значение из localStorage попадает в самый первый
-  // рендер, поэтому меню сразу рисуется под нужную роль.
-  const [profile, setProfile] = useState<SchoolProfile | null>(readCachedProfile);
-  const [schoolClass, setSchoolClass] = useState<SchoolClass | null>(null);
+export function SchoolAuthProvider({
+  children,
+  initialProfile = null,
+  initialEmail = null,
+  initialSchoolClass = null,
+}: {
+  children: ReactNode;
+  initialProfile?: SchoolProfile | null;
+  initialEmail?: string | null;
+  initialSchoolClass?: SchoolClass | null;
+}) {
+  /*
+    loading стартует с false: профиль уже пришёл с сервера, ждать нечего.
+    Если оставить true, каждый SchoolAuthGate вернул бы null на первом кадре
+    и вместо мигающего меню получилось бы мигающее пустое место.
+  */
+  const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState<string | null>(initialEmail);
+  const [profile, setProfile] = useState<SchoolProfile | null>(initialProfile);
+  const [schoolClass, setSchoolClass] = useState<SchoolClass | null>(initialSchoolClass);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -108,9 +105,6 @@ export function SchoolAuthProvider({ children }: { children: ReactNode }) {
       setEmail(data.email ?? null);
       setProfile(data.profile ?? null);
       setSchoolClass(data.class ?? null);
-      // Сеть — источник правды: если сессия кончилась, кэш обязан исчезнуть,
-      // иначе меню продолжит показывать роль вышедшего пользователя.
-      writeCachedProfile(data.profile ?? null);
     } catch {
       // Сеть отвалилась — оставляем то, что уже показано, и не мигаем.
     } finally {
@@ -119,15 +113,18 @@ export function SchoolAuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    refresh();
+    /*
+      refresh() при монтировании больше не вызывается: профиль уже пришёл
+      с сервера тем же запросом, что и HTML. Лишний вызов не только тратил
+      бы запрос, но и дёргал loading в true и обратно — а на это состояние
+      завязаны ворота публикации, и они успевали моргнуть пустотой.
 
+      Перезапрос остаётся на реальные события: вход, выход, смена
+      пользователя. INITIAL_SESSION и TOKEN_REFRESHED к ним не относятся —
+      первое дублирует то, что уже есть, второе меняет только срок токена.
+    */
     const supabase = createClient();
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
-      // INITIAL_SESSION прилетает сразу при подписке и означает то же самое,
-      // что и refresh() строкой выше — без этой проверки каждый заход
-      // на страницу стоил бы двух одинаковых запросов подряд.
-      // TOKEN_REFRESHED меняет только срок действия токена, профиль от этого
-      // не меняется, перезапрашивать его незачем.
       if (event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') return;
       refresh();
     });
@@ -196,8 +193,9 @@ export function SchoolAuthProvider({ children }: { children: ReactNode }) {
     async function signOut() {
       const supabase = createClient();
       await supabase.auth.signOut();
-      writeCachedProfile(null);
       setProfile(null);
+      setEmail(null);
+      setSchoolClass(null);
       await refresh();
     }
 

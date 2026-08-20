@@ -13,6 +13,7 @@
 
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { getServerProfile } from '@/lib/supabase/serverProfile';
 
 function randomClassCode(): string {
   // Без похожих символов (0/O, 1/I) — код читают и вводят руками с доски.
@@ -23,21 +24,52 @@ function randomClassCode(): string {
 }
 
 export async function GET() {
+  // Та же функция, что вызывает layout при серверном рендере — иначе две
+  // копии логики разошлись бы при первом же изменении схемы профиля.
+  const { profile, email, schoolClass } = await getServerProfile();
+  return NextResponse.json({ profile, email, class: schoolClass });
+}
+
+/**
+ * Донаполнение профиля данными онбординга (класс, предметы, цель, дата).
+ *
+ * Отдельно от POST: POST создаёт профиль и выбирает роль один раз при
+ * регистрации, PATCH правит поля персонализации сколько угодно раз потом.
+ * Роль и класс через PATCH не проходят — их менять пользователю нельзя,
+ * это дополнительно закрыто грантами на уровне колонок в самой базе.
+ */
+export async function PATCH(request: Request) {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) return NextResponse.json({ profile: null }, { status: 200 });
+  if (!user) return NextResponse.json({ error: 'not_authenticated' }, { status: 401 });
 
-  const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle();
-  let classInfo: { name: string; code: string } | null = null;
-  if (profile?.class_id) {
-    const { data: cls } = await supabase.from('classes').select('name, code').eq('id', profile.class_id).maybeSingle();
-    classInfo = cls ?? null;
+  const body = await request.json().catch(() => null);
+  if (!body) return NextResponse.json({ error: 'invalid_body' }, { status: 400 });
+
+  const patch: Record<string, unknown> = {};
+  if (typeof body.name === 'string' && body.name.trim()) patch.name = body.name.trim();
+  if (typeof body.grade === 'number') patch.grade = body.grade;
+  if (Array.isArray(body.subjectIds)) patch.subject_ids = body.subjectIds;
+  if (typeof body.goal === 'string') patch.goal = body.goal;
+  if (typeof body.targetDate === 'string' || body.targetDate === null) patch.target_date = body.targetDate;
+  if (typeof body.avatarColor === 'string') patch.avatar_color = body.avatarColor;
+
+  if (Object.keys(patch).length === 0) {
+    return NextResponse.json({ error: 'nothing_to_update' }, { status: 400 });
   }
 
-  return NextResponse.json({ profile, email: user.email, class: classInfo });
+  const { data, error } = await supabase
+    .from('profiles')
+    .update(patch)
+    .eq('id', user.id)
+    .select()
+    .single();
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 403 });
+  return NextResponse.json({ profile: data });
 }
 
 export async function POST(request: Request) {
