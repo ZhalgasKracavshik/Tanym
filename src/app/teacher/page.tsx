@@ -9,7 +9,7 @@
  * ученика доходят до учителя. Это и есть замыкание круга «ученик → учитель».
  */
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { SUBJECTS } from '@/data';
 import { buildDemoClass, classSkillAverages } from '@/data/demo-class';
 import { computeSkillMastery, summarize } from '@/lib/personalization';
@@ -17,7 +17,9 @@ import { useStore } from '@/components/StoreProvider';
 import type { Dict } from '@/lib/i18n';
 import { AddTopicForm } from './AddTopicForm';
 import { Icon } from '@/components/Icon';
-import { Badge, Button, Panel, ProgressBar, RailRow, SectionHeader, Skeleton } from '@/components/ui';
+import { Badge, Button, Kicker, Panel, ProgressBar, RailRow, SectionHeader, Skeleton } from '@/components/ui';
+import { SchoolAuthGate } from '@/components/SchoolAuthGate';
+import { TeacherClassRoster } from '@/components/TeacherClassRoster';
 
 /** Подписи страницы на трёх языках. Ключи одинаковые — за этим следит TypeScript. */
 const TEXT: Dict<{
@@ -30,6 +32,7 @@ const TEXT: Dict<{
   statWeakest: string;
   studentsTitle: string;
   studentsDescription: string;
+  demoDataLabel: string;
   colStudent: string;
   colLevel: string;
   colPoints: string;
@@ -57,6 +60,7 @@ const TEXT: Dict<{
     statAtRiskOf: (n) => `из ${n} учеников`,
     statWeakest: 'Слабейшая тема',
     studentsTitle: 'Ученики',
+    demoDataLabel: 'Демонстрационные данные',
     studentsDescription: 'Отсортированы по уровню: наверху те, кому нужна помощь',
     colStudent: 'Ученик',
     colLevel: 'Уровень',
@@ -85,6 +89,7 @@ const TEXT: Dict<{
     statAtRiskOf: (n) => `${n} оқушының ішінен`,
     statWeakest: 'Ең әлсіз тақырып',
     studentsTitle: 'Оқушылар',
+    demoDataLabel: 'Демонстрациялық деректер',
     studentsDescription: 'Деңгейі бойынша сұрыпталған: көмек қажет оқушылар жоғарыда',
     colStudent: 'Оқушы',
     colLevel: 'Деңгей',
@@ -113,6 +118,7 @@ const TEXT: Dict<{
     statAtRiskOf: (n) => `of ${n} students`,
     statWeakest: 'Weakest topic',
     studentsTitle: 'Students',
+    demoDataLabel: 'Demo data',
     studentsDescription: 'Sorted by level: those who need help come first',
     colStudent: 'Student',
     colLevel: 'Level',
@@ -204,6 +210,19 @@ export default function TeacherPage() {
       */}
       <h1 className="text-3xl font-semibold text-ink-900 sm:text-4xl">{t.title}</h1>
 
+      {/*
+        Настоящий класс — те, кто реально ввёл код учителя, а не выдуманные
+        одноклассники ниже. Стоит первым, до демонстрационных данных,
+        потому что это единственная часть панели, которая не постановочная.
+      */}
+      <div className="mt-10 rounded-xl border border-ink-200 bg-ink-50 p-5">
+        <Suspense fallback={null}>
+          <SchoolAuthGate requireRole="teacher" language={state.language}>
+            {() => <TeacherClassRoster language={state.language} />}
+          </SchoolAuthGate>
+        </Suspense>
+      </div>
+
       {/* Выбор предмета лежит на голом фоне и отделён линией, а не рамкой карточки */}
       <div className="mt-10 flex flex-wrap gap-2 border-b border-ink-200 pb-4">
         {SUBJECTS.map((item) => (
@@ -266,7 +285,10 @@ export default function TeacherPage() {
       <div className="mt-10 grid gap-x-8 gap-y-10 lg:grid-cols-3">
         {/* Таблица учеников */}
         <div className="lg:col-span-2">
-          <SectionHeader title={t.studentsTitle} description={t.studentsDescription} />
+          <Kicker>{t.demoDataLabel}</Kicker>
+          <div className="mt-2">
+            <SectionHeader title={t.studentsTitle} description={t.studentsDescription} />
+          </div>
           {/* Таблица это плотные данные, поэтому панель без тени, а не карточка */}
           <Panel className="overflow-x-auto">
             <table className="w-full min-w-125 text-sm">
