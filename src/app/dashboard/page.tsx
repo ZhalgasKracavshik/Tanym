@@ -18,6 +18,7 @@ import type { Dict } from '@/lib/i18n';
 import { Icon } from '@/components/Icon';
 import type { IconName } from '@/components/Icon';
 import { ButtonLink, Card, EmptyState, ProgressBar, SectionHeader, Skeleton } from '@/components/ui';
+import { Reveal } from '@/components/motion';
 
 /** Подписи кабинета на трёх языках. Ключи одинаковые — за этим следит TypeScript. */
 const TEXT: Dict<{
@@ -27,6 +28,7 @@ const TEXT: Dict<{
   greeting: (name: string) => string;
   gradeLabel: (grade: number) => string;
   daysLeft: (days: number) => string;
+  daysLeftLabel: string;
   noDataTitle: string;
   noDataText: string;
   startDiagnostics: string;
@@ -62,6 +64,7 @@ const TEXT: Dict<{
     greeting: (name) => `Привет, ${name}`,
     gradeLabel: (grade) => `${grade} класс`,
     daysLeft: (days) => `до цели осталось ${days} дн.`,
+    daysLeftLabel: 'дней до цели',
     noDataTitle: 'Пока нет данных о прогрессе',
     noDataText: 'Пройди диагностику: она займёт 7 минут и покажет, с чего начать.',
     startDiagnostics: 'Пройти диагностику',
@@ -97,6 +100,7 @@ const TEXT: Dict<{
     greeting: (name) => `Сәлем, ${name}`,
     gradeLabel: (grade) => `${grade}-сынып`,
     daysLeft: (days) => `мақсатқа ${days} күн қалды`,
+    daysLeftLabel: 'мақсатқа дейін күн',
     noDataTitle: 'Әзірге прогресс туралы дерек жоқ',
     noDataText: 'Диагностикадан өт: ол 7 минут алады және неден бастау керегін көрсетеді.',
     startDiagnostics: 'Диагностикадан өту',
@@ -132,6 +136,7 @@ const TEXT: Dict<{
     greeting: (name) => `Hi, ${name}`,
     gradeLabel: (grade) => `Grade ${grade}`,
     daysLeft: (days) => `${days} days left until your goal`,
+    daysLeftLabel: 'days to your goal',
     noDataTitle: 'No progress data yet',
     noDataText: 'Take the diagnostic: it takes 7 minutes and shows where to start.',
     startDiagnostics: 'Take the diagnostic',
@@ -255,15 +260,42 @@ export default function DashboardPage() {
         и обратный отсчёт стоят рядом мелко, как подпись, а не как отдельная
         строка описания.
       */}
-      <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-        <h1 className="text-3xl font-semibold text-ink-900 sm:text-4xl">
-          {t.greeting(profile.name.split(' ')[0])}
-        </h1>
-        <p className="text-sm text-ink-400">
-          {t.gradeLabel(profile.grade)}
-          {daysLeft !== null && daysLeft >= 0 && ` · ${t.daysLeft(daysLeft)}`}
-        </p>
-      </div>
+      {/*
+        Приветствие лежит на тёмной панели с тёплым бликом, а не на белом фоне.
+        Кабинет — единственный экран, куда ученик заходит каждый день, и он
+        должен открываться как «твоё место», а не как очередная страница
+        со списком. Обратный отсчёт до экзамена вынесен сюда же: это причина,
+        по которой он вообще открывает приложение.
+      */}
+      <Reveal>
+        <div
+          className="relative overflow-hidden rounded-[var(--radius-card)] p-8 text-white shadow-[var(--shadow-float)] sm:p-10"
+          style={{ background: 'var(--gradient-ink)' }}
+        >
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full opacity-30 blur-3xl"
+            style={{ background: 'var(--gradient-brand)' }}
+          />
+          <div className="relative flex flex-wrap items-end justify-between gap-6">
+            <div>
+              <h1 className="text-3xl font-semibold sm:text-4xl">
+                {t.greeting(profile.name.split(' ')[0])}
+              </h1>
+              <p className="mt-2 text-sm text-white/60">{t.gradeLabel(profile.grade)}</p>
+            </div>
+
+            {daysLeft !== null && daysLeft >= 0 && (
+              <div className="rounded-[var(--radius-control)] border border-white/15 bg-white/10 px-5 py-3 backdrop-blur">
+                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/50">
+                  {t.daysLeftLabel}
+                </p>
+                <p className="mt-1 text-3xl font-semibold tabular-nums">{daysLeft}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </Reveal>
 
       {stats.totalAttempts === 0 ? (
         <div className="mt-6">
