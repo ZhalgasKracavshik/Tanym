@@ -1,14 +1,12 @@
 'use client';
 
 /**
- * Реальные ученики, подключившиеся по коду класса.
+ * Реальные ученики класса вместе с прогрессом.
  *
- * Честно: это список подключившихся, а не прогресс. Академические данные
- * (mastery, попытки, серии) по-прежнему живут только в localStorage
- * каждого ученика и никуда не синхронизируются — учитель видит здесь имя
- * и дату подключения, а не проценты. Полный мониторинг прогресса это
- * отдельная и заметно большая задача: пришлось бы дублировать в базу
- * весь поток попыток из движка персонализации, а не только профиль.
+ * Прогресс приходит из student_progress — снимка, который каждый ученик
+ * сам отправляет из ProgressSync. Мастерство по-прежнему считает только
+ * локальный движок персонализации в браузере ученика; здесь его уже
+ * посчитанный результат, а не пересчёт заново на сервере.
  */
 
 import { useEffect, useState } from 'react';
@@ -16,12 +14,17 @@ import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
 import { createClient } from '@/lib/supabase/client';
 import type { Language } from '@/lib/types';
 import { Icon } from './Icon';
-import { RailRow } from './ui';
+import { ProgressBar, RailRow } from './ui';
 
 interface Student {
   id: string;
   name: string;
   created_at: string;
+  points: number;
+  average_mastery: number;
+  streak_current: number;
+  total_attempts: number;
+  updated_at: string | null;
 }
 
 const TEXT = {
@@ -30,21 +33,30 @@ const TEXT = {
     code: 'Код для новых учеников',
     empty: 'Пока никто не подключился этим кодом.',
     joined: 'Подключился',
-    honest: 'Здесь только список подключившихся. Прогресс по заданиям пока хранится в браузере каждого ученика и не синхронизируется с этой панелью — это следующий шаг.',
+    noProgress: 'ещё не занимался',
+    points: 'очк.',
+    streak: (n: number) => `серия ${n} дн.`,
+    lastActive: (date: string) => `последний раз — ${date}`,
   },
   kk: {
     title: 'Сынып коды бойынша қосылған оқушылар',
     code: 'Жаңа оқушыларға арналған код',
     empty: 'Әзірге бұл код бойынша ешкім қосылған жоқ.',
     joined: 'Қосылды',
-    honest: 'Мұнда тек қосылғандар тізімі. Тапсырмалар бойынша үлгерім әзірге әр оқушының браузерінде сақталады және бұл панельмен синхрондалмайды — бұл келесі қадам.',
+    noProgress: 'әлі айналыспаған',
+    points: 'ұпай',
+    streak: (n: number) => `${n} күн серия`,
+    lastActive: (date: string) => `соңғы рет — ${date}`,
   },
   en: {
     title: 'Students connected via class code',
     code: 'Code for new students',
     empty: 'No one has joined with this code yet.',
     joined: 'Joined',
-    honest: "This is only a list of who joined. Task progress is still stored in each student's own browser and is not synced to this panel yet — that's the next step.",
+    noProgress: 'no activity yet',
+    points: 'pts',
+    streak: (n: number) => `${n}-day streak`,
+    lastActive: (date: string) => `last active ${date}`,
   },
 } as const;
 
@@ -58,16 +70,43 @@ export function TeacherClassRoster({ language }: { language: Language }) {
     const supabase = createClient();
     let cancelled = false;
 
-    supabase
-      .from('profiles')
-      .select('id, name, created_at')
-      .eq('class_id', profile.class_id)
-      .eq('role', 'student')
-      .order('created_at', { ascending: true })
-      .then(({ data }) => {
-        if (!cancelled) setStudents(data ?? []);
-      });
+    async function load() {
+      const { data: roster } = await supabase
+        .from('profiles')
+        .select('id, name, created_at')
+        .eq('class_id', profile!.class_id)
+        .eq('role', 'student')
+        .order('created_at', { ascending: true });
 
+      if (cancelled || !roster) return;
+
+      const ids = roster.map((row) => row.id);
+      const { data: progress } =
+        ids.length > 0
+          ? await supabase
+              .from('student_progress')
+              .select('student_id, points, average_mastery, streak_current, total_attempts, updated_at')
+              .in('student_id', ids)
+          : { data: [] };
+
+      if (cancelled) return;
+      const progressById = Object.fromEntries((progress ?? []).map((row) => [row.student_id, row]));
+
+      setStudents(
+        roster.map((row) => ({
+          id: row.id,
+          name: row.name,
+          created_at: row.created_at,
+          points: progressById[row.id]?.points ?? 0,
+          average_mastery: progressById[row.id]?.average_mastery ?? 0,
+          streak_current: progressById[row.id]?.streak_current ?? 0,
+          total_attempts: progressById[row.id]?.total_attempts ?? 0,
+          updated_at: progressById[row.id]?.updated_at ?? null,
+        })),
+      );
+    }
+
+    load();
     return () => {
       cancelled = true;
     };
@@ -90,25 +129,43 @@ export function TeacherClassRoster({ language }: { language: Language }) {
         <p className="mt-3 text-sm text-ink-500">{t.empty}</p>
       ) : (
         <ul className="mt-3 space-y-2">
-          {students.map((student) => (
-            <li key={student.id}>
-              <RailRow tone="brand">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="flex items-center gap-2 font-semibold text-ink-800">
-                    <Icon name="user" size={16} className="text-brand-500" />
-                    {student.name}
-                  </span>
-                  <span className="text-xs text-ink-400">
-                    {t.joined} {new Date(student.created_at).toLocaleDateString(language)}
-                  </span>
-                </div>
-              </RailRow>
-            </li>
-          ))}
+          {students
+            .slice()
+            .sort((a, b) => a.average_mastery - b.average_mastery)
+            .map((student) => (
+              <li key={student.id}>
+                <RailRow tone={student.total_attempts === 0 ? 'neutral' : 'brand'}>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <span className="flex items-center gap-2 font-semibold text-ink-800">
+                        <Icon name="user" size={16} className="text-brand-500" />
+                        {student.name}
+                      </span>
+                      {student.total_attempts > 0 ? (
+                        <div className="mt-2 max-w-xs">
+                          <ProgressBar value={student.average_mastery} />
+                        </div>
+                      ) : (
+                        <p className="mt-1 text-xs text-ink-400">{t.noProgress}</p>
+                      )}
+                    </div>
+                    <div className="text-right text-xs text-ink-500">
+                      {student.total_attempts > 0 && (
+                        <p className="font-semibold tabular-nums text-ink-800">
+                          {student.points} {t.points}
+                          {student.streak_current > 0 && ` · ${t.streak(student.streak_current)}`}
+                        </p>
+                      )}
+                      <p className="mt-1">
+                        {t.joined} {new Date(student.created_at).toLocaleDateString(language)}
+                      </p>
+                    </div>
+                  </div>
+                </RailRow>
+              </li>
+            ))}
         </ul>
       )}
-
-      <p className="mt-3 text-xs text-ink-400">{t.honest}</p>
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { Inter, Playfair_Display } from 'next/font/google';
 import './globals.css';
 import { StoreProvider } from '@/components/StoreProvider';
 import { AppShell } from '@/components/AppShell';
+import { ProgressSync } from '@/components/ProgressSync';
 
 /**
  * Шрифт подключаем с кириллическим набором символов.
@@ -42,6 +43,7 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
     <html lang="ru" className={`${inter.variable} ${playfair.variable} h-full`}>
       <body className="flex min-h-full flex-col">
         <StoreProvider>
+          <ProgressSync />
           <AppShell>{children}</AppShell>
         </StoreProvider>
       </body>
