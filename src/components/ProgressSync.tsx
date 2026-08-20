@@ -52,6 +52,7 @@ export function ProgressSync() {
           last_active_date: state.streak.lastActiveDate,
           total_attempts: stats.totalAttempts,
           correct_attempts: stats.correctAttempts,
+          topics_mastered: stats.topicsMastered,
           skill_mastery: skillMastery,
           average_mastery: stats.overallMastery,
           updated_at: new Date().toISOString(),

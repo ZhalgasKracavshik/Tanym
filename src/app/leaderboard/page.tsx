@@ -9,12 +9,13 @@
  * И формулировка честная: скрывается имя, а не участие.
  */
 
-import { buildSchoolLeaderboard } from '@/data/leaderboard';
 import { pseudonym, rankEntries } from '@/lib/leaderboard';
 import type { LeaderboardEntry } from '@/lib/leaderboard';
 import { summarize } from '@/lib/personalization';
 import type { Dict } from '@/lib/i18n';
 import { useStore } from '@/components/StoreProvider';
+import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
+import { useSchoolLeaderboard } from '@/lib/supabase/leaderboard';
 import { Icon } from '@/components/Icon';
 import { Badge, ButtonLink, EmptyState, Panel, Skeleton } from '@/components/ui';
 
@@ -71,8 +72,7 @@ const TEXT: Dict<{
     noProfileText: 'Создайте профиль ученика и решите первые задания, тогда строка появится сама.',
     createProfile: 'Создать профиль',
     teacherNote: 'Вы вошли как учитель: в ученический рейтинг ваша строка не добавляется.',
-    demoNote:
-      'В MVP нет общего сервера, поэтому одноклассники в таблице показаны демонстрационными данными. Настоящий прогресс считается только у вас.',
+    demoNote: 'В рейтинге видны только ученики, вошедшие через школьный Google-аккаунт и решившие хотя бы одно задание.',
   },
   kk: {
     title: 'Мектеп рейтингі',
@@ -95,8 +95,7 @@ const TEXT: Dict<{
     noProfileText: 'Оқушы профилін құрып, алғашқы тапсырмаларды шешіңіз, сонда жолыңыз өзі пайда болады.',
     createProfile: 'Профиль құру',
     teacherNote: 'Сіз мұғалім ретінде кірдіңіз: оқушылар рейтингіне сіздің жолыңыз қосылмайды.',
-    demoNote:
-      'MVP-де ортақ сервер жоқ, сондықтан кестедегі сыныптастар көрсетілім деректері болып табылады. Нақты прогресс тек сізде есептеледі.',
+    demoNote: 'Рейтингте тек мектеп Google аккаунтымен кірген және кемінде бір тапсырманы шешкен оқушылар көрінеді.',
   },
   en: {
     title: 'School leaderboard',
@@ -119,16 +118,17 @@ const TEXT: Dict<{
     noProfileText: 'Create a student profile and solve your first tasks, and your row will appear on its own.',
     createProfile: 'Create profile',
     teacherNote: 'You are signed in as a teacher, so your row is not added to the student ranking.',
-    demoNote:
-      'The MVP has no shared server, so the classmates in this table are demo data. Only your own progress is real.',
+    demoNote: 'The leaderboard only shows students who signed in with a school Google account and solved at least one task.',
   },
 };
 
 export default function LeaderboardPage() {
   const { state, hydrated, setLeaderboardAnonymous } = useStore();
+  const { profile: schoolProfile } = useSchoolAuth();
+  const realEntries = useSchoolLeaderboard(schoolProfile?.id ?? null);
   const t = TEXT[state.language];
 
-  if (!hydrated) {
+  if (!hydrated || realEntries === null) {
     return (
       <div className="mx-auto max-w-4xl space-y-4 px-4 py-10 sm:px-6">
         <Skeleton className="h-8 w-56" />
@@ -147,7 +147,11 @@ export default function LeaderboardPage() {
   const me: LeaderboardEntry | null =
     profile && isStudent
       ? {
-          id: profile.id,
+          // Реальный вошедший ученик получает свой Supabase id — тогда его
+          // строка из базы (может ещё не успеть обновиться за 4 секунды
+          // ProgressSync) не задвоится со свежей, посчитанной прямо сейчас.
+          // Гость без входа получает локальный id — сравнивать её не с чем.
+          id: schoolProfile?.id ?? profile.id,
           name: profile.name,
           grade: profile.grade,
           points: summary.points,
@@ -158,7 +162,7 @@ export default function LeaderboardPage() {
         }
       : null;
 
-  const rows = rankEntries(me ? [...buildSchoolLeaderboard(), me] : buildSchoolLeaderboard());
+  const rows = rankEntries(me ? [...realEntries, me] : realEntries);
 
   /** Что видят остальные: настоящее имя или псевдоним. */
   const visibleName = (entry: LeaderboardEntry): string =>
