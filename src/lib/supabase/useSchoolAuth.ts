@@ -16,12 +16,19 @@ export interface SchoolProfile {
   role: 'student' | 'teacher';
   name: string;
   grade: number | null;
+  class_id: string | null;
+}
+
+export interface SchoolClass {
+  name: string;
+  code: string;
 }
 
 export function useSchoolAuth() {
   const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState<string | null>(null);
   const [profile, setProfile] = useState<SchoolProfile | null>(null);
+  const [schoolClass, setSchoolClass] = useState<SchoolClass | null>(null);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -29,6 +36,7 @@ export function useSchoolAuth() {
     const data = await res.json();
     setEmail(data.email ?? null);
     setProfile(data.profile ?? null);
+    setSchoolClass(data.class ?? null);
     setLoading(false);
   }, []);
 
@@ -53,15 +61,25 @@ export function useSchoolAuth() {
     await refresh();
   }
 
-  async function chooseRole(role: 'student' | 'teacher') {
+  async function chooseRole(role: 'student' | 'teacher', classCode?: string) {
     const res = await fetch('/api/profile', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ role }),
+      body: JSON.stringify({ role, classCode }),
     });
+    const data = await res.json().catch(() => null);
     if (res.ok) await refresh();
-    return res.ok;
+    return { ok: res.ok, error: data?.error as string | undefined };
   }
 
-  return { loading, email, profile, signInWithGoogle, signOut, chooseRole, isSignedIn: email !== null };
+  return {
+    loading,
+    email,
+    profile,
+    schoolClass,
+    signInWithGoogle,
+    signOut,
+    chooseRole,
+    isSignedIn: email !== null,
+  };
 }

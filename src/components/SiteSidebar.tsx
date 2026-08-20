@@ -17,11 +17,25 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useStore } from './StoreProvider';
+import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
 import { LANGUAGES } from '@/lib/i18n-shared';
 import type { Dict } from '@/lib/i18n';
 import type { IconName } from './Icon';
 import { Icon } from './Icon';
 import { Logo, LogoMark } from './Logo';
+
+/**
+ * Пункты, скрытые от роли.
+ *
+ * Действует только для вошедших через школьный Google-аккаунт с известной
+ * ролью — гость (никто не вошёл) по-прежнему видит всё, как раньше. Учителю
+ * не нужны инструменты ученика (план, кабинет, наставник), ученику не нужна
+ * панель мониторинга класса.
+ */
+const HIDDEN_FOR_ROLE: Record<'student' | 'teacher', string[]> = {
+  student: ['/teacher'],
+  teacher: ['/plan', '/dashboard', '/chat'],
+};
 
 const TEXT: Dict<{
   plan: string;
@@ -96,6 +110,7 @@ const TEXT: Dict<{
 export function SiteSidebar() {
   const pathname = usePathname();
   const { state, hydrated, setLanguage } = useStore();
+  const { profile: schoolProfile } = useSchoolAuth();
   const t = TEXT[state.language];
   const profile = state.profile;
   const [open, setOpen] = useState(false);
@@ -115,7 +130,7 @@ export function SiteSidebar() {
     return () => window.removeEventListener('keydown', onKey);
   }, [open]);
 
-  const NAV: { href: string; label: string; icon: IconName }[] = [
+  const ALL_NAV: { href: string; label: string; icon: IconName }[] = [
     { href: '/announcements', label: t.announcements, icon: 'megaphone' },
     { href: '/plan', label: t.plan, icon: 'compass' },
     { href: '/dashboard', label: t.dashboard, icon: 'columns' },
@@ -127,6 +142,9 @@ export function SiteSidebar() {
     { href: '/chat', label: t.mentor, icon: 'chat' },
     { href: '/teacher', label: t.teacher, icon: 'cap' },
   ];
+  const NAV = ALL_NAV.filter(
+    (item) => !schoolProfile || !HIDDEN_FOR_ROLE[schoolProfile.role].includes(item.href)
+  );
 
   const navList = (
     <ul className="flex flex-col gap-0.5">
