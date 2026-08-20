@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Inter } from 'next/font/google';
+import { Inter, Playfair_Display } from 'next/font/google';
 import './globals.css';
 import { StoreProvider } from '@/components/StoreProvider';
 import { AppShell } from '@/components/AppShell';
@@ -15,6 +15,18 @@ const inter = Inter({
   display: 'swap',
 });
 
+/**
+ * Отдельный засечный шрифт только для словесного знака «Tanym» в логотипе —
+ * тот же контрастный засечный рисунок, что и в присланном образце. Кириллица
+ * ему не нужна: название бренда всегда набрано латиницей.
+ */
+const playfair = Playfair_Display({
+  variable: '--font-playfair',
+  subsets: ['latin'],
+  weight: ['700', '800'],
+  display: 'swap',
+});
+
 export const metadata: Metadata = {
   title: 'Tanym: персональный AI-наставник для школьников Казахстана',
   description:
@@ -27,7 +39,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
-    <html lang="ru" className={`${inter.variable} h-full`}>
+    <html lang="ru" className={`${inter.variable} ${playfair.variable} h-full`}>
       <body className="flex min-h-full flex-col">
         <StoreProvider>
           <AppShell>{children}</AppShell>

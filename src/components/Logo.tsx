@@ -50,7 +50,12 @@ export function Logo({ size = 32, className = '' }: LogoProps) {
   return (
     <span className={`flex items-center gap-2 ${className}`}>
       <LogoMark size={size} className="text-accent-500" />
-      <span className="text-lg font-black tracking-tight text-ink-900">Tanym</span>
+      <span
+        className="text-xl tracking-tight text-accent-500"
+        style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontWeight: 700 }}
+      >
+        Tanym
+      </span>
     </span>
   );
 }

@@ -197,7 +197,12 @@ export function SiteSidebar() {
         </button>
         <Link href="/dashboard" className="flex min-w-0 items-center gap-2 outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded-lg">
           <LogoMark size={26} className="text-accent-500 shrink-0" />
-          <span className="truncate text-base font-black tracking-tight text-ink-900">Tanym</span>
+          <span
+            className="truncate text-base tracking-tight text-accent-500"
+            style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontWeight: 700 }}
+          >
+            Tanym
+          </span>
         </Link>
       </div>
 
