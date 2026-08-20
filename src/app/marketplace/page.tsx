@@ -12,8 +12,7 @@
  * заплатил, перестаёт работать на ученика.
  */
 
-import { useState } from 'react';
-import { LISTINGS } from '@/data/listings';
+import { Suspense, useEffect, useState } from 'react';
 import { LISTING_TYPES } from '@/lib/listings';
 import type { Listing, ListingType } from '@/lib/listings';
 import type { Dict } from '@/lib/i18n';
@@ -21,6 +20,69 @@ import { useStore } from '@/components/StoreProvider';
 import { PublishForm } from './PublishForm';
 import { Icon } from '@/components/Icon';
 import { Badge, Button, Card, EmptyState, Kicker } from '@/components/ui';
+import { createClient } from '@/lib/supabase/client';
+import { SchoolAuthGate } from '@/components/SchoolAuthGate';
+import { ListingPublishForm } from '@/components/ListingPublishForm';
+
+interface PublishedListingRow {
+  id: string;
+  type: ListingType;
+  title: string;
+  author_name: string;
+  author_role: string;
+  description: string;
+  category: string;
+  format: 'online' | 'offline' | 'both';
+  price: number | null;
+  price_note: string | null;
+  spots: number | null;
+  schedule: string;
+  contact: string;
+  verified: boolean;
+}
+
+function rowToListing(row: PublishedListingRow): Listing {
+  return {
+    id: row.id,
+    type: row.type,
+    title: row.title,
+    authorName: row.author_name,
+    authorRole: row.author_role,
+    description: row.description,
+    category: row.category,
+    price: row.price,
+    priceNote: row.price_note ?? undefined,
+    format: row.format,
+    schedule: row.schedule,
+    contact: row.contact,
+    spots: row.spots ?? undefined,
+    verified: row.verified,
+  };
+}
+
+/** Реальные объявления из Supabase — раньше здесь был захардкоженный массив. */
+function usePublishedListings(refreshKey: number) {
+  const [listings, setListings] = useState<Listing[] | null>(null);
+
+  useEffect(() => {
+    const supabase = createClient();
+    let cancelled = false;
+
+    supabase
+      .from('published_listings')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .then(({ data }) => {
+        if (!cancelled) setListings((data ?? []).map(rowToListing));
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshKey]);
+
+  return listings;
+}
 
 const TEXT: Dict<{
   kicker: string;
@@ -145,8 +207,14 @@ export default function MarketplacePage() {
   const t = TEXT[state.language];
 
   const [filter, setFilter] = useState<ListingType | 'all' | 'mine'>('all');
+  const [publishRefreshKey, setPublishRefreshKey] = useState(0);
+  const publishedListings = usePublishedListings(publishRefreshKey);
 
-  const all: Listing[] = [...state.myListings, ...LISTINGS];
+  if (publishedListings === null) {
+    return <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6" />;
+  }
+
+  const all: Listing[] = [...state.myListings, ...publishedListings];
 
   const visible = all.filter((listing) => {
     if (filter === 'all') return true;
@@ -324,6 +392,26 @@ export default function MarketplacePage() {
           })}
         </div>
       )}
+
+      {/* Публикация проверенных объявлений — только роль admin. Форма выше
+          (PublishForm) остаётся отдельным путём для учеников: их объявления
+          сначала идут на модерацию (state.myListings), а не публикуются сразу. */}
+      <div className="mt-16">
+        <Kicker>Опубликовать проверенное объявление</Kicker>
+        <div className="mt-4">
+          <Suspense fallback={null}>
+            <SchoolAuthGate requireRole="admin" language={state.language}>
+              {(profile) => (
+                <ListingPublishForm
+                  language={state.language}
+                  adminId={profile.id}
+                  onPublished={() => setPublishRefreshKey((key) => key + 1)}
+                />
+              )}
+            </SchoolAuthGate>
+          </Suspense>
+        </div>
+      </div>
     </div>
   );
 }

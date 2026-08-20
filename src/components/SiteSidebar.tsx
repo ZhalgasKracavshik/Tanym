@@ -32,9 +32,10 @@ import { Logo, LogoMark } from './Logo';
  * не нужны инструменты ученика (план, кабинет, наставник), ученику не нужна
  * панель мониторинга класса.
  */
-const HIDDEN_FOR_ROLE: Record<'student' | 'teacher', string[]> = {
+const HIDDEN_FOR_ROLE: Record<'student' | 'teacher' | 'admin', string[]> = {
   student: ['/teacher'],
   teacher: ['/plan', '/dashboard', '/chat'],
+  admin: ['/plan', '/dashboard', '/chat'],
 };
 
 const TEXT: Dict<{

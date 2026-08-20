@@ -13,7 +13,11 @@ import { createClient } from './client';
 
 export interface SchoolProfile {
   id: string;
-  role: 'student' | 'teacher';
+  /**
+   * 'admin' никогда не выбирается на форме входа — только вручную через SQL
+   * (см. profiles в Supabase). chooseRole ниже принимает только student/teacher.
+   */
+  role: 'student' | 'teacher' | 'admin';
   name: string;
   grade: number | null;
   class_id: string | null;

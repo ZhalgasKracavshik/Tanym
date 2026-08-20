@@ -10,6 +10,7 @@
 
 import { NextResponse } from 'next/server';
 import { getArchiveTask, getMaterial } from '@/data/archive';
+import type { ArchiveTask } from '@/lib/archive';
 import { matchesArchiveAnswer } from '@/lib/archive-answer';
 import { AiUnavailableError, generateText, isAiConfigured } from '@/lib/ai/gemini';
 import {
@@ -20,6 +21,48 @@ import {
 } from '@/lib/ai/socratic';
 import { checkRateLimit, clientKeyFromRequest } from '@/lib/ai/rate-limit';
 import type { SocraticRequest, SocraticResponse } from '@/lib/ai/contracts';
+import { createClient } from '@/lib/supabase/server';
+
+/**
+ * Задание либо из статического архива (обычный id), либо из материала,
+ * опубликованного учителем/админом в Supabase — тогда taskId имеет вид
+ * db:<materialId>:<taskId>. Формат придуман специально, чтобы не искать
+ * задание перебором всех материалов в базе — сразу знаем, где искать.
+ */
+async function resolveTask(taskId: string): Promise<{ task: ArchiveTask; materialTitle: string } | null> {
+  if (taskId.startsWith('db:')) {
+    const [, materialId, dbTaskId] = taskId.split(':');
+    if (!materialId || !dbTaskId) return null;
+
+    const supabase = await createClient();
+    const { data: material } = await supabase
+      .from('archive_materials')
+      .select('title, tasks')
+      .eq('id', materialId)
+      .maybeSingle();
+    if (!material) return null;
+
+    const rawTask = (material.tasks as Array<Record<string, unknown>>).find((item) => item.id === dbTaskId);
+    if (!rawTask) return null;
+
+    return {
+      task: {
+        id: dbTaskId,
+        materialId,
+        prompt: String(rawTask.prompt ?? ''),
+        answer: String(rawTask.answer ?? ''),
+        unit: rawTask.unit ? String(rawTask.unit) : undefined,
+        explanation: String(rawTask.explanation ?? ''),
+        opening: String(rawTask.opening ?? ''),
+      },
+      materialTitle: material.title,
+    };
+  }
+
+  const task = getArchiveTask(taskId);
+  if (!task) return null;
+  return { task, materialTitle: getMaterial(task.materialId)?.title ?? '' };
+}
 
 export async function POST(
   request: Request,
@@ -43,12 +86,11 @@ export async function POST(
     return NextResponse.json({ error: 'Нужны поля taskId и message' }, { status: 400 });
   }
 
-  const task = getArchiveTask(body.taskId);
-  if (!task) {
+  const resolved = await resolveTask(body.taskId);
+  if (!resolved) {
     return NextResponse.json({ error: 'Задание не найдено' }, { status: 404 });
   }
-
-  const material = getMaterial(task.materialId);
+  const { task, materialTitle } = resolved;
   const language = body.language ?? 'ru';
   // Элементы истории тоже проверяем: [null] ронял обращение к message.role
   // строкой ниже, и роут отвечал 500 вместо отказа или запасного текста.
@@ -81,7 +123,7 @@ export async function POST(
         ? socraticSuccessPrompt(task, body.message)
         : socraticPrompt({
             task,
-            materialTitle: material?.title ?? '',
+            materialTitle,
             history,
             studentMessage: body.message,
             profile: body.profile ?? null,

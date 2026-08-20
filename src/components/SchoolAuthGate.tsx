@@ -42,8 +42,10 @@ const SUBMIT_ERROR_TEXT: Record<string, Record<'ru' | 'kk' | 'en', string>> = {
   },
 };
 
+type SchoolRole = 'student' | 'teacher' | 'admin';
+
 interface SchoolAuthGateProps {
-  requireRole: 'student' | 'teacher';
+  requireRole: SchoolRole | SchoolRole[];
   language: 'ru' | 'kk' | 'en';
   children: (profile: { id: string; name: string }) => ReactNode;
 }
@@ -186,10 +188,11 @@ export function SchoolAuthGate({ requireRole, language, children }: SchoolAuthGa
     );
   }
 
-  if (profile.role !== requireRole) {
+  const allowedRoles = Array.isArray(requireRole) ? requireRole : [requireRole];
+  if (!allowedRoles.includes(profile.role)) {
     return (
       <div className="rounded-xl border border-ink-200 bg-ink-50 p-5">
-        <p className="text-sm text-ink-500">{t.wrongRole(requireRole)}</p>
+        <p className="text-sm text-ink-500">{t.wrongRole(allowedRoles.join(' / '))}</p>
       </div>
     );
   }
