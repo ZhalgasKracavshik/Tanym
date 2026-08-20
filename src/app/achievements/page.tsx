@@ -139,21 +139,50 @@ export default function AchievementsPage() {
     );
   }
 
+  // Локального профиля (диагностика ещё не пройдена) может не быть, а
+  // Google-аккаунт учителя или ученика — это отдельная, независимая история:
+  // учитель может вообще никогда не проходить онбординг ученика. Поэтому
+  // здесь не return, а просто пропуск раздела с личными достижениями —
+  // лента и вход остаются доступны в любом случае.
   if (!state.profile) {
     return (
-      <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
-        {/* Иконка стоит рядом: проп icon в EmptyState принимает строку,
-            а строкой иконку из набора не передать. */}
-        <div className="mb-3 flex justify-center">
-          <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-ink-200 bg-white text-ink-400">
-            <Icon name="trophy" size={24} />
-          </span>
+      <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
+        <h1 className="text-3xl font-semibold text-ink-900 sm:text-4xl">{t.title}</h1>
+
+        <div className="mt-10 max-w-3xl">
+          {/* Иконка стоит рядом: проп icon в EmptyState принимает строку,
+              а строкой иконку из набора не передать. */}
+          <div className="mb-3 flex justify-center">
+            <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-ink-200 bg-white text-ink-400">
+              <Icon name="trophy" size={24} />
+            </span>
+          </div>
+          <EmptyState
+            title={t.noProfileTitle}
+            description={t.noProfileText}
+            action={<ButtonLink href="/onboarding">{t.createProfile}</ButtonLink>}
+          />
         </div>
-        <EmptyState
-          title={t.noProfileTitle}
-          description={t.noProfileText}
-          action={<ButtonLink href="/onboarding">{t.createProfile}</ButtonLink>}
-        />
+
+        <div className="mt-16">
+          <Kicker>{t.feedTitle}</Kicker>
+          <div className="mt-4">
+            <AchievementFeed language={state.language} refreshKey={feedRefreshKey} />
+          </div>
+        </div>
+
+        <div className="mt-10">
+          <Kicker>{t.shareTitle}</Kicker>
+          <div className="mt-4">
+            <Suspense fallback={null}>
+              <SchoolAuthGate requireRole="student" language={state.language}>
+                {() => (
+                  <p className="text-sm text-ink-500">{t.noProfileText}</p>
+                )}
+              </SchoolAuthGate>
+            </Suspense>
+          </div>
+        </div>
       </div>
     );
   }

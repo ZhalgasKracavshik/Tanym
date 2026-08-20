@@ -13,6 +13,7 @@ import { SUBJECTS } from '@/data';
 import { ButtonLink, Card } from '@/components/ui';
 import { Icon, type IconName } from '@/components/Icon';
 import { useLang, type Dict } from '@/lib/i18n';
+import { LandingAuthBanner } from '@/components/LandingAuthBanner';
 
 /** Подписи лендинга на трёх языках. Ключи одинаковые — за этим следит TypeScript. */
 const TEXT: Dict<{
@@ -196,7 +197,8 @@ const TEXT: Dict<{
 };
 
 export default function HomePage() {
-  const t = TEXT[useLang()];
+  const language = useLang();
+  const t = TEXT[language];
 
   // Цифры берём из самого контента, а не пишем руками: добавится тема,
   // и строка на первом экране обновится сама.
@@ -214,6 +216,12 @@ export default function HomePage() {
 
   return (
     <div>
+      {/*
+        Вход для школьного аккаунта — сразу под шапкой, видно без прокрутки.
+        Раньше кнопка входа была спрятана внутри разделов архива и достижений.
+      */}
+      <LandingAuthBanner language={language} />
+
       {/*
         Первый экран.
 
