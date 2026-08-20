@@ -4,6 +4,7 @@ import './globals.css';
 import { StoreProvider } from '@/components/StoreProvider';
 import { AppShell } from '@/components/AppShell';
 import { ProgressSync } from '@/components/ProgressSync';
+import { SchoolAuthProvider } from '@/lib/supabase/useSchoolAuth';
 
 /**
  * Шрифт подключаем с кириллическим набором символов.
@@ -43,8 +44,12 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
     <html lang="ru" className={`${inter.variable} ${playfair.variable} h-full`}>
       <body className="flex min-h-full flex-col">
         <StoreProvider>
-          <ProgressSync />
-          <AppShell>{children}</AppShell>
+          {/* Один запрос профиля на всё приложение вместо шести — см.
+              комментарий в useSchoolAuth.tsx. */}
+          <SchoolAuthProvider>
+            <ProgressSync />
+            <AppShell>{children}</AppShell>
+          </SchoolAuthProvider>
         </StoreProvider>
       </body>
     </html>

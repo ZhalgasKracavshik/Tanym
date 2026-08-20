@@ -19,7 +19,6 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const load = (path) => import(pathToFileURL(join(root, path)).href);
 
 const { pseudonym, rankEntries } = await load('src/lib/leaderboard.ts');
-const { buildSchoolLeaderboard } = await load('src/data/leaderboard.ts');
 
 const problems = [];
 const check = (condition, message) => {
@@ -65,24 +64,28 @@ check(
 );
 check(ranked[0].points >= ranked[1].points, 'список не отсортирован по убыванию очков');
 
-/* --- 3. Демонстрационные данные постоянны --- */
+/* --- 3. Порядок стабилен при повторном ранжировании --- */
 
-const runA = buildSchoolLeaderboard().map((entry) => `${entry.id}:${entry.points}`).join('|');
-const runB = buildSchoolLeaderboard().map((entry) => `${entry.id}:${entry.points}`).join('|');
-check(runA === runB, 'список учеников меняется между вызовами — рейтинг будет прыгать');
+/*
+  Раньше здесь проверялись демонстрационные данные из data/leaderboard.ts.
+  Этот файл удалён: рейтинг читает настоящие строки из student_progress,
+  и проверять постоянство выдуманного массива стало нечего. Осталось
+  свойство, которое от источника данных не зависит: одинаковый вход обязан
+  давать одинаковый порядок, иначе строки будут прыгать между перерисовками.
+*/
+const sample = [
+  { id: 'x', name: 'X', grade: 9, points: 400, topicsMastered: 3, streak: 2 },
+  { id: 'y', name: 'Y', grade: 10, points: 400, topicsMastered: 1, streak: 0 },
+  { id: 'z', name: 'Z', grade: 11, points: 150, topicsMastered: 1, streak: 5 },
+];
 
-const school = buildSchoolLeaderboard();
-check(school.length >= 10, `учеников в демо-классе слишком мало: ${school.length}`);
-
-const pointsList = school.map((entry) => entry.points);
-check(
-  new Set(pointsList).size < pointsList.length,
-  'ни у кого не совпадают очки — случай равных мест не проверяется данными',
-);
+const orderA = rankEntries(sample).map((entry) => `${entry.id}:${entry.rank}`).join('|');
+const orderB = rankEntries(sample).map((entry) => `${entry.id}:${entry.rank}`).join('|');
+check(orderA === orderB, 'порядок меняется между вызовами — рейтинг будет прыгать');
 
 /* --- Итог --- */
 
-console.log(`Учеников в демо-рейтинге: ${school.length}. Псевдоним примера: ${first}`);
+console.log(`Псевдоним примера: ${first}. Порядок при ничьей: ${orderA}`);
 
 if (problems.length === 0) {
   console.log('\n✓ Лидерборд работает верно.');
