@@ -12,6 +12,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import { Avatar } from './Avatar';
 import { Icon } from './Icon';
 import type { IconName } from './Icon';
 import { LiftCard, StaggerGroup, StaggerItem } from './motion';
@@ -32,6 +33,7 @@ interface FeedRow {
 interface FeedItem extends FeedRow {
   actorName: string;
   actorColor: string | null;
+  actorEmoji: string | null;
 }
 
 const KIND_META: Record<FeedKind, { icon: IconName; label: string; tone: string }> = {
@@ -98,7 +100,7 @@ export function useActivityFeed(limit = 20, refreshKey = 0) {
       const ids = [...new Set(rows.map((row) => row.actor_id))];
       const { data: profiles } = await supabase
         .from('profiles')
-        .select('id, name, avatar_color')
+        .select('id, name, avatar_color, avatar_emoji')
         .in('id', ids);
 
       if (cancelled) return;
@@ -109,6 +111,7 @@ export function useActivityFeed(limit = 20, refreshKey = 0) {
           ...row,
           actorName: byId[row.actor_id]?.name ?? 'Ученик',
           actorColor: byId[row.actor_id]?.avatar_color ?? null,
+          actorEmoji: byId[row.actor_id]?.avatar_emoji ?? null,
         })),
       );
     }
@@ -159,13 +162,19 @@ export function ActivityFeed({ limit = 20, refreshKey = 0 }: { limit?: number; r
             <LiftCard className="overflow-hidden rounded-[var(--radius-card)] border border-ink-200/80 bg-white shadow-[var(--shadow-rest)]">
               <Link href={item.link} className="block p-5">
                 <div className="flex items-start gap-3">
-                  <span
-                    aria-hidden
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
-                    style={{ background: item.actorColor ?? 'var(--gradient-brand)' }}
-                  >
-                    {item.actorName.trim().charAt(0).toUpperCase() || '?'}
-                  </span>
+                  {/*
+                    Через общий Avatar, а не свой кружок: здесь раньше цвет
+                    подставлялся в CSS напрямую (`background: item.actorColor`),
+                    но в колонке лежит идентификатор вроде «brand», а не
+                    градиент — браузер такое правило отбрасывал, и белая буква
+                    оказывалась на белой карточке.
+                  */}
+                  <Avatar
+                    name={item.actorName}
+                    colorId={item.actorColor}
+                    emoji={item.actorEmoji}
+                    size={40}
+                  />
 
                   <div className="min-w-0 flex-1">
                     <p className="text-sm text-ink-500">

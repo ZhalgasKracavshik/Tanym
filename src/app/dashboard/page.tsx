@@ -14,11 +14,14 @@ import { almatyDateIso, almatyYesterdayIso } from '@/lib/date';
 import { daysLeftUntil } from '@/lib/events';
 import { usePublishedEvents } from '@/lib/supabase/events';
 import { useStore } from '@/components/StoreProvider';
+import { useEffectiveProfile } from '@/lib/useEffectiveProfile';
 import type { Dict } from '@/lib/i18n';
 import { Icon } from '@/components/Icon';
 import type { IconName } from '@/components/Icon';
-import { ButtonLink, Card, EmptyState, ProgressBar, SectionHeader, Skeleton } from '@/components/ui';
+import { ButtonLink, Card, EmptyState, Kicker, ProgressBar, SectionHeader, Skeleton } from '@/components/ui';
 import { Reveal } from '@/components/motion';
+import { ProgressRing } from '@/components/ProgressRing';
+import { ActivityFeed } from '@/components/ActivityFeed';
 
 /** Подписи кабинета на трёх языках. Ключи одинаковые — за этим следит TypeScript. */
 const TEXT: Dict<{
@@ -56,6 +59,12 @@ const TEXT: Dict<{
   targetHintBefore: string;
   targetHintLink: string;
   targetHintAfter: string;
+  todayKicker: string;
+  todayStart: string;
+  todayRing: string;
+  todayDoneTitle: string;
+  todayDoneText: string;
+  feedTitle: string;
 }> = {
   ru: {
     noProfileTitle: 'Профиль ещё не создан',
@@ -92,6 +101,12 @@ const TEXT: Dict<{
     targetHintBefore: 'Укажи дату экзамена в ',
     targetHintLink: 'профиле',
     targetHintAfter: ', и появится обратный отсчёт с подсказкой по темпу.',
+    todayKicker: 'Сегодняшняя задача',
+    todayStart: 'Начать',
+    todayRing: 'освоено',
+    todayDoneTitle: 'На сегодня всё',
+    todayDoneText: 'Выбери предмет в плане — и здесь появится задача на завтра.',
+    feedTitle: 'Что происходит',
   },
   kk: {
     noProfileTitle: 'Профиль әлі құрылмаған',
@@ -128,6 +143,12 @@ const TEXT: Dict<{
     targetHintBefore: 'Емтихан күнін ',
     targetHintLink: 'профильде',
     targetHintAfter: ' көрсет, сонда кері санақ пен қарқын бойынша кеңес пайда болады.',
+    todayKicker: 'Бүгінгі тапсырма',
+    todayStart: 'Бастау',
+    todayRing: 'меңгерілді',
+    todayDoneTitle: 'Бүгінге болды',
+    todayDoneText: 'Жоспардан пән таңда — сонда мұнда ертеңгі тапсырма шығады.',
+    feedTitle: 'Не болып жатыр',
   },
   en: {
     noProfileTitle: 'No profile yet',
@@ -164,6 +185,12 @@ const TEXT: Dict<{
     targetHintBefore: 'Set your exam date in your ',
     targetHintLink: 'profile',
     targetHintAfter: ' and a countdown with pacing tips will appear.',
+    todayKicker: "Today's task",
+    todayStart: 'Start',
+    todayRing: 'mastered',
+    todayDoneTitle: "That's it for today",
+    todayDoneText: 'Pick a subject in your plan and tomorrow’s task will appear here.',
+    feedTitle: 'What’s happening',
   },
 };
 
@@ -202,7 +229,12 @@ function Metric({
 export default function DashboardPage() {
   const { state, hydrated } = useStore();
   const publishedEvents = usePublishedEvents();
-  const profile = state.profile;
+  /*
+    Не state.profile напрямую: локальная копия пуста в новом браузере, и
+    вошедший ученик получал бы «профиль не создан» поверх заполненного
+    профиля. Подробности — в useEffectiveProfile.
+  */
+  const profile = useEffectiveProfile();
   const t = TEXT[state.language];
 
   if (!hydrated) {
@@ -296,6 +328,42 @@ export default function DashboardPage() {
           </div>
         </div>
       </Reveal>
+
+      {/*
+        Задача дня стоит сразу под приветствием и в единственном числе.
+
+        Ниже на странице есть и список начатых тем, и «продолжить обучение»
+        с тремя вариантами — но выбор из списка это работа, которую ученик
+        делает до того, как начал заниматься, и на которой чаще всего
+        закрывает вкладку. Здесь выбор уже сделан движком персонализации:
+        одна тема, одна кнопка. Списки остаются ниже для тех, кто хочет
+        решить иначе.
+      */}
+      {nextTopics[0] && (
+        <Reveal immediate>
+          <Card className="mt-6 border-brand-200/80 bg-gradient-to-br from-brand-50/80 via-white to-white">
+            <div className="flex flex-wrap items-center justify-between gap-6">
+              <div className="min-w-[16rem] flex-1">
+                <Kicker>{t.todayKicker}</Kicker>
+                <h2 className="mt-2 text-2xl font-semibold text-ink-900">
+                  {nextTopics[0].topic.title}
+                </h2>
+                <p className="mt-1 text-sm text-ink-500">{nextTopics[0].reasons[0]}</p>
+                <div className="mt-5">
+                  <ButtonLink href={`/learn/${nextTopics[0].topic.id}`}>{t.todayStart}</ButtonLink>
+                </div>
+              </div>
+
+              {/* Кольцо показывает прогресс именно по этой теме, а не общий:
+                  рядом с кнопкой «начать» общая цифра ничего не сообщает. */}
+              <ProgressRing
+                value={state.topicProgress[nextTopics[0].topic.id]?.mastery ?? 0}
+                caption={t.todayRing}
+              />
+            </div>
+          </Card>
+        </Reveal>
+      )}
 
       {stats.totalAttempts === 0 ? (
         <div className="mt-6">
@@ -472,6 +540,24 @@ export default function DashboardPage() {
           </div>
         </>
       )}
+
+      {/*
+        Лента вынесена из ветки «есть прогресс» и стоит в самом низу.
+
+        Внутри ветки её не видел как раз тот, кому она нужнее всего:
+        у новичка ноль решённых заданий, и весь блок с метриками не
+        рендерится — а увидеть, что тут кто-то живёт и что-то публикует,
+        важнее всего именно в первый день.
+      */}
+      <div className="mt-12 border-t border-ink-200 pt-8">
+        <h2 className="flex items-center gap-2 text-lg font-bold text-ink-900">
+          <Icon name="sparkles" size={20} className="text-brand-500" />
+          {t.feedTitle}
+        </h2>
+        <div className="mt-4">
+          <ActivityFeed limit={5} />
+        </div>
+      </div>
     </div>
   );
 }

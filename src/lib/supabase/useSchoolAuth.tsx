@@ -37,6 +37,7 @@ export interface SchoolProfile {
   grade: number | null;
   class_id: string | null;
   avatar_color: string | null;
+  avatar_emoji: string | null;
   social_links: unknown;
   subject_ids: string[] | null;
   goal: string | null;

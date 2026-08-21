@@ -19,6 +19,8 @@ import { useOwnStreakPoints, useSchoolLeaderboard } from '@/lib/supabase/leaderb
 import { portfolioPoints, usePortfolio } from '@/components/Portfolio';
 import { Icon } from '@/components/Icon';
 import { Avatar } from '@/components/Avatar';
+import { TIER_LABEL, levelFromPoints } from '@/lib/level';
+import type { LevelTier } from '@/lib/level';
 import { Badge, ButtonLink, EmptyState, Panel, Skeleton } from '@/components/ui';
 
 /**
@@ -38,6 +40,7 @@ const TEXT: Dict<{
   topScore: string;
   colRank: string;
   colStudent: string;
+  levelWord: string;
   colPoints: string;
   colTopics: string;
   colStreak: string;
@@ -60,6 +63,7 @@ const TEXT: Dict<{
     topScore: 'Лучший результат',
     colRank: 'Место',
     colStudent: 'Ученик',
+    levelWord: 'Уровень',
     colPoints: 'Очки',
     colTopics: 'Освоено тем',
     colStreak: 'Серия',
@@ -83,6 +87,7 @@ const TEXT: Dict<{
     topScore: 'Үздік нәтиже',
     colRank: 'Орын',
     colStudent: 'Оқушы',
+    levelWord: 'Деңгей',
     colPoints: 'Ұпай',
     colTopics: 'Меңгерілген тақырып',
     colStreak: 'Күн сериясы',
@@ -106,6 +111,7 @@ const TEXT: Dict<{
     topScore: 'Top score',
     colRank: 'Place',
     colStudent: 'Student',
+    levelWord: 'Level',
     colPoints: 'Points',
     colTopics: 'Topics mastered',
     colStreak: 'Streak',
@@ -122,6 +128,15 @@ const TEXT: Dict<{
     teacherNote: 'You are signed in as a teacher, so your row is not added to the student ranking.',
     demoNote: 'Points come from solved tasks and verified portfolio achievements: an olympiad win outweighs dozens of quizzes.',
   },
+};
+
+
+const TIER_STYLE: Record<LevelTier, string> = {
+  bronze: 'bg-[#f2e3d5] text-[#8a5a30]',
+  silver: 'bg-[#e6ebef] text-[#5b6b78]',
+  gold: 'bg-[#fbeaba] text-[#8a6a00]',
+  platinum: 'bg-[#e3ecf6] text-[#3f6690]',
+  diamond: 'bg-[#dff1f6] text-[#1f7b93]',
 };
 
 export default function LeaderboardPage() {
@@ -164,6 +179,11 @@ export default function LeaderboardPage() {
           id: schoolProfile.id,
           name: schoolProfile.name,
           grade: (schoolProfile.grade ?? profile?.grade ?? 0) as LeaderboardEntry['grade'],
+          // Своя строка собирается здесь, а не приходит из общего запроса,
+          // поэтому оформление аватара нужно перенести явно — иначе у всех
+          // символ на месте, а у себя почему-то буква.
+          avatarColor: schoolProfile.avatar_color,
+          avatarEmoji: schoolProfile.avatar_emoji,
           // Свои баллы складываются из тех же трёх источников, что и у
           // остальных строк (задания + подтверждённые достижения + бонусы
           // за серии), иначе собственное место считалось бы по другим
@@ -272,7 +292,8 @@ export default function LeaderboardPage() {
               <div key={entry.id} className="flex flex-col items-center">
                 <Avatar
                   name={visibleName(entry)}
-                  colorId={entry.anonymous ? 'slate' : undefined}
+                  colorId={entry.anonymous ? 'slate' : entry.avatarColor}
+                  emoji={entry.anonymous ? null : entry.avatarEmoji}
                   size={isWinner ? 64 : 52}
                   className={isWinner ? 'ring-2 ring-accent-400 ring-offset-2' : ''}
                 />
@@ -348,21 +369,51 @@ export default function LeaderboardPage() {
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <span
-                      className={`block font-semibold ${
-                        entry.isCurrentUser ? 'text-brand-700' : 'text-ink-900'
-                      }`}
-                    >
-                      {visibleName(entry)}
-                      {entry.isCurrentUser && (
-                        <Badge tone="brand" className="ml-2 align-middle">
-                          {t.you}
-                        </Badge>
-                      )}
-                    </span>
-                    <span className="mt-0.5 block text-xs tabular-nums text-ink-400">
-                      {t.gradeLabel(entry.grade)}
-                    </span>
+                    {/*
+                      Аватар и уровень, а не одна строка имени.
+
+                      В таблице из одинаковых строк ученик ищет себя глазами
+                      по имени — это медленно. Цветной кружок находится
+                      быстрее, а уровень отвечает на вопрос, который место в
+                      списке не отвечает: тот, кто стоит двадцатым, всё равно
+                      видит, что он вырос.
+                    */}
+                    <div className="flex items-center gap-3">
+                      <Avatar
+                        name={visibleName(entry)}
+                        colorId={entry.anonymous ? 'slate' : entry.avatarColor}
+                        emoji={entry.anonymous ? null : entry.avatarEmoji}
+                        size={36}
+                      />
+                      <div className="min-w-0">
+                        <span
+                          className={`block font-semibold ${
+                            entry.isCurrentUser ? 'text-brand-700' : 'text-ink-900'
+                          }`}
+                        >
+                          {visibleName(entry)}
+                          {entry.isCurrentUser && (
+                            <Badge tone="brand" className="ml-2 align-middle">
+                              {t.you}
+                            </Badge>
+                          )}
+                        </span>
+                        <span className="mt-1 flex flex-wrap items-center gap-2">
+                          <span
+                            className={`rounded-[var(--radius-pill)] px-2 py-0.5 text-[11px] font-bold ${
+                              TIER_STYLE[levelFromPoints(entry.points).tier]
+                            }`}
+                          >
+                            {`${t.levelWord} ${levelFromPoints(entry.points).level} · ${
+                              TIER_LABEL[levelFromPoints(entry.points).tier]
+                            }`}
+                          </span>
+                          <span className="text-xs tabular-nums text-ink-400">
+                            {t.gradeLabel(entry.grade)}
+                          </span>
+                        </span>
+                      </div>
+                    </div>
                   </td>
                   <td
                     className={`px-4 py-3 text-right tabular-nums ${

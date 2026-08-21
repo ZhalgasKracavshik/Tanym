@@ -20,7 +20,8 @@ import type { Grade, LearningGoal } from '@/lib/types';
 import { SUBJECTS } from '@/data';
 import { useStore } from '@/components/StoreProvider';
 import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
-import { AVATAR_COLORS, Avatar } from '@/components/Avatar';
+import { Avatar } from '@/components/Avatar';
+import { AVATAR_COLORS, AVATAR_EMOJI } from '@/lib/avatar';
 import { Icon } from '@/components/Icon';
 import { PasswordField, SubmitButton } from '@/components/auth-ui';
 import { Alert, Button, ButtonLink, Card, Kicker, Skeleton } from '@/components/ui';
@@ -111,14 +112,62 @@ export default function SettingsPage() {
       {/* Аватар */}
       <Card className="mt-8">
         <div className="flex flex-wrap items-center gap-4">
-          <Avatar name={displayName} colorId={schoolProfile?.avatar_color} size={64} />
+          <Avatar
+            name={displayName}
+            colorId={schoolProfile?.avatar_color}
+            emoji={schoolProfile?.avatar_emoji}
+            size={64}
+          />
           <div>
             <h2 className="font-bold text-ink-900">{displayName}</h2>
             <p className="text-sm text-ink-400">{email ?? 'без аккаунта'}</p>
           </div>
         </div>
 
-        <p className="mt-6 text-sm font-semibold text-ink-800">Цвет аватара</p>
+        {/*
+          Символ идёт первым, а цвет вторым: выбор картинки ощущается как
+          «поставить себе аватарку», ради чего сюда и заходят, а фон —
+          доводка. Обратный порядок делал бы главным менее важное.
+        */}
+        <div className="mt-6 flex items-baseline justify-between gap-3">
+          <p className="text-sm font-semibold text-ink-800">Символ</p>
+          {schoolProfile?.avatar_emoji && (
+            <button
+              onClick={() => save({}, { avatarEmoji: null })}
+              className="text-xs font-semibold text-ink-400 underline-offset-2 hover:text-ink-600 hover:underline"
+            >
+              Вернуть букву
+            </button>
+          )}
+        </div>
+        {/*
+          Шесть колонок на телефоне, а не восемь: кнопка должна попадать под
+          палец, а не быть точкой в 30 пикселей. Ширина задаётся ячейкой
+          (w-full + aspect-square), иначе фиксированные 40px вылезают за
+          колонку и соседние кнопки наезжают друг на друга.
+        */}
+        <div className="mt-3 grid grid-cols-6 gap-2 sm:grid-cols-8 md:grid-cols-11">
+          {AVATAR_EMOJI.map((emoji) => {
+            const active = schoolProfile?.avatar_emoji === emoji;
+            return (
+              <button
+                key={emoji}
+                aria-label={`Символ ${emoji}`}
+                aria-pressed={active}
+                onClick={() => save({}, { avatarEmoji: emoji })}
+                className={`flex aspect-square w-full items-center justify-center rounded-[var(--radius-control)] text-xl leading-none transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
+                  active
+                    ? 'bg-brand-50 ring-2 ring-brand-500'
+                    : 'bg-ink-50 hover:scale-105 hover:bg-ink-100'
+                }`}
+              >
+                {emoji}
+              </button>
+            );
+          })}
+        </div>
+
+        <p className="mt-6 text-sm font-semibold text-ink-800">Цвет фона</p>
         <div className="mt-3 flex flex-wrap gap-2">
           {AVATAR_COLORS.map((color) => (
             <button
@@ -127,13 +176,19 @@ export default function SettingsPage() {
               aria-label={color.title}
               aria-pressed={schoolProfile?.avatar_color === color.id}
               onClick={() => save({}, { avatarColor: color.id })}
-              className={`h-11 w-11 rounded-full transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
+              className={`flex h-11 w-11 items-center justify-center rounded-full transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
                 schoolProfile?.avatar_color === color.id
                   ? 'ring-2 ring-brand-500 ring-offset-2'
                   : 'hover:scale-105'
               }`}
               style={{ background: color.value }}
-            />
+            >
+              {/* Символ виден прямо на образце — иначе выбор фона
+                  приходится проверять, глядя на аватар выше. */}
+              <span aria-hidden className="text-lg leading-none">
+                {schoolProfile?.avatar_emoji ?? ''}
+              </span>
+            </button>
           ))}
         </div>
       </Card>

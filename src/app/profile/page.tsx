@@ -26,6 +26,7 @@ import type { SocialLink } from '@/lib/social';
 import { Icon } from '@/components/Icon';
 import type { IconName } from '@/components/Icon';
 import { Reveal } from '@/components/motion';
+import { TIER_LABEL, levelFromPoints, pointsWord } from '@/lib/level';
 import { ButtonLink, Kicker, Skeleton } from '@/components/ui';
 
 /** Показатель в шапке профиля. */
@@ -46,6 +47,7 @@ const ROLE_TITLE: Record<string, string> = {
   teacher: 'Учитель',
   admin: 'Администратор',
 };
+
 
 export default function ProfilePage() {
   const { state, hydrated } = useStore();
@@ -129,7 +131,12 @@ export default function ProfilePage() {
           />
 
           <div className="relative flex flex-wrap items-center gap-5">
-            <Avatar name={name} colorId={schoolProfile?.avatar_color} size={80} />
+            <Avatar
+              name={name}
+              colorId={schoolProfile?.avatar_color}
+              emoji={schoolProfile?.avatar_emoji}
+              size={80}
+            />
             <div className="min-w-0">
               <h1 className="text-3xl font-semibold text-white sm:text-4xl">{name}</h1>
               <p className="mt-1 text-sm text-white/60">
@@ -147,12 +154,56 @@ export default function ProfilePage() {
           </div>
 
           {isStudent && (
-            <div className="relative mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <Stat icon="trophy" value={totalPoints} label="всего баллов" />
-              <Stat icon="medal" value={achievementPoints} label="за достижения" />
-              <Stat icon="flame" value={state.streak.current} label="дней подряд" />
-              <Stat icon="chart" value={myRank ? `#${myRank}` : '—'} label="место в школе" />
-            </div>
+            <>
+              <div className="relative mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <Stat icon="trophy" value={totalPoints} label="всего баллов" />
+                <Stat icon="medal" value={achievementPoints} label="за достижения" />
+                <Stat icon="flame" value={state.streak.current} label="дней подряд" />
+                <Stat icon="chart" value={myRank ? `#${myRank}` : '—'} label="место в школе" />
+              </div>
+
+              {/*
+                Уровень под цифрами.
+
+                Место в школе — единственная сравнительная метрика выше, и
+                она бесполезна тому, кто стоит двадцатым: сдвинуть её тяжело,
+                а значит она не мотивирует, а расстраивает. Уровень сравнивает
+                ученика с ним же вчерашним и потому растёт у всех.
+              */}
+              {(() => {
+                const level = levelFromPoints(totalPoints);
+                return (
+                  <div className="relative mt-4 rounded-[var(--radius-control)] border border-white/15 bg-white/5 px-5 py-4">
+                    <div className="flex flex-wrap items-baseline justify-between gap-2">
+                      <p className="text-sm font-bold text-white">
+                        Уровень {level.level}
+                        <span className="ml-2 font-semibold text-white/50">{TIER_LABEL[level.tier]}</span>
+                      </p>
+                      {level.nextAt !== null && (
+                        <p className="text-xs tabular-nums text-white/50">
+                          до уровня {level.level + 1} — {level.nextAt - totalPoints}{' '}
+                          {pointsWord(level.nextAt - totalPoints)}
+                        </p>
+                      )}
+                    </div>
+                    <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
+                      {/*
+                        Минимум 3% ширины: пустая полоса читается как «ты ещё
+                        не начинал», хотя уровень уже идёт. Цифра слева при
+                        этом остаётся точной — подкрашена только полоса.
+                      */}
+                      <div
+                        className="h-full rounded-full transition-all duration-700"
+                        style={{
+                          width: `${Math.max(3, Math.round(level.progress * 100))}%`,
+                          background: 'var(--gradient-brand)',
+                        }}
+                      />
+                    </div>
+                  </div>
+                );
+              })()}
+            </>
           )}
         </div>
       </Reveal>

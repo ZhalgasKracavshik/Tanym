@@ -14,6 +14,7 @@ import { getSubject } from '@/data';
 import { daysUntil, rankTopics, weakestSkills } from '@/lib/personalization';
 import type { PlanRequest, PlanResponse } from '@/lib/ai/contracts';
 import { useStore } from '@/components/StoreProvider';
+import { useEffectiveProfile } from '@/lib/useEffectiveProfile';
 import type { Dict } from '@/lib/i18n';
 import { AiBadge } from '@/components/AiBadge';
 import { Icon } from '@/components/Icon';
@@ -152,7 +153,12 @@ const TEXT: Dict<{
 export default function PlanPage() {
   const { state, hydrated, cachePlan } = useStore();
   const t = TEXT[state.language];
-  const profile = state.profile;
+  /*
+    Не state.profile напрямую: локальная копия пуста в новом браузере, и
+    вошедший ученик получал бы «профиль не создан» поверх заполненного
+    профиля. Подробности — в useEffectiveProfile.
+  */
+  const profile = useEffectiveProfile();
 
   const [subjectId, setSubjectId] = useState<string | null>(null);
   const [plan, setPlan] = useState<PlanResponse | null>(null);

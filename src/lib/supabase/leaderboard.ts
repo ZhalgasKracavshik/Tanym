@@ -84,7 +84,10 @@ export function useSchoolLeaderboard(excludeStudentId: string | null) {
         return;
       }
 
-      const { data: profiles } = await supabase.from('profiles').select('id, name, grade').in('id', ids);
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, name, grade, avatar_color, avatar_emoji')
+        .in('id', ids);
       if (cancelled) return;
 
       const profileById = Object.fromEntries((profiles ?? []).map((row) => [row.id, row]));
@@ -105,6 +108,8 @@ export function useSchoolLeaderboard(excludeStudentId: string | null) {
                 (p?.points ?? 0) + (achievementPointsById[id] ?? 0) + (streakPointsById[id] ?? 0),
               topicsMastered: p?.topics_mastered ?? 0,
               streak: p?.streak_current ?? 0,
+              avatarColor: profile.avatar_color,
+              avatarEmoji: profile.avatar_emoji,
             };
           })
           // Ученик без единого балла в списке не нужен: он попал бы туда

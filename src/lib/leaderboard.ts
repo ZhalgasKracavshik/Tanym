@@ -23,6 +23,9 @@ export interface LeaderboardEntry {
   isCurrentUser?: boolean;
   /** true — вместо имени показываем псевдоним. */
   anonymous?: boolean;
+  /** Оформление аватара — чтобы список не был колонкой одинаковых кружков. */
+  avatarColor?: string | null;
+  avatarEmoji?: string | null;
 }
 
 /**

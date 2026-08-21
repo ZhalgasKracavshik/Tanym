@@ -208,7 +208,12 @@ export function SiteSidebar() {
         href="/profile"
         className="flex min-w-0 flex-1 items-center gap-2 rounded-[var(--radius-control)] border border-ink-200 py-2 pl-2 pr-3 outline-none transition-all duration-150 hover:border-brand-300 hover:bg-ink-50 focus-visible:ring-2 focus-visible:ring-brand-500"
       >
-        <Avatar name={displayName} colorId={schoolProfile?.avatar_color} size={32} />
+        <Avatar
+          name={displayName}
+          colorId={schoolProfile?.avatar_color}
+          emoji={schoolProfile?.avatar_emoji}
+          size={32}
+        />
         <span className="truncate text-sm font-semibold text-ink-700">
           {displayName.split(' ')[0]}
         </span>
@@ -249,7 +254,12 @@ export function SiteSidebar() {
             aria-label={t.settings}
             className="shrink-0 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
           >
-            <Avatar name={displayName} colorId={schoolProfile?.avatar_color} size={32} />
+            <Avatar
+          name={displayName}
+          colorId={schoolProfile?.avatar_color}
+          emoji={schoolProfile?.avatar_emoji}
+          size={32}
+        />
           </Link>
         )}
       </div>

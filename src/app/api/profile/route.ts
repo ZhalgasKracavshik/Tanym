@@ -13,6 +13,7 @@
 
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { AVATAR_EMOJI } from '@/lib/avatar';
 import { parseSocialLinks } from '@/lib/social';
 import { getServerProfile } from '@/lib/supabase/serverProfile';
 
@@ -57,6 +58,17 @@ export async function PATCH(request: Request) {
   if (typeof body.goal === 'string') patch.goal = body.goal;
   if (typeof body.targetDate === 'string' || body.targetDate === null) patch.target_date = body.targetDate;
   if (typeof body.avatarColor === 'string') patch.avatar_color = body.avatarColor;
+  /*
+    Символ принимаем только из набора AVATAR_EMOJI, а не любую строку.
+    Колонка text приняла бы что угодно — включая абзац текста или
+    невидимые управляющие символы, которые растянули бы кружок аватара
+    во всех списках сразу. Пустая строка — это «убрать символ».
+  */
+  if (body.avatarEmoji === null || body.avatarEmoji === '') {
+    patch.avatar_emoji = null;
+  } else if (typeof body.avatarEmoji === 'string' && AVATAR_EMOJI.includes(body.avatarEmoji)) {
+    patch.avatar_emoji = body.avatarEmoji;
+  }
   /*
     Ссылки чистим на сервере повторно, а не доверяем клиенту.
     Форма уже проверяет адрес, но PATCH — обычный HTTP-запрос: его можно
