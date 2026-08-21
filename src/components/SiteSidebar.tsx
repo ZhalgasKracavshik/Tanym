@@ -42,6 +42,7 @@ const HIDDEN_FOR_ROLE: Record<'student' | 'teacher' | 'admin', string[]> = {
 
 const TEXT: Dict<{
   plan: string;
+  feed: string;
   dashboard: string;
   achievements: string;
   archive: string;
@@ -60,6 +61,7 @@ const TEXT: Dict<{
 }> = {
   ru: {
     plan: 'Мой план',
+    feed: 'Лента',
     dashboard: 'Кабинет',
     achievements: 'Достижения',
     archive: 'Архив',
@@ -78,6 +80,7 @@ const TEXT: Dict<{
   },
   kk: {
     plan: 'Жоспарым',
+    feed: 'Лента',
     dashboard: 'Кабинет',
     achievements: 'Жетістіктер',
     archive: 'Мұрағат',
@@ -96,6 +99,7 @@ const TEXT: Dict<{
   },
   en: {
     plan: 'My plan',
+    feed: 'Feed',
     dashboard: 'Dashboard',
     achievements: 'Achievements',
     archive: 'Archive',
@@ -138,6 +142,7 @@ export function SiteSidebar() {
   }, [open]);
 
   const ALL_NAV: { href: string; label: string; icon: IconName }[] = [
+    { href: '/feed', label: t.feed, icon: 'sparkles' },
     { href: '/announcements', label: t.announcements, icon: 'megaphone' },
     { href: '/plan', label: t.plan, icon: 'compass' },
     { href: '/dashboard', label: t.dashboard, icon: 'columns' },

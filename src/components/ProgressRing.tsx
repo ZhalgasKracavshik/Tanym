@@ -13,7 +13,6 @@
  * строки между собой, а сравнивать десять колец глазом тяжело.
  */
 
-import { useEffect, useState } from 'react';
 import { useReducedMotion } from 'framer-motion';
 
 export function ProgressRing({
@@ -50,15 +49,6 @@ export function ProgressRing({
   */
   const drawn = Math.max(clamped, 0.035);
 
-  /*
-    Первый кадр рисуется пустым кольцом, и только затем ставится настоящая
-    длина дуги — иначе переходить не от чего и кольцо просто появляется
-    заполненным. При отключённой анимации сразу конечное значение.
-  */
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-  const shown = reduce || mounted ? drawn : 0;
-
   const stroke =
     tone === 'success' ? 'var(--color-success-500)' : tone === 'accent' ? 'var(--color-accent-400)' : 'var(--color-brand-500)';
 
@@ -88,8 +78,9 @@ export function ProgressRing({
           Framer записывал strokeDashoffset в атрибут и на этом
           останавливался: дуга навсегда замирала в начальном положении,
           то есть кольцо оставалось пустым при любом прогрессе. Переход
-          средствами CSS делает ровно то же самое и не зависит от того,
-          как библиотека обходится с атрибутами SVG.
+          средствами CSS делает то же самое, не зависит от того, как
+          библиотека обходится с атрибутами SVG, и не требует лишнего
+          состояния «уже смонтировано» — а значит и лишнего рендера.
         */}
         <circle
           cx={size / 2}
@@ -101,7 +92,7 @@ export function ProgressRing({
           strokeLinecap="round"
           style={{
             strokeDasharray: circumference,
-            strokeDashoffset: circumference * (1 - shown),
+            strokeDashoffset: circumference * (1 - drawn),
             transition: reduce ? undefined : 'stroke-dashoffset 900ms cubic-bezier(0.16, 1, 0.3, 1)',
           }}
         />

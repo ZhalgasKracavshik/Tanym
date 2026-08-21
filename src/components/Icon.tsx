@@ -55,6 +55,9 @@ export type IconName =
   | 'bulb'
   | 'columns'
   | 'plus'
+  | 'arrow-left'
+  | 'shield'
+  | 'users'
   | 'user'
   | 'folder'
   | 'calendar'
@@ -301,6 +304,15 @@ const PATHS: Record<IconName, React.ReactNode> = {
     </>
   ),
   plus: <path d="M12 5v14M5 12h14" />,
+  'arrow-left': <path d="M19 12H5m0 0 6-6m-6 6 6 6" />,
+  shield: <path d="M12 3 5 6v5.5c0 4 2.8 7.6 7 9.5 4.2-1.9 7-5.5 7-9.5V6l-7-3Z" />,
+  users: (
+    <>
+      <circle cx="9" cy="8" r="3.4" />
+      <path d="M2.8 20a6.2 6.2 0 0 1 12.4 0" />
+      <path d="M16 5.4a3.4 3.4 0 0 1 0 5.2M17.5 14.4A6.2 6.2 0 0 1 21.2 20" />
+    </>
+  ),
   user: (
     <>
       <circle cx="12" cy="8" r="4" />

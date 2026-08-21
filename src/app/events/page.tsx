@@ -9,7 +9,7 @@
  * а события с закрывающейся регистрацией поднимаются наверх.
  */
 
-import { Suspense, useState } from 'react';
+import { useState } from 'react';
 import { EVENT_TYPES, daysLeftUntil, eventStatus, formatEventDate } from '@/lib/events';
 import type { EventStatus, EventType, SchoolEvent } from '@/lib/events';
 import type { Dict } from '@/lib/i18n';
@@ -17,8 +17,7 @@ import { useStore } from '@/components/StoreProvider';
 import { Icon } from '@/components/Icon';
 import { Badge, Button, Card, EmptyState, Kicker } from '@/components/ui';
 import { usePublishedEvents } from '@/lib/supabase/events';
-import { GatedSection } from '@/components/GatedSection';
-import { EventPublishForm } from '@/components/EventPublishForm';
+import { PublishAction } from '@/components/PublishAction';
 
 const TEXT: Dict<{
   kicker: string;
@@ -155,7 +154,12 @@ export default function EventsPage() {
   const t = TEXT[state.language];
 
   const [filter, setFilter] = useState<EventType | 'all' | 'mine'>('all');
-  const [publishRefreshKey, setPublishRefreshKey] = useState(0);
+  /*
+    Сеттер убран: публикация ушла на отдельную страницу и возвращает сюда
+    обычным переходом, а список перечитывается при монтировании. Значение
+    остаётся как стабильный аргумент хука.
+  */
+  const [publishRefreshKey] = useState(0);
   const events = usePublishedEvents(publishRefreshKey);
 
   if (events === null) {
@@ -206,8 +210,13 @@ export default function EventsPage() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
-      <Kicker>{t.kicker}</Kicker>
-      <h1 className="mt-2 text-3xl font-semibold text-ink-900 sm:text-4xl">{t.title}</h1>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <Kicker>{t.kicker}</Kicker>
+          <h1 className="mt-2 text-3xl font-semibold text-ink-900 sm:text-4xl">{t.title}</h1>
+        </div>
+        <PublishAction href="/events/new" label="Добавить событие" requireRole="admin" />
+      </div>
 
       {/*
         Обратный отсчёт вынесен из списка наверх и набран крупнее всего на экране.
@@ -382,21 +391,7 @@ export default function EventsPage() {
       )}
 
       {/* Публикация доступна только роли admin — учителя сюда не допущены,
-          в отличие от материалов архива. */}
-      <GatedSection
-        title="Опубликовать событие"
-        requireRole="admin"
-        language={state.language}
-      >
-        {(profile) => (
-                <EventPublishForm
-                  language={state.language}
-                  adminId={profile.id}
-                  onPublished={() => setPublishRefreshKey((key) => key + 1)}
-                />
-              )}
-      </GatedSection>
-    </div>
+          в отличие от материалов архива. */}    </div>
   );
 }
 

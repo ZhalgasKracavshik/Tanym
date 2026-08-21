@@ -12,18 +12,15 @@
  * заплатил, перестаёт работать на ученика.
  */
 
-import { Suspense, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { LISTING_TYPES } from '@/lib/listings';
 import type { Listing, ListingType } from '@/lib/listings';
 import type { Dict } from '@/lib/i18n';
 import { useStore } from '@/components/StoreProvider';
-import { PublishForm } from './PublishForm';
 import { Icon } from '@/components/Icon';
 import { Badge, Card, EmptyState, Kicker } from '@/components/ui';
 import { createClient } from '@/lib/supabase/client';
-import { SchoolAuthGate } from '@/components/SchoolAuthGate';
-import { GatedSection } from '@/components/GatedSection';
-import { ListingPublishForm } from '@/components/ListingPublishForm';
+import { PublishAction } from '@/components/PublishAction';
 
 interface PublishedListingRow {
   id: string;
@@ -188,7 +185,12 @@ export default function MarketplacePage() {
   const t = TEXT[state.language];
 
   const [filter, setFilter] = useState<ListingType | 'all'>('all');
-  const [publishRefreshKey, setPublishRefreshKey] = useState(0);
+  /*
+    Сеттер убран: публикация ушла на отдельную страницу и возвращает сюда
+    обычным переходом, а список перечитывается при монтировании. Значение
+    остаётся как стабильный аргумент хука.
+  */
+  const [publishRefreshKey] = useState(0);
   const publishedListings = usePublishedListings(publishRefreshKey);
 
   if (publishedListings === null) {
@@ -209,8 +211,18 @@ export default function MarketplacePage() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
-      <Kicker>{t.kicker}</Kicker>
-      <h1 className="mt-2 text-3xl font-semibold text-ink-900 sm:text-4xl">{t.title}</h1>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <Kicker>{t.kicker}</Kicker>
+          <h1 className="mt-2 text-3xl font-semibold text-ink-900 sm:text-4xl">{t.title}</h1>
+        </div>
+        {/* Одна кнопка на все роли — форма за ней своя у каждой. */}
+        <PublishAction
+          href="/marketplace/new"
+          label="Разместить"
+          requireRole={['student', 'teacher', 'admin']}
+        />
+      </div>
       <p className="mt-4 max-w-2xl text-sm text-ink-500">{t.subtitle}</p>
 
       {/* Предупреждение о безопасности: аудитория — подростки, и часть
@@ -233,18 +245,6 @@ export default function MarketplacePage() {
             {type.title[state.language]}
           </button>
         ))}
-      </div>
-
-      {/* Форма размещения — только реальный вошедший ученик или учитель,
-          уходит на модерацию в Supabase, а не сразу в список. */}
-      <div className="mt-4">
-        <Suspense fallback={null}>
-          {/* Гостя сюда не пустит middleware, а админ публикует ниже,
-              сразу проверенным объявлением — здесь его форма не нужна. */}
-          <SchoolAuthGate requireRole={['student', 'teacher']} language={state.language}>
-            {(profile) => <PublishForm language={state.language} profile={profile} />}
-          </SchoolAuthGate>
-        </Suspense>
       </div>
 
       {sorted.length === 0 ? (
@@ -340,23 +340,6 @@ export default function MarketplacePage() {
           })}
         </div>
       )}
-
-      {/* Публикация сразу-проверенных объявлений — только роль admin. Форма выше
-          (PublishForm) остаётся отдельным путём для учеников и учителей: их
-          объявления сначала идут на модерацию через /admin, а не публикуются сразу. */}
-      <GatedSection
-        title="Опубликовать проверенное объявление"
-        requireRole="admin"
-        language={state.language}
-      >
-        {(profile) => (
-          <ListingPublishForm
-            language={state.language}
-            adminId={profile.id}
-            onPublished={() => setPublishRefreshKey((key) => key + 1)}
-          />
-        )}
-      </GatedSection>
     </div>
   );
 }

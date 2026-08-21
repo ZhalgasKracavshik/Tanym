@@ -9,7 +9,7 @@
  * внизу, непрочитанное помечено, а фильтр по классу убирает чужие объявления.
  */
 
-import { Suspense, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ANNOUNCEMENT_CATEGORIES,
   formatAnnouncementDate,
@@ -20,10 +20,9 @@ import type { Announcement, AnnouncementCategory } from '@/lib/announcements';
 import type { Dict } from '@/lib/i18n';
 import { useStore } from '@/components/StoreProvider';
 import { Icon } from '@/components/Icon';
-import { Badge, EmptyState, Kicker, RailRow, Skeleton } from '@/components/ui';
+import { Badge, EmptyState, RailRow, Skeleton } from '@/components/ui';
 import { usePublishedAnnouncements } from '@/lib/supabase/announcements';
-import { GatedSection } from '@/components/GatedSection';
-import { AnnouncementPublishForm } from '@/components/AnnouncementPublishForm';
+import { PublishAction } from '@/components/PublishAction';
 
 const TEXT: Dict<{
   title: string;
@@ -105,7 +104,12 @@ export default function AnnouncementsPage() {
   const t = TEXT[state.language];
 
   const [category, setCategory] = useState<AnnouncementCategory | 'all'>('all');
-  const [feedRefreshKey, setFeedRefreshKey] = useState(0);
+  /*
+    Сеттер убран: публикация ушла на отдельную страницу и возвращает сюда
+    обычным переходом, а список перечитывается при монтировании. Значение
+    остаётся как стабильный аргумент хука.
+  */
+  const [feedRefreshKey] = useState(0);
   const published = usePublishedAnnouncements(feedRefreshKey);
   const ANNOUNCEMENTS = published ?? [];
   const [onlyMyGrade, setOnlyMyGrade] = useState(false);
@@ -193,7 +197,12 @@ export default function AnnouncementsPage() {
         Описание того, что такое доска объявлений, ученик прочитает один раз,
         а цифру непрочитанного он приходит смотреть каждый день.
       */}
-      <h1 className="text-3xl font-semibold text-ink-900 sm:text-4xl">{t.title}</h1>
+      {/* Заголовок и действие в одной строке: кнопка живёт в постоянном
+          углу, а не внизу под списком. */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <h1 className="text-3xl font-semibold text-ink-900 sm:text-4xl">{t.title}</h1>
+        <PublishAction href="/announcements/new" label="Опубликовать" requireRole="admin" />
+      </div>
 
       {/*
         Полоса показателей лежит прямо на фоне между двумя волосяными линиями.
@@ -345,22 +354,6 @@ export default function AnnouncementsPage() {
           })}
         </div>
       )}
-
-      {/* Объявление — официальный голос школы, поэтому публикует только admin,
-          не каждый учитель. */}
-      <GatedSection
-        title="Опубликовать объявление"
-        requireRole="admin"
-        language={state.language}
-      >
-        {(profile) => (
-                <AnnouncementPublishForm
-                  language={state.language}
-                  adminId={profile.id}
-                  onPublished={() => setFeedRefreshKey((key) => key + 1)}
-                />
-              )}
-      </GatedSection>
     </div>
   );
 }

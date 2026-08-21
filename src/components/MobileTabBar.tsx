@@ -22,6 +22,7 @@ import { Icon } from './Icon';
 import type { IconName } from './Icon';
 
 const TEXT: Dict<{
+  feed: string;
   dashboard: string;
   achievements: string;
   mentor: string;
@@ -32,6 +33,7 @@ const TEXT: Dict<{
   more: string;
 }> = {
   ru: {
+    feed: 'Лента',
     dashboard: 'Кабинет',
     achievements: 'Портфолио',
     mentor: 'Наставник',
@@ -42,6 +44,7 @@ const TEXT: Dict<{
     more: 'Ещё',
   },
   kk: {
+    feed: 'Лента',
     dashboard: 'Кабинет',
     achievements: 'Портфолио',
     mentor: 'Тәлімгер',
@@ -52,6 +55,7 @@ const TEXT: Dict<{
     more: 'Тағы',
   },
   en: {
+    feed: 'Feed',
     dashboard: 'Home',
     achievements: 'Portfolio',
     mentor: 'Mentor',
@@ -90,6 +94,12 @@ export function MobileTabBar({ onMore }: { onMore: () => void }) {
             { href: '/profile', label: t.profile, icon: 'user' },
           ]
         : [
+            /*
+              Лента первой: это то, куда заходят «просто посмотреть», а
+              такие заходы самые частые. Кабинет рядом — за ним приходят
+              осознанно и найдут его второй кнопкой без труда.
+            */
+            { href: '/feed', label: t.feed, icon: 'sparkles' },
             { href: '/dashboard', label: t.dashboard, icon: 'columns' },
             { href: '/achievements', label: t.achievements, icon: 'trophy' },
             { href: '/chat', label: t.mentor, icon: 'chat' },

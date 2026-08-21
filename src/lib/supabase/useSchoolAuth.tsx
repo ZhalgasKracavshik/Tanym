@@ -22,7 +22,7 @@
  * клиентский рендер видят одно и то же значение, подменять нечего.
  */
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { createClient } from './client';
 
@@ -99,18 +99,36 @@ export function SchoolAuthProvider({
   const [profile, setProfile] = useState<SchoolProfile | null>(initialProfile);
   const [schoolClass, setSchoolClass] = useState<SchoolClass | null>(initialSchoolClass);
 
-  const refresh = useCallback(async () => {
-    setLoading(true);
+  /*
+    id пользователя, под которым собран текущий профиль.
+
+    Хранится в ref, а не в состоянии: он нужен только для сравнения внутри
+    обработчика событий, и попадание его в зависимости эффекта заново
+    подписывало бы обработчик при каждом входе.
+  */
+  const knownUserId = useRef<string | null>(initialProfile?.id ?? null);
+
+  const refresh = useCallback(async (silent = false) => {
+    /*
+      Тихое обновление не трогает loading.
+
+      На loading завязаны ворота публикации и меню: подняв его, мы на время
+      запроса гасим половину интерфейса. Для настоящего входа это уместно —
+      там всё равно меняется всё, — а для фоновой перепроверки нет: человек
+      видит, как страница на мгновение пустеет без всякой причины.
+    */
+    if (!silent) setLoading(true);
     try {
       const res = await fetch('/api/profile');
       const data = await res.json();
       setEmail(data.email ?? null);
       setProfile(data.profile ?? null);
       setSchoolClass(data.class ?? null);
+      knownUserId.current = data.profile?.id ?? null;
     } catch {
       // Сеть отвалилась — оставляем то, что уже показано, и не мигаем.
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
@@ -126,8 +144,32 @@ export function SchoolAuthProvider({
       первое дублирует то, что уже есть, второе меняет только срок токена.
     */
     const supabase = createClient();
-    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') return;
+
+      /*
+        Решение принимается по пользователю, а не по названию события.
+
+        Supabase присылает SIGNED_IN не только при настоящем входе: он
+        приходит и просто на возвращение к вкладке, когда клиент заново
+        сверяет сессию. Реагировать на само событие означало перезапрашивать
+        профиль каждый раз, когда человек свернул окно и вернулся, — ровно
+        то, из-за чего страница «перезагружалась» сама по себе.
+
+        Если пользователь тот же самый, менять нечего и трогать состояние
+        не нужно вовсе.
+      */
+      const nextUserId = session?.user?.id ?? null;
+      if (nextUserId === knownUserId.current) return;
+
+      knownUserId.current = nextUserId;
+      if (nextUserId === null) {
+        // Выход: профиль убираем сразу, не дожидаясь ответа сервера.
+        setProfile(null);
+        setEmail(null);
+        setSchoolClass(null);
+        return;
+      }
       refresh();
     });
 

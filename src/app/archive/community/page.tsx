@@ -8,12 +8,11 @@
  * стереть разницу.
  */
 
-import { Suspense, useState } from 'react';
+import { useState } from 'react';
 import type { Dict } from '@/lib/i18n';
 import { useStore } from '@/components/StoreProvider';
 import { Kicker } from '@/components/ui';
-import { GatedSection } from '@/components/GatedSection';
-import { ArchiveMaterialPublishForm } from '@/components/ArchiveMaterialPublishForm';
+import { PublishAction } from '@/components/PublishAction';
 import { ArchiveMaterialFeed } from '@/components/ArchiveMaterialFeed';
 import { ArchiveTabs } from '../ArchiveTabs';
 
@@ -50,12 +49,26 @@ const TEXT: Dict<{
 export default function CommunityArchivePage() {
   const { state } = useStore();
   const t = TEXT[state.language];
-  const [refreshKey, setRefreshKey] = useState(0);
+  /*
+    Ключ обновления остаётся: публикация теперь на своей странице и
+    возвращает сюда обычным переходом, а список читается заново при
+    монтировании. Значение не меняется — оно нужно как стабильный аргумент.
+  */
+  const [refreshKey] = useState(0);
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
-      <Kicker>{t.kicker}</Kicker>
-      <h1 className="mt-2 text-3xl font-semibold text-ink-900 sm:text-4xl">{t.title}</h1>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <Kicker>{t.kicker}</Kicker>
+          <h1 className="mt-2 text-3xl font-semibold text-ink-900 sm:text-4xl">{t.title}</h1>
+        </div>
+        <PublishAction
+          href="/archive/community/new"
+          label={t.publishTitle}
+          requireRole={['teacher', 'admin']}
+        />
+      </div>
       <p className="mt-2 max-w-2xl text-sm text-ink-500">{t.subtitle}</p>
 
       <ArchiveTabs active="community" language={state.language} />
@@ -66,21 +79,6 @@ export default function CommunityArchivePage() {
           <ArchiveMaterialFeed language={state.language} refreshKey={refreshKey} />
         </div>
       </div>
-
-      <GatedSection
-        title={t.publishTitle}
-        requireRole={['teacher', 'admin']}
-        language={state.language}
-        className="mt-10 border-t border-ink-200 pt-10"
-      >
-        {(profile) => (
-          <ArchiveMaterialPublishForm
-            language={state.language}
-            userId={profile.id}
-            onPublished={() => setRefreshKey((key) => key + 1)}
-          />
-        )}
-      </GatedSection>
     </div>
   );
 }
