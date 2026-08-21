@@ -1,352 +1,213 @@
 'use client';
 
 /**
- * Достижения и серия занятий.
+ * Достижения школы: портфолио и лента, а не внутренние значки.
  *
- * Страница отвечает на вопрос «зачем возвращаться завтра». Персональный план
- * объясняет, ЧТО учить, а этот экран даёт причину не бросить: видимая серия
- * и незакрытые достижения работают там, где не работает рациональный аргумент.
+ * Раньше страница начиналась с серии дней и очков за решённые задания —
+ * то есть с внутренней механики приложения. Теперь порядок обратный:
+ * сначала настоящие достижения (олимпиады, конкурсы, проекты) и лента
+ * школы, а серии и значки ушли вниз как подробность. Причина простая:
+ * ученик приходит сюда посмотреть, кто чего добился, а не сколько
+ * кликов он сделал в тренажёре.
  */
 
-import { Suspense, useEffect, useState } from 'react';
-import { evaluateAchievements, freshlyUnlocked } from '@/lib/achievements';
-import type { AchievementStatus } from '@/lib/achievements';
-import { summarize } from '@/lib/personalization';
-import { almatyDateIso, almatyYesterdayIso } from '@/lib/date';
-import type { Dict } from '@/lib/i18n';
+import { useState } from 'react';
 import { useStore } from '@/components/StoreProvider';
+import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
+import { useOwnStreakPoints, useSchoolLeaderboard } from '@/lib/supabase/leaderboard';
+import { rankEntries } from '@/lib/leaderboard';
+import { evaluateAchievements } from '@/lib/achievements';
+import { summarize } from '@/lib/personalization';
+import { AchievementForm, PortfolioGrid, portfolioPoints, usePortfolio } from '@/components/Portfolio';
+import { ActivityFeed } from '@/components/ActivityFeed';
 import { Icon } from '@/components/Icon';
-import { ButtonLink, EmptyState, Kicker, ProgressBar, RailRow, Skeleton } from '@/components/ui';
-import { SchoolAuthGate } from '@/components/SchoolAuthGate';
-import { AchievementPublishForm } from '@/components/AchievementPublishForm';
-import { AchievementFeed } from '@/components/AchievementFeed';
+import type { IconName } from '@/components/Icon';
+import { Reveal } from '@/components/motion';
+import { ButtonLink, Kicker, ProgressBar, RailRow, Skeleton } from '@/components/ui';
 
-const TEXT: Dict<{
-  title: string;
-  noProfileTitle: string;
-  noProfileText: string;
-  createProfile: string;
-  streakTitle: string;
-  streakUnit: (n: number) => string;
-  streakActive: string;
-  streakBroken: string;
-  streakNone: string;
-  longest: string;
-  points: string;
-  unlockedCount: string;
-  newlyUnlocked: string;
-  locked: string;
-  done: string;
-  ofTarget: (current: number, target: number) => string;
-  shareTitle: string;
-  feedTitle: string;
-}> = {
-  ru: {
-    title: 'Достижения',
-    noProfileTitle: 'Сначала нужен профиль',
-    noProfileText: 'Достижения начисляются за решённые задания, начни с диагностики.',
-    createProfile: 'Создать профиль',
-    streakTitle: 'Серия занятий',
-    streakUnit: (n) => (n === 1 ? 'день' : n > 1 && n < 5 ? 'дня' : 'дней'),
-    streakActive: 'Серия идёт, не прерывай её сегодня',
-    streakBroken: 'Серия прервалась. Реши одно задание, чтобы начать заново',
-    streakNone: 'Реши первое задание, чтобы начать серию',
-    longest: 'Лучшая серия',
-    points: 'Очки',
-    unlockedCount: 'Получено',
-    newlyUnlocked: 'Новое достижение!',
-    locked: 'Ещё не получено',
-    done: 'Получено',
-    ofTarget: (current, target) => `${current} из ${target}`,
-    shareTitle: 'Поделиться достижением',
-    feedTitle: 'Лента достижений школы',
-  },
-  kk: {
-    title: 'Жетістіктер',
-    noProfileTitle: 'Алдымен профиль қажет',
-    noProfileText: 'Жетістіктер шешілген тапсырмалар үшін беріледі, диагностикадан баста.',
-    createProfile: 'Профиль құру',
-    streakTitle: 'Сабақ сериясы',
-    streakUnit: () => 'күн',
-    streakActive: 'Серия жалғасып жатыр, бүгін үзіп алма',
-    streakBroken: 'Серия үзілді. Қайта бастау үшін бір тапсырма шеш',
-    streakNone: 'Серияны бастау үшін алғашқы тапсырманы шеш',
-    longest: 'Үздік серия',
-    points: 'Ұпай',
-    unlockedCount: 'Алынды',
-    newlyUnlocked: 'Жаңа жетістік!',
-    locked: 'Әлі алынған жоқ',
-    done: 'Алынды',
-    ofTarget: (current, target) => `${target} ішінен ${current}`,
-    shareTitle: 'Жетістікпен бөлісу',
-    feedTitle: 'Мектеп жетістіктер лентасы',
-  },
-  en: {
-    title: 'Achievements',
-    noProfileTitle: 'A profile is needed first',
-    noProfileText: 'Achievements come from solving tasks, so start with the diagnostic.',
-    createProfile: 'Create profile',
-    streakTitle: 'Study streak',
-    streakUnit: (n) => (n === 1 ? 'day' : 'days'),
-    streakActive: 'Your streak is alive, keep it going today',
-    streakBroken: 'Your streak ended. Solve one task to start again',
-    streakNone: 'Solve your first task to start a streak',
-    longest: 'Longest streak',
-    points: 'Points',
-    unlockedCount: 'Unlocked',
-    newlyUnlocked: 'New achievement!',
-    locked: 'Not yet unlocked',
-    done: 'Unlocked',
-    ofTarget: (current, target) => `${current} of ${target}`,
-    shareTitle: 'Share an achievement',
-    feedTitle: "School achievement feed",
-  },
-};
+/** Крупный показатель в тёмной шапке. */
+function HeroStat({ icon, value, label }: { icon: IconName; value: number | string; label: string }) {
+  return (
+    <div className="rounded-[var(--radius-control)] border border-white/15 bg-white/10 px-5 py-4 backdrop-blur">
+      <p className="flex items-center gap-2 text-2xl font-semibold tabular-nums text-white">
+        <Icon name={icon} size={18} className="text-white/60" />
+        {value}
+      </p>
+      <p className="mt-1 text-xs text-white/50">{label}</p>
+    </div>
+  );
+}
 
 export default function AchievementsPage() {
-  const { state, hydrated, markAchievementsSeen } = useStore();
-  const t = TEXT[state.language];
+  const { state, hydrated } = useStore();
+  const { profile: schoolProfile, loading } = useSchoolAuth();
 
-  /**
-   * Поздравление держим в отдельном состоянии, а не вычисляем при каждом рендере.
-   *
-   * Причина: как только достижение помечено показанным, freshlyUnlocked() вернёт
-   * пустой список, страница перерисуется — и баннер исчезнет через доли секунды,
-   * раньше, чем ученик успеет его прочитать. Снимок делается один раз при заходе
-   * и живёт до ухода со страницы.
-   */
-  const [fresh, setFresh] = useState<AchievementStatus[]>([]);
-  const [feedRefreshKey, setFeedRefreshKey] = useState(0);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const achievements = usePortfolio(schoolProfile?.id ?? null, refreshKey);
+  const streakPoints = useOwnStreakPoints(schoolProfile?.id ?? null);
+  const others = useSchoolLeaderboard(schoolProfile?.id ?? null);
 
-  useEffect(() => {
-    if (!hydrated) return;
-    const unlockedNow = freshlyUnlocked(state);
-    if (unlockedNow.length === 0) return;
-
-    setFresh(unlockedNow);
-    markAchievementsSeen(unlockedNow.map((item) => item.id));
-    // Намеренно только по hydrated: снимок нужен один раз за посещение страницы.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hydrated]);
-
-  if (!hydrated) {
+  if (!hydrated || loading) {
     return (
-      <div className="mx-auto max-w-4xl space-y-4 px-4 py-10 sm:px-6">
-        <Skeleton className="h-8 w-56" />
-        <Skeleton className="h-32 w-full" />
+      <div className="mx-auto max-w-5xl space-y-4 px-4 py-10 sm:px-6">
+        <Skeleton className="h-40 w-full" />
         <Skeleton className="h-64 w-full" />
       </div>
     );
   }
 
-  // Локального профиля (диагностика ещё не пройдена) может не быть, а
-  // Google-аккаунт учителя или ученика — это отдельная, независимая история:
-  // учитель может вообще никогда не проходить онбординг ученика. Поэтому
-  // здесь не return, а просто пропуск раздела с личными достижениями —
-  // лента и вход остаются доступны в любом случае.
-  if (!state.profile) {
-    return (
-      <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
-        <h1 className="text-3xl font-semibold text-ink-900 sm:text-4xl">{t.title}</h1>
+  const summary = summarize(state);
+  const achievementPoints = portfolioPoints(achievements);
+  const totalPoints = summary.points + achievementPoints + streakPoints;
+  const isStudent = schoolProfile?.role === 'student';
 
-        <div className="mt-10 max-w-3xl">
-          {/* Иконка стоит рядом: проп icon в EmptyState принимает строку,
-              а строкой иконку из набора не передать. */}
-          <div className="mb-3 flex justify-center">
-            <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-ink-200 bg-white text-ink-400">
-              <Icon name="trophy" size={24} />
-            </span>
-          </div>
-          <EmptyState
-            title={t.noProfileTitle}
-            description={t.noProfileText}
-            action={<ButtonLink href="/onboarding">{t.createProfile}</ButtonLink>}
-          />
-        </div>
+  /*
+    Место считается ровно так же, как в рейтинге: своя строка добавляется
+    к чужим и ранжируется вместе с ними. Иначе на разных страницах у
+    одного человека оказалось бы разное место.
+  */
+  const myRank =
+    isStudent && others
+      ? (rankEntries([
+          ...others,
+          {
+            id: schoolProfile.id,
+            name: schoolProfile.name,
+            grade: (schoolProfile.grade ?? 0) as never,
+            points: totalPoints,
+            topicsMastered: summary.topicsMastered,
+            streak: state.streak.current,
+            isCurrentUser: true,
+          },
+        ]).find((entry) => entry.isCurrentUser)?.rank ?? null)
+      : null;
 
-        <div className="mt-16">
-          <Kicker>{t.feedTitle}</Kicker>
-          <div className="mt-4">
-            <AchievementFeed language={state.language} refreshKey={feedRefreshKey} />
-          </div>
-        </div>
-
-        <div className="mt-10">
-          <Kicker>{t.shareTitle}</Kicker>
-          <div className="mt-4">
-            <Suspense fallback={null}>
-              <SchoolAuthGate requireRole="student" language={state.language}>
-                {() => (
-                  <p className="text-sm text-ink-500">{t.noProfileText}</p>
-                )}
-              </SchoolAuthGate>
-            </Suspense>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const achievements = evaluateAchievements(state);
-  const unlocked = achievements.filter((item) => item.unlocked).length;
-  const stats = summarize(state);
-
-  // Серия считается живой, если последняя активность была сегодня или вчера.
-  const last = state.streak.lastActiveDate;
-  const streakAlive = last === almatyDateIso() || last === almatyYesterdayIso();
-  const streakValue = streakAlive ? state.streak.current : 0;
+  // Внутренние значки: считаются из локального прогресса, а не из базы.
+  const badges = evaluateAchievements(state);
+  const unlockedCount = badges.filter((item) => item.unlocked).length;
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
-      {/*
-        Заголовок без описания, сразу серия. Ученик приходит сюда посмотреть,
-        сколько дней он держится, а не прочитать, что такое достижения.
-      */}
-      <h1 className="text-3xl font-semibold text-ink-900 sm:text-4xl">{t.title}</h1>
-
-      {/*
-        Серия это главный элемент экрана, поэтому она набрана в несколько раз
-        крупнее всего остального и лежит прямо на фоне между волосяными линиями.
-        Раньше она сидела в карточке рядом с тремя одинаковыми плитками метрик
-        и по весу ничем от них не отличалась.
-      */}
-      <div className="mt-10 flex flex-wrap items-end justify-between gap-x-10 gap-y-8 border-y border-ink-200 py-8">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-ink-400">{t.streakTitle}</p>
-          <p className="mt-2 flex items-end gap-3">
-            <Icon
-              name="flame"
-              size={52}
-              className={streakValue > 0 ? 'text-accent-500' : 'text-ink-300'}
-            />
-            <span className="text-6xl font-semibold leading-none tabular-nums text-ink-900 sm:text-7xl">
-              {streakValue}
-            </span>
-            <span className="text-xl text-ink-400">{t.streakUnit(streakValue)}</span>
-          </p>
-          <p className="mt-2 text-sm text-ink-500">
-            {streakValue > 0 ? t.streakActive : state.streak.longest > 0 ? t.streakBroken : t.streakNone}
-          </p>
-        </div>
-
-        {/* Второстепенные показатели: те же цифры, но заметно мельче серии */}
-        <div className="grid grid-cols-3 gap-x-8 sm:divide-x sm:divide-ink-200">
-          <div className="sm:pr-8">
-            <p className="text-xs font-medium uppercase tracking-wide text-ink-400">{t.longest}</p>
-            <p className="mt-2 text-2xl font-semibold tabular-nums text-ink-900">{state.streak.longest}</p>
-          </div>
-          <div className="sm:px-8">
-            <p className="text-xs font-medium uppercase tracking-wide text-ink-400">{t.points}</p>
-            <p className="mt-2 text-2xl font-semibold tabular-nums text-ink-900">{stats.points}</p>
-          </div>
-          <div className="sm:pl-8">
-            <p className="text-xs font-medium uppercase tracking-wide text-ink-400">{t.unlockedCount}</p>
-            <p className="mt-2 text-2xl font-semibold tabular-nums text-ink-900">
-              {unlocked}/{achievements.length}
+    <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
+      {/* Шапка: чего добился именно ты */}
+      <Reveal immediate>
+        <div
+          className="relative overflow-hidden rounded-[var(--radius-card)] p-8 text-white shadow-[var(--shadow-float)] sm:p-10"
+          style={{ background: 'var(--gradient-ink)' }}
+        >
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full opacity-30 blur-3xl"
+            style={{ background: 'var(--gradient-brand)' }}
+          />
+          <div className="relative">
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/50">Достижения</p>
+            <h1 className="mt-2 text-3xl font-semibold sm:text-4xl">
+              {isStudent ? 'Твоё портфолио' : 'Достижения школы'}
+            </h1>
+            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/60">
+              {isStudent
+                ? 'Олимпиады, конкурсы и проекты приносят баллы в рейтинг школы. Участие без места — тоже достижение.'
+                : 'Здесь ученики публикуют олимпиады, конкурсы и проекты.'}
             </p>
-          </div>
-        </div>
-      </div>
 
-      {/* Поздравление с новыми достижениями стоит после серии: иначе экран
-          открывался бы разным содержимым в зависимости от дня. */}
-      {fresh.length > 0 && (
-        <div className="mt-10 rounded-2xl border border-accent-200 bg-accent-50 p-5">
-          <p className="flex items-center gap-2 font-bold text-accent-700">
-            <Icon name="sparkles" size={18} />
-            {t.newlyUnlocked}
-          </p>
-          <div className="mt-4 flex flex-wrap gap-3">
-            {fresh.map((item) => (
-              <span
-                key={item.id}
-                className="flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm font-semibold text-ink-800"
-              >
-                <Icon name={item.icon} size={18} className="text-accent-600" />
-                {item.title[state.language]}
-              </span>
-            ))}
+            {isStudent && (
+              <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <HeroStat icon="chart" value={myRank ? `#${myRank}` : '—'} label="место в школе" />
+                <HeroStat icon="trophy" value={totalPoints} label="всего баллов" />
+                <HeroStat icon="medal" value={achievementPoints} label="за достижения" />
+                <HeroStat icon="flame" value={streakPoints} label="за серии" />
+              </div>
+            )}
           </div>
         </div>
+      </Reveal>
+
+      {/* Портфолио — главное на странице */}
+      {isStudent && (
+        <section className="mt-12">
+          <Kicker>Моё портфолио</Kicker>
+          <div className="mt-4">
+            <AchievementForm
+              studentId={schoolProfile.id}
+              language={state.language}
+              onSubmitted={() => setRefreshKey((key) => key + 1)}
+            />
+          </div>
+          <div className="mt-6">
+            <PortfolioGrid
+              items={achievements ?? []}
+              language={state.language}
+              emptyText="Добавьте первое достижение — после проверки оно принесёт баллы и появится в ленте школы."
+            />
+          </div>
+        </section>
       )}
 
-      {/*
-        Достижения это перечисление, а не набор самодостаточных единиц, поэтому
-        они переехали с карточек на строки с рейкой. Цвет рейки кодирует
-        состояние, но рядом всегда стоит подпись словами.
-      */}
-      <div className="mt-10 grid gap-4 sm:grid-cols-2">
-        {achievements.map((item) => (
-          <RailRow
-            key={item.id}
-            tone={item.unlocked ? 'success' : 'neutral'}
-            className={item.unlocked ? 'border-success-500/40 bg-success-50' : ''}
-          >
-            <div className="flex items-start gap-3">
-              {/* Незаработанные показываем блёклыми — видно, что это цель, а не награда */}
-              <span
-                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${
-                  item.unlocked ? 'bg-success-500/10 text-success-700' : 'bg-ink-100 text-ink-400'
-                }`}
-              >
-                <Icon name={item.icon} size={24} />
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="font-bold text-ink-900">{item.title[state.language]}</h2>
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                      item.unlocked ? 'bg-success-500 text-white' : 'bg-ink-100 text-ink-500'
-                    }`}
-                  >
-                    {item.unlocked ? t.done : t.locked}
-                  </span>
-                </div>
-                <p className="mt-2 text-sm text-ink-500">{item.description[state.language]}</p>
+      {/* Лента школы */}
+      <section className="mt-14">
+        <Kicker>Лента школы</Kicker>
+        <p className="mt-2 text-sm text-ink-500">
+          Что публикуют ученики и учителя: подтверждённые достижения, материалы и объявления.
+        </p>
+        <div className="mt-5">
+          <ActivityFeed limit={20} refreshKey={refreshKey} />
+        </div>
+      </section>
 
-                {!item.unlocked && (
-                  <div className="mt-4">
-                    <ProgressBar value={item.ratio} showPercent={false} />
-                    <p className="mt-2 text-xs tabular-nums text-ink-400">
-                      {t.ofTarget(item.current, item.target)}
-                    </p>
-                  </div>
-                )}
-              </div>
+      {/*
+        Значки за работу в тренажёре — внизу и намеренно спокойнее.
+        Это внутренняя механика продукта, а не результат, который ученик
+        покажет при поступлении.
+      */}
+      {isStudent && (
+        <section className="mt-14 border-t border-ink-200 pt-10">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <Kicker>Значки за занятия</Kicker>
+              <p className="mt-2 text-sm text-ink-500">
+                Начисляются автоматически за работу в тренажёре.
+              </p>
             </div>
-          </RailRow>
-        ))}
-      </div>
+            <p className="text-sm font-semibold tabular-nums text-ink-400">
+              {unlockedCount} из {badges.length}
+            </p>
+          </div>
 
-      {/*
-        Лента и форма публикации требуют настоящего аккаунта (Google, только
-        почта школьного домена), поэтому лежат в SchoolAuthGate. Просмотр
-        ленты доступен и без входа — там нет запроса на публикацию.
-      */}
-      <div className="mt-16">
-        <Kicker>{t.feedTitle}</Kicker>
-        <div className="mt-4">
-          <AchievementFeed language={state.language} refreshKey={feedRefreshKey} />
-        </div>
-      </div>
+          <ul className="mt-5 grid gap-2 sm:grid-cols-2">
+            {badges.map((badge) => (
+              <li key={badge.id}>
+                <RailRow tone={badge.unlocked ? 'success' : 'neutral'}>
+                  <div className="flex items-start gap-3">
+                    <Icon
+                      name={badge.icon}
+                      size={20}
+                      className={badge.unlocked ? 'text-success-700' : 'text-ink-300'}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-ink-900">{badge.title[state.language]}</p>
+                      <p className="mt-1 text-xs text-ink-500">{badge.description[state.language]}</p>
+                      {!badge.unlocked && (
+                        <div className="mt-2 max-w-[16rem]">
+                          <ProgressBar value={badge.ratio} />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </RailRow>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
-      <div className="mt-10">
-        <Kicker>{t.shareTitle}</Kicker>
-        <div className="mt-4">
-          <Suspense fallback={null}>
-            <SchoolAuthGate requireRole="student" language={state.language}>
-              {(profile) => (
-                <AchievementPublishForm
-                  state={state}
-                  language={state.language}
-                  userId={profile.id}
-                  onPublished={() => setFeedRefreshKey((key) => key + 1)}
-                />
-              )}
-            </SchoolAuthGate>
-          </Suspense>
+      {/* Учитель и админ портфолио не ведут, но ленту школы видят */}
+      {!isStudent && (
+        <div className="mt-10">
+          <ButtonLink href="/leaderboard" variant="secondary">
+            Открыть рейтинг школы
+          </ButtonLink>
         </div>
-      </div>
+      )}
     </div>
   );
 }
