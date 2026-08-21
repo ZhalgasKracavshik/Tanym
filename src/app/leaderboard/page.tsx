@@ -18,6 +18,7 @@ import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
 import { useOwnStreakPoints, useSchoolLeaderboard } from '@/lib/supabase/leaderboard';
 import { portfolioPoints, usePortfolio } from '@/components/Portfolio';
 import { Icon } from '@/components/Icon';
+import { Avatar } from '@/components/Avatar';
 import { Badge, ButtonLink, EmptyState, Panel, Skeleton } from '@/components/ui';
 
 /**
@@ -142,22 +143,27 @@ export default function LeaderboardPage() {
     );
   }
 
+  /*
+    Ученик определяется по школьному аккаунту, а не по локальному профилю.
+    Раньше проверялся state.profile, и вошедший ученик, не проходивший
+    онбординг в этом браузере, просто не попадал в рейтинг — хотя его
+    баллы за достижения уже лежали в базе.
+  */
   const profile = state.profile;
-  const isStudent = profile !== null && profile.role === 'student';
+  const isStudent = schoolProfile?.role === 'student';
   const summary = summarize(state);
 
   // Строка текущего пользователя собирается из его реального прогресса,
   // а не хранится в данных: очки и темы считает движок персонализации.
   const me: LeaderboardEntry | null =
-    profile && isStudent
+    schoolProfile && isStudent
       ? {
-          // Реальный вошедший ученик получает свой Supabase id — тогда его
-          // строка из базы (может ещё не успеть обновиться за 4 секунды
-          // ProgressSync) не задвоится со свежей, посчитанной прямо сейчас.
-          // Гость без входа получает локальный id — сравнивать её не с чем.
-          id: schoolProfile?.id ?? profile.id,
-          name: profile.name,
-          grade: profile.grade,
+          // Свой Supabase id — тогда строка из базы (может ещё не успеть
+          // обновиться за 4 секунды ProgressSync) не задвоится со свежей,
+          // посчитанной прямо сейчас.
+          id: schoolProfile.id,
+          name: schoolProfile.name,
+          grade: (schoolProfile.grade ?? profile?.grade ?? 0) as LeaderboardEntry['grade'],
           // Свои баллы складываются из тех же трёх источников, что и у
           // остальных строк (задания + подтверждённые достижения + бонусы
           // за серии), иначе собственное место считалось бы по другим
@@ -238,6 +244,57 @@ export default function LeaderboardPage() {
         Прокручивается вбок отдельно от страницы — иначе на телефоне пять
         колонок растянули бы весь макет.
       */}
+      {/*
+        Подиум для первой тройки.
+
+        Таблица одинаковых строк не отличает победителя от восьмого места:
+        разница только в цифре слева, и взгляд её не выхватывает. Подиум
+        делает первую тройку событием, ради которого в рейтинг и заходят.
+        Колонки намеренно разной высоты — порядок читается формой, а не
+        только числом.
+
+        Показывается, только если в рейтинге есть кого показывать: подиум
+        с одним человеком выглядит насмешкой.
+      */}
+      {rows.length >= 3 && (
+        <div className="mt-10 grid grid-cols-3 items-end gap-2 sm:gap-4">
+          {[rows[1], rows[0], rows[2]].map((entry) => {
+            const isWinner = entry.rank === 1;
+            const height = entry.rank === 1 ? 'h-28 sm:h-36' : entry.rank === 2 ? 'h-20 sm:h-28' : 'h-16 sm:h-24';
+            const tone =
+              entry.rank === 1
+                ? 'var(--gradient-brand)'
+                : entry.rank === 2
+                  ? 'linear-gradient(135deg, #d3e0e8, #a8bcc8)'
+                  : 'linear-gradient(135deg, #f6c0a8, #e57545)';
+
+            return (
+              <div key={entry.id} className="flex flex-col items-center">
+                <Avatar
+                  name={visibleName(entry)}
+                  colorId={entry.anonymous ? 'slate' : undefined}
+                  size={isWinner ? 64 : 52}
+                  className={isWinner ? 'ring-2 ring-accent-400 ring-offset-2' : ''}
+                />
+                <p className="mt-2 line-clamp-1 max-w-full text-center text-xs font-bold text-ink-900 sm:text-sm">
+                  {visibleName(entry)}
+                </p>
+                <p className="text-xs font-semibold tabular-nums text-brand-600">{entry.points}</p>
+
+                <div
+                  className={`mt-2 flex w-full items-start justify-center rounded-t-[var(--radius-control)] pt-3 ${height}`}
+                  style={{ background: tone }}
+                >
+                  <span className="text-lg font-bold tabular-nums text-white drop-shadow">
+                    {entry.rank}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       <Panel className="mt-10 overflow-x-auto">
         <table className="w-full min-w-[36rem] border-collapse text-sm">
           <thead>
