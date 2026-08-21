@@ -9,6 +9,7 @@
  * И формулировка честная: скрывается имя, а не участие.
  */
 
+import { useState } from 'react';
 import { pseudonym, rankEntries } from '@/lib/leaderboard';
 import type { LeaderboardEntry } from '@/lib/leaderboard';
 import { summarize } from '@/lib/personalization';
@@ -140,6 +141,7 @@ const TIER_STYLE: Record<LevelTier, string> = {
 };
 
 export default function LeaderboardPage() {
+  const [visibleCount, setVisibleCount] = useState(10);
   const { state, hydrated, setLeaderboardAnonymous } = useStore();
   const { profile: schoolProfile } = useSchoolAuth();
   const realEntries = useSchoolLeaderboard(schoolProfile?.id ?? null);
@@ -197,6 +199,17 @@ export default function LeaderboardPage() {
       : null;
 
   const rows = rankEntries(me ? [...realEntries, me] : realEntries);
+
+  /*
+    Список показывается порциями.
+
+    Школа — это сотни строк, и вываливать их разом значит сделать страницу
+    длиной в лифт: своё место всё равно ищут через выделенную строку, а
+    остальное листают. Порция в десять — столько, сколько помещается на
+    экран, не заставляя прокручивать ради следующей.
+  */
+  const visibleRows = rows.slice(0, visibleCount);
+  const hasMore = rows.length > visibleRows.length;
 
   /** Что видят остальные: настоящее имя или псевдоним. */
   const visibleName = (entry: LeaderboardEntry): string =>
@@ -338,7 +351,7 @@ export default function LeaderboardPage() {
             </tr>
           </thead>
           <tbody>
-            {rows.map((entry) => {
+            {visibleRows.map((entry) => {
               const medalTone = MEDAL_TONE[entry.rank];
 
               return (
@@ -364,7 +377,14 @@ export default function LeaderboardPage() {
                           : 'font-bold text-ink-900'
                       }`}
                     >
-                      {medalTone && <Icon name="medal" size={18} className={medalTone} />}
+                      {/* У первого места корона, у второго и третьего медаль:
+                          отличать лидера от призёров одинаковым значком
+                          значит не отличать их вовсе. */}
+                      {entry.rank === 1 ? (
+                        <Icon name="crown" size={19} className={medalTone} />
+                      ) : (
+                        medalTone && <Icon name="medal" size={18} className={medalTone} />
+                      )}
                       {entry.rank}
                     </span>
                   </td>
@@ -435,6 +455,17 @@ export default function LeaderboardPage() {
           </tbody>
         </table>
       </Panel>
+
+      {hasMore && (
+        <div className="mt-4 flex justify-center">
+          <button
+            onClick={() => setVisibleCount((count) => count + 10)}
+            className="rounded-[var(--radius-control)] border border-ink-200 bg-white px-5 py-2.5 text-sm font-semibold text-ink-600 transition-all duration-150 hover:border-brand-300 hover:text-brand-600 focus-visible:ring-2 focus-visible:ring-brand-500"
+          >
+            Показать ещё 10 · осталось {rows.length - visibleRows.length}
+          </button>
+        </div>
+      )}
 
       {/*
         Всё, что не таблица, ушло вниз в отдельную область: переключатель

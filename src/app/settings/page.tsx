@@ -26,14 +26,28 @@ import { Icon } from '@/components/Icon';
 import { PasswordField, SubmitButton } from '@/components/auth-ui';
 import { Alert, Button, ButtonLink, Card, Kicker, Skeleton } from '@/components/ui';
 
+/** Языки интерфейса — те же три, что и в переключателе меню. */
+const LANGUAGE_OPTIONS: { id: 'ru' | 'kk' | 'en'; title: string }[] = [
+  { id: 'ru', title: 'Русский' },
+  { id: 'kk', title: 'Қазақша' },
+  { id: 'en', title: 'English' },
+];
+
 const OPTION =
   'flex items-center gap-3 rounded-[var(--radius-control)] border-2 p-3 text-left transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500';
 
 export default function SettingsPage() {
-  const { state, hydrated, updateProfile, resetAll } = useStore();
+  const { state, hydrated, updateProfile, resetAll, setLanguage, setLeaderboardAnonymous } = useStore();
   const { profile: schoolProfile, schoolClass, email, signOut, updatePassword, refresh } = useSchoolAuth();
 
   const [saved, setSaved] = useState(false);
+  /*
+    null означает «поле не трогали» — тогда показываем текущее имя.
+    Синхронизировать состояние с профилем через эффект было бы хуже:
+    это лишний рендер и гонка, при которой набранный текст затирается
+    ответом сервера прямо под пальцами.
+  */
+  const [nameDraft, setNameDraft] = useState<string | null>(null);
   const [password, setPassword] = useState('');
   const [passwordStatus, setPasswordStatus] = useState<'idle' | 'loading' | 'success'>('idle');
   const [passwordError, setPasswordError] = useState<string | null>(null);
@@ -93,6 +107,7 @@ export default function SettingsPage() {
     setPassword('');
   }
 
+  const isStudent = schoolProfile?.role === 'student';
   const displayName = schoolProfile?.name ?? state.profile?.name ?? 'Ученик';
 
   return (
@@ -118,10 +133,48 @@ export default function SettingsPage() {
             emoji={schoolProfile?.avatar_emoji}
             size={64}
           />
-          <div>
-            <h2 className="font-bold text-ink-900">{displayName}</h2>
-            <p className="text-sm text-ink-400">{email ?? 'без аккаунта'}</p>
+          <div className="min-w-0 flex-1">
+            <h2 className="truncate font-bold text-ink-900">{displayName}</h2>
+            <p className="truncate text-sm text-ink-400">{email ?? 'без аккаунта'}</p>
           </div>
+        </div>
+
+        {/*
+          Имя редактируется здесь и нигде больше.
+
+          До этого сменить его было невозможно вообще: оно приходило из
+          Google при первом входе и оставалось навсегда. Между тем имя стоит
+          в рейтинге, в ленте и в портфолио — то есть ровно там, где его
+          видят одноклассники.
+        */}
+        <div className="mt-6">
+          <label className="block">
+            <span className="text-sm font-semibold text-ink-800">Имя</span>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <input
+                value={nameDraft ?? displayName}
+                onChange={(event) => setNameDraft(event.target.value)}
+                maxLength={60}
+                placeholder="Как вас зовут"
+                className="min-w-[12rem] flex-1 rounded-[var(--radius-control)] border border-ink-200 px-4 py-2.5 text-sm outline-none transition-colors duration-150 focus:border-brand-400 focus-visible:ring-2 focus-visible:ring-brand-500"
+              />
+              <Button
+                variant="secondary"
+                disabled={
+                  nameDraft === null ||
+                  nameDraft.trim().length < 2 ||
+                  nameDraft.trim() === displayName
+                }
+                onClick={() => {
+                  const value = (nameDraft ?? '').trim();
+                  save({ name: value }, { name: value });
+                  setNameDraft(null);
+                }}
+              >
+                Сохранить
+              </Button>
+            </div>
+          </label>
         </div>
 
         {/*
@@ -314,6 +367,60 @@ export default function SettingsPage() {
           </div>
         </Card>
       )}
+
+      {/*
+        Язык и приватность.
+
+        Переключатель языка есть в меню, но искать настройку в навигации
+        неочевидно: человек, которому понадобился казахский, идёт в
+        настройки. Анонимность в рейтинге жила на самой странице рейтинга —
+        это удобно в момент, когда увидел себя в списке, но найти её потом,
+        чтобы отключить, было негде.
+      */}
+      <Card className="mt-6 space-y-6">
+        <div>
+          <h2 className="font-bold text-ink-900">Язык интерфейса</h2>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {LANGUAGE_OPTIONS.map((option) => (
+              <button
+                key={option.id}
+                onClick={() => setLanguage(option.id)}
+                aria-pressed={state.language === option.id}
+                className={`rounded-[var(--radius-control)] border px-4 py-2 text-sm font-semibold transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
+                  state.language === option.id
+                    ? 'border-brand-300 bg-brand-50 text-brand-700'
+                    : 'border-ink-200 bg-white text-ink-500 hover:border-brand-200 hover:text-brand-600'
+                }`}
+              >
+                {option.title}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {isStudent && (
+          <div className="border-t border-ink-100 pt-6">
+            <h2 className="font-bold text-ink-900">Приватность</h2>
+            <label className="mt-3 flex cursor-pointer items-start gap-3">
+              <input
+                type="checkbox"
+                checked={state.leaderboardAnonymous}
+                onChange={(event) => setLeaderboardAnonymous(event.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--color-brand-500)]"
+              />
+              <span>
+                <span className="block text-sm font-semibold text-ink-800">
+                  Скрыть моё имя в рейтинге
+                </span>
+                <span className="mt-1 block text-xs text-ink-500">
+                  Одноклассники увидят псевдоним. Баллы продолжают начисляться, место
+                  сохраняется, из рейтинга вы не выпадаете.
+                </span>
+              </span>
+            </label>
+          </div>
+        )}
+      </Card>
 
       {/* Выход и сброс */}
       <Card className="mt-6">
