@@ -242,24 +242,24 @@ export default function HomePage() {
         />
 
         <div className="mx-auto max-w-6xl px-6 py-20 text-center sm:py-28">
-          <Reveal>
+          <Reveal immediate>
             <span className="inline-flex items-center gap-2 rounded-[var(--radius-pill)] border border-brand-200 bg-brand-50/80 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-brand-700 backdrop-blur">
               <Icon name="sparkles" size={14} />
               {t.kicker}
             </span>
           </Reveal>
 
-          <Reveal delay={0.06}>
+          <Reveal immediate delay={0.06}>
             <h1 className="mx-auto mt-7 max-w-4xl text-[2.6rem] font-semibold leading-[1.05] tracking-tight text-ink-900 sm:text-6xl">
               {t.heroTitle}
             </h1>
           </Reveal>
 
-          <Reveal delay={0.12}>
+          <Reveal immediate delay={0.12}>
             <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-ink-500">{t.heroText}</p>
           </Reveal>
 
-          <Reveal delay={0.18}>
+          <Reveal immediate delay={0.18}>
             <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
               <PressLink
                 href="/onboarding"
@@ -285,7 +285,7 @@ export default function HomePage() {
             поэтому вместо него настоящий состав продукта: он проверяется за две
             секунды переходом в каталог.
           */}
-          <Reveal delay={0.24}>
+          <Reveal immediate delay={0.24}>
             <div className="mt-12">
               <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-ink-300">{t.proofLabel}</p>
               <div className="mt-4 flex flex-wrap items-center justify-center gap-2">

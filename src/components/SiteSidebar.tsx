@@ -23,6 +23,7 @@ import type { Dict } from '@/lib/i18n';
 import type { IconName } from './Icon';
 import { Icon } from './Icon';
 import { Logo, LogoMark } from './Logo';
+import { Avatar } from './Avatar';
 
 /**
  * Пункты, скрытые от роли.
@@ -192,20 +193,35 @@ export function SiteSidebar() {
     </div>
   );
 
-  const profileRow = hydrated && profile && (
-    <Link
-      href="/profile"
-      className="flex items-center gap-2 rounded-xl border border-ink-200 py-2 pl-2 pr-3 outline-none transition-all duration-150 hover:border-brand-300 hover:bg-ink-50 focus-visible:ring-2 focus-visible:ring-brand-500"
-      title={t.settings}
-    >
-      <span
-        aria-hidden
-        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent-100 text-xs font-bold text-accent-700"
+  /*
+    Строка пользователя: аватар ведёт в профиль, шестерёнка — в настройки.
+    Раньше здесь была одна ссылка на /profile, и выход был спрятан внутри
+    ворот публикации на случайных страницах — то есть найти его можно было
+    только наткнувшись. Теперь он там, где его ищут: рядом со своим именем.
+  */
+  const displayName = schoolProfile?.name ?? profile?.name ?? null;
+
+  const profileRow = displayName && (
+    <div className="flex items-center gap-1.5">
+      <Link
+        href="/profile"
+        className="flex min-w-0 flex-1 items-center gap-2 rounded-[var(--radius-control)] border border-ink-200 py-2 pl-2 pr-3 outline-none transition-all duration-150 hover:border-brand-300 hover:bg-ink-50 focus-visible:ring-2 focus-visible:ring-brand-500"
       >
-        {profile.name.trim().charAt(0).toUpperCase() || '?'}
-      </span>
-      <span className="truncate text-sm font-semibold text-ink-700">{profile.name.split(' ')[0]}</span>
-    </Link>
+        <Avatar name={displayName} colorId={schoolProfile?.avatar_color} size={32} />
+        <span className="truncate text-sm font-semibold text-ink-700">
+          {displayName.split(' ')[0]}
+        </span>
+      </Link>
+
+      <Link
+        href="/settings"
+        title={t.settings}
+        aria-label={t.settings}
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-control)] border border-ink-200 text-ink-400 outline-none transition-all duration-150 hover:border-brand-300 hover:text-brand-600 focus-visible:ring-2 focus-visible:ring-brand-500"
+      >
+        <Icon name="settings" size={17} />
+      </Link>
+    </div>
   );
 
   return (

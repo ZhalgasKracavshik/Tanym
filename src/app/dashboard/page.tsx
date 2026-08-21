@@ -267,7 +267,7 @@ export default function DashboardPage() {
         со списком. Обратный отсчёт до экзамена вынесен сюда же: это причина,
         по которой он вообще открывает приложение.
       */}
-      <Reveal>
+      <Reveal immediate>
         <div
           className="relative overflow-hidden rounded-[var(--radius-card)] p-8 text-white shadow-[var(--shadow-float)] sm:p-10"
           style={{ background: 'var(--gradient-ink)' }}

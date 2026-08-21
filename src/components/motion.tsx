@@ -48,19 +48,33 @@ export function Reveal({
   children,
   delay = 0,
   className = '',
+  immediate = false,
 }: {
   children: ReactNode;
   delay?: number;
   className?: string;
+  /**
+   * Проигрывать сразу при монтировании, не дожидаясь попадания в кадр.
+   *
+   * Для блока, который и так виден при открытии страницы (шапка профиля,
+   * первый экран), ожидание IntersectionObserver — лишний риск: если
+   * наблюдатель почему-то не сработает, содержимое останется прозрачным
+   * навсегда. Появление ниже по странице такой цены не имеет, там
+   * whileInView уместен.
+   */
+  immediate?: boolean;
 }) {
   const reduced = useReducedMotion();
+  const from = reduced ? { opacity: 0 } : { opacity: 0, y: 24 };
+  const to = { opacity: 1, y: 0 };
 
   return (
     <motion.div
       className={className}
-      initial={reduced ? { opacity: 0 } : { opacity: 0, y: 24 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.2 }}
+      initial={from}
+      {...(immediate
+        ? { animate: to }
+        : { whileInView: to, viewport: { once: true, amount: 0.2 } })}
       transition={{ ...EASE_OUT, delay }}
     >
       {children}
