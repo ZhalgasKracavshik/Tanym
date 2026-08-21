@@ -22,6 +22,7 @@ import { Icon } from '@/components/Icon';
 import { Badge, Card, EmptyState, Kicker } from '@/components/ui';
 import { createClient } from '@/lib/supabase/client';
 import { SchoolAuthGate } from '@/components/SchoolAuthGate';
+import { GatedSection } from '@/components/GatedSection';
 import { ListingPublishForm } from '@/components/ListingPublishForm';
 
 interface PublishedListingRow {
@@ -238,6 +239,8 @@ export default function MarketplacePage() {
           уходит на модерацию в Supabase, а не сразу в список. */}
       <div className="mt-4">
         <Suspense fallback={null}>
+          {/* Гостя сюда не пустит middleware, а админ публикует ниже,
+              сразу проверенным объявлением — здесь его форма не нужна. */}
           <SchoolAuthGate requireRole={['student', 'teacher']} language={state.language}>
             {(profile) => <PublishForm language={state.language} profile={profile} />}
           </SchoolAuthGate>
@@ -341,22 +344,19 @@ export default function MarketplacePage() {
       {/* Публикация сразу-проверенных объявлений — только роль admin. Форма выше
           (PublishForm) остаётся отдельным путём для учеников и учителей: их
           объявления сначала идут на модерацию через /admin, а не публикуются сразу. */}
-      <div className="mt-16">
-        <Kicker>Опубликовать проверенное объявление</Kicker>
-        <div className="mt-4">
-          <Suspense fallback={null}>
-            <SchoolAuthGate requireRole="admin" language={state.language}>
-              {(profile) => (
-                <ListingPublishForm
-                  language={state.language}
-                  adminId={profile.id}
-                  onPublished={() => setPublishRefreshKey((key) => key + 1)}
-                />
-              )}
-            </SchoolAuthGate>
-          </Suspense>
-        </div>
-      </div>
+      <GatedSection
+        title="Опубликовать проверенное объявление"
+        requireRole="admin"
+        language={state.language}
+      >
+        {(profile) => (
+          <ListingPublishForm
+            language={state.language}
+            adminId={profile.id}
+            onPublished={() => setPublishRefreshKey((key) => key + 1)}
+          />
+        )}
+      </GatedSection>
     </div>
   );
 }

@@ -202,30 +202,24 @@ export function SchoolAuthGate({ requireRole, language, children }: SchoolAuthGa
     );
   }
 
-  const allowedRoles = Array.isArray(requireRole) ? requireRole : [requireRole];
-  if (!allowedRoles.includes(profile.role)) {
-    return (
-      <div className="rounded-xl border border-ink-200 bg-ink-50 p-5">
-        <p className="text-sm text-ink-500">{t.wrongRole(allowedRoles.join(' / '))}</p>
-      </div>
-    );
-  }
+  /*
+    Нет прав — раздела просто нет.
 
-  return (
-    <div>
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-sm text-ink-500">
-        <span>
-          {t.signedInAs(profile.name)}
-          {schoolClass &&
-            (profile.role === 'teacher'
-              ? ` · ${t.classCodeForStudents}: ${schoolClass.code}`
-              : ` · ${t.inClass(schoolClass.name)}`)}
-        </span>
-        <button onClick={signOut} className="font-semibold text-brand-600 hover:underline">
-          {t.signOut}
-        </button>
-      </div>
-      {children(profile)}
-    </div>
-  );
+    Раньше здесь выводилось «этот раздел только для роли admin». Такое
+    сообщение бесполезно вдвойне: ученик всё равно не может стать
+    админом, а на экране остаётся заголовок «Опубликовать объявление»
+    над серой плашкой — то есть обещание действия, которого не будет.
+    Пустой раздел честнее: не показываем того, чего человек не может.
+  */
+  const allowedRoles = Array.isArray(requireRole) ? requireRole : [requireRole];
+  if (!allowedRoles.includes(profile.role)) return null;
+
+  /*
+    Никакой строки «Вы вошли как …» с кнопкой выхода здесь больше нет.
+    Выход живёт в настройках и в боковом меню, а на странице публикации
+    он оказывался в случайном месте посреди контента и сбивал с толку.
+    Класс и код класса тоже видны в настройках — дублировать их над
+    каждой формой незачем.
+  */
+  return <>{children(profile)}</>;
 }

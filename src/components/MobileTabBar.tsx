@@ -100,13 +100,18 @@ export function MobileTabBar({ onMore }: { onMore: () => void }) {
     <nav
       aria-label={t.more}
       /*
-        pb с safe-area: на айфонах внизу живёт системная полоса, и без
-        отступа последняя иконка оказывается ровно под ней.
+        Плавающая пилюля, а не полоса во всю ширину.
+
+        Полоса прибивает интерфейс к нижнему краю и на светлом фоне
+        сливается с контентом. Отдельная скруглённая панель с тенью
+        читается как элемент поверх страницы, а не как её край.
+        Отступ снизу учитывает системную полосу айфона.
       */
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-ink-200 bg-white/95 backdrop-blur md:hidden"
-      style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+      className="fixed inset-x-0 bottom-0 z-40 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:hidden"
     >
-      <ul className="flex items-stretch">
+      <ul
+        className="mx-auto flex max-w-md items-stretch rounded-[var(--radius-pill)] border border-ink-200/70 bg-white/90 p-1.5 shadow-[var(--shadow-float)] backdrop-blur-xl"
+      >
         {tabs.map((tab) => {
           const active = pathname === tab.href || pathname.startsWith(`${tab.href}/`);
           return (
@@ -114,11 +119,11 @@ export function MobileTabBar({ onMore }: { onMore: () => void }) {
               <Link
                 href={tab.href}
                 aria-current={active ? 'page' : undefined}
-                className="flex flex-col items-center gap-1 px-1 py-2.5 outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                className="flex flex-col items-center gap-1 rounded-[var(--radius-pill)] px-1 py-2 outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
               >
                 <span
-                  className={`flex h-8 w-full max-w-[4rem] items-center justify-center rounded-[var(--radius-pill)] transition-all duration-200 ${
-                    active ? 'text-white' : 'text-ink-400'
+                  className={`flex h-9 w-full max-w-[3.5rem] items-center justify-center rounded-[var(--radius-pill)] transition-all duration-200 ${
+                    active ? 'text-white shadow-[var(--shadow-glow)]' : 'text-ink-400'
                   }`}
                   style={active ? { background: 'var(--gradient-brand)' } : undefined}
                 >
@@ -141,9 +146,9 @@ export function MobileTabBar({ onMore }: { onMore: () => void }) {
         <li className="flex-1">
           <button
             onClick={onMore}
-            className="flex w-full flex-col items-center gap-1 px-1 py-2.5 outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            className="flex w-full flex-col items-center gap-1 rounded-[var(--radius-pill)] px-1 py-2 outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
           >
-            <span className="flex h-8 w-full max-w-[4rem] items-center justify-center rounded-[var(--radius-pill)] text-ink-400">
+            <span className="flex h-9 w-full max-w-[3.5rem] items-center justify-center rounded-[var(--radius-pill)] text-ink-400">
               <Icon name="menu" size={19} />
             </span>
             <span className="text-[10px] font-semibold leading-none text-ink-400">{t.more}</span>

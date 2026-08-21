@@ -322,7 +322,7 @@ export default function ChatPage() {
         опускается ниже — панели там нет.
       */}
       <div className="sticky bottom-24 z-10 mt-8 md:bottom-6">
-        <div className="flex items-end gap-2 rounded-[var(--radius-card)] border border-ink-200 bg-white/95 p-2.5 shadow-[var(--shadow-float)] backdrop-blur transition-all duration-200 focus-within:border-brand-300">
+        <div className="flex items-end gap-2 rounded-[var(--radius-card)] border border-white/10 p-2.5 shadow-[var(--shadow-float)] transition-all duration-200 focus-within:border-white/25" style={{ background: 'var(--gradient-ink)' }}>
           <textarea
             value={question}
             onChange={(event) => setQuestion(event.target.value)}
@@ -336,7 +336,7 @@ export default function ChatPage() {
             rows={1}
             disabled={loading}
             placeholder={t.placeholder}
-            className="max-h-32 flex-1 resize-none bg-transparent px-3 py-2.5 outline-none"
+            className="max-h-32 flex-1 resize-none bg-transparent px-3 py-2.5 text-white outline-none placeholder:text-white/40"
           />
           <PressButton
             onClick={() => send(question)}

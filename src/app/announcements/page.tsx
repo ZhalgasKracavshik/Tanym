@@ -22,7 +22,7 @@ import { useStore } from '@/components/StoreProvider';
 import { Icon } from '@/components/Icon';
 import { Badge, EmptyState, Kicker, RailRow, Skeleton } from '@/components/ui';
 import { usePublishedAnnouncements } from '@/lib/supabase/announcements';
-import { SchoolAuthGate } from '@/components/SchoolAuthGate';
+import { GatedSection } from '@/components/GatedSection';
 import { AnnouncementPublishForm } from '@/components/AnnouncementPublishForm';
 
 const TEXT: Dict<{
@@ -348,22 +348,19 @@ export default function AnnouncementsPage() {
 
       {/* Объявление — официальный голос школы, поэтому публикует только admin,
           не каждый учитель. */}
-      <div className="mt-16">
-        <Kicker>Опубликовать объявление</Kicker>
-        <div className="mt-4">
-          <Suspense fallback={null}>
-            <SchoolAuthGate requireRole="admin" language={state.language}>
-              {(profile) => (
+      <GatedSection
+        title="Опубликовать объявление"
+        requireRole="admin"
+        language={state.language}
+      >
+        {(profile) => (
                 <AnnouncementPublishForm
                   language={state.language}
                   adminId={profile.id}
                   onPublished={() => setFeedRefreshKey((key) => key + 1)}
                 />
               )}
-            </SchoolAuthGate>
-          </Suspense>
-        </div>
-      </div>
+      </GatedSection>
     </div>
   );
 }

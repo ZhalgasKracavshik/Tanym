@@ -12,7 +12,7 @@ import { Suspense, useState } from 'react';
 import type { Dict } from '@/lib/i18n';
 import { useStore } from '@/components/StoreProvider';
 import { Kicker } from '@/components/ui';
-import { SchoolAuthGate } from '@/components/SchoolAuthGate';
+import { GatedSection } from '@/components/GatedSection';
 import { ArchiveMaterialPublishForm } from '@/components/ArchiveMaterialPublishForm';
 import { ArchiveMaterialFeed } from '@/components/ArchiveMaterialFeed';
 import { ArchiveTabs } from '../ArchiveTabs';
@@ -67,22 +67,20 @@ export default function CommunityArchivePage() {
         </div>
       </div>
 
-      <div className="mt-10 border-t border-ink-200 pt-10">
-        <Kicker>{t.publishTitle}</Kicker>
-        <div className="mt-4">
-          <Suspense fallback={null}>
-            <SchoolAuthGate requireRole={['teacher', 'admin']} language={state.language}>
-              {(profile) => (
-                <ArchiveMaterialPublishForm
-                  language={state.language}
-                  userId={profile.id}
-                  onPublished={() => setRefreshKey((key) => key + 1)}
-                />
-              )}
-            </SchoolAuthGate>
-          </Suspense>
-        </div>
-      </div>
+      <GatedSection
+        title={t.publishTitle}
+        requireRole={['teacher', 'admin']}
+        language={state.language}
+        className="mt-10 border-t border-ink-200 pt-10"
+      >
+        {(profile) => (
+          <ArchiveMaterialPublishForm
+            language={state.language}
+            userId={profile.id}
+            onPublished={() => setRefreshKey((key) => key + 1)}
+          />
+        )}
+      </GatedSection>
     </div>
   );
 }

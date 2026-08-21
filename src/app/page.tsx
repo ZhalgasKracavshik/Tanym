@@ -40,7 +40,18 @@ const TEXT: Dict<{
   teacherCta: string;
   partnersTitle: string;
   partnersText: string;
-  partners: { href: string; icon: IconName; title: string; text: string; cta: string }[];
+  partners: {
+    href: string;
+    icon: IconName;
+    title: string;
+    text: string;
+    cta: string;
+    badge: string;
+    /** Заливка карточки, цвет пятна и рамки — свои у каждой аудитории. */
+    tint: string;
+    glow: string;
+    border: string;
+  }[];
   finalTitle: string;
   finalText: string;
 }> = {
@@ -95,6 +106,10 @@ const TEXT: Dict<{
     partners: [
       {
         href: '/for-schools',
+        badge: 'Пилот на один класс',
+        tint: 'linear-gradient(150deg, #fff6ec 0%, #ffeddc 100%)',
+        glow: '#e57545',
+        border: '#f6c0a8',
         icon: 'school',
         title: 'Для школ',
         text: 'Карта пробелов по каждому классу, свои материалы учителей и портфолио учеников в одном месте.',
@@ -102,6 +117,10 @@ const TEXT: Dict<{
       },
       {
         href: '/for-centers',
+        badge: 'Размещение с проверкой',
+        tint: 'linear-gradient(150deg, #f2f7fb 0%, #e6eff7 100%)',
+        glow: '#4d6b85',
+        border: '#c9dcea',
         icon: 'building',
         title: 'Для учебных центров',
         text: 'Размещение в разделе «Возможности» с проверкой школой — ученик приходит, уже зная свой уровень.',
@@ -168,6 +187,10 @@ const TEXT: Dict<{
     partners: [
       {
         href: '/for-schools',
+        badge: 'Бір сыныпқа пилот',
+        tint: 'linear-gradient(150deg, #fff6ec 0%, #ffeddc 100%)',
+        glow: '#e57545',
+        border: '#f6c0a8',
         icon: 'school',
         title: 'Мектептерге',
         text: 'Әр сынып бойынша олқылық картасы, мұғалімдердің өз материалдары және оқушы портфолиосы бір жерде.',
@@ -175,6 +198,10 @@ const TEXT: Dict<{
       },
       {
         href: '/for-centers',
+        badge: 'Тексерумен орналастыру',
+        tint: 'linear-gradient(150deg, #f2f7fb 0%, #e6eff7 100%)',
+        glow: '#4d6b85',
+        border: '#c9dcea',
         icon: 'building',
         title: 'Оқу орталықтарына',
         text: '«Мүмкіндіктер» бөлімінде мектеп тексеруімен орналастыру — оқушы деңгейін біліп келеді.',
@@ -238,6 +265,10 @@ const TEXT: Dict<{
     partners: [
       {
         href: '/for-schools',
+        badge: 'Pilot with one class',
+        tint: 'linear-gradient(150deg, #fff6ec 0%, #ffeddc 100%)',
+        glow: '#e57545',
+        border: '#f6c0a8',
         icon: 'school',
         title: 'For schools',
         text: 'A gap map for every class, teachers’ own materials and student portfolios in one place.',
@@ -245,6 +276,10 @@ const TEXT: Dict<{
       },
       {
         href: '/for-centers',
+        badge: 'Vetted listing',
+        tint: 'linear-gradient(150deg, #f2f7fb 0%, #e6eff7 100%)',
+        glow: '#4d6b85',
+        border: '#c9dcea',
         icon: 'building',
         title: 'For learning centres',
         text: 'A listing under Opportunities, vetted by the school — students arrive already knowing their level.',
@@ -561,16 +596,34 @@ export default function HomePage() {
             {t.partners.map((partner) => (
               <StaggerItem key={partner.href}>
                 <Link href={partner.href} className="block h-full">
-                  <LiftCard className="group h-full rounded-[var(--radius-card)] border border-ink-200/80 bg-white p-8 shadow-[var(--shadow-rest)]">
+                  {/*
+                    Карточки партнёров окрашены, а не белые как всё остальное.
+                    Это единственный блок на странице, обращённый не к ученику,
+                    и цвет — самый дешёвый способ показать смену адресата:
+                    пролистывающий мимо школьник видит, что раздел не про него.
+                  */}
+                  <LiftCard
+                    className="group relative h-full overflow-hidden rounded-[var(--radius-card)] border p-8 shadow-[var(--shadow-rest)]"
+                    style={{ background: partner.tint, borderColor: partner.border }}
+                  >
                     <span
-                      className="flex h-12 w-12 items-center justify-center rounded-[var(--radius-control)] text-white"
-                      style={{ background: 'var(--gradient-brand)' }}
+                      aria-hidden
+                      className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full opacity-60 blur-2xl"
+                      style={{ background: partner.glow }}
+                    />
+                    <span className="relative flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-ink-500">
+                      <span className="h-1.5 w-1.5 rounded-full" style={{ background: partner.glow }} />
+                      {partner.badge}
+                    </span>
+                    <span
+                      className="relative mt-5 flex h-12 w-12 items-center justify-center rounded-[var(--radius-control)] text-white"
+                      style={{ background: partner.glow }}
                     >
                       <Icon name={partner.icon} size={22} />
                     </span>
-                    <h3 className="mt-5 text-xl font-bold text-ink-900">{partner.title}</h3>
-                    <p className="mt-2 text-sm leading-relaxed text-ink-500">{partner.text}</p>
-                    <span className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-brand-600">
+                    <h3 className="relative mt-5 text-xl font-bold text-ink-900">{partner.title}</h3>
+                    <p className="relative mt-2 text-sm leading-relaxed text-ink-600">{partner.text}</p>
+                    <span className="relative mt-6 inline-flex items-center gap-2 text-sm font-bold text-ink-900">
                       {partner.cta}
                       <Icon name="arrowRight" size={16} />
                     </span>

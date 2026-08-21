@@ -15,7 +15,7 @@ import Link from 'next/link';
 import { AnimatePresence } from 'framer-motion';
 import { Icon } from './Icon';
 import { Logo } from './Logo';
-import { PressButton, Reveal, SuccessCheck, Spinner, motion } from './motion';
+import { EASE_OUT, PressButton, Reveal, SuccessCheck, Spinner, motion } from './motion';
 
 /* ------------------------------------------------------------------ */
 /*  Оболочка                                                           */
@@ -33,31 +33,87 @@ export function AuthShell({
   footer?: ReactNode;
 }) {
   return (
-    <div className="relative isolate flex min-h-[calc(100vh-3.5rem)] items-center justify-center overflow-hidden px-4 py-14">
-      {/* То же тёплое свечение, что на первом экране лендинга: вход должен
-          ощущаться частью продукта, а не служебной страницей. */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 -top-32 -z-10 h-[30rem] opacity-70 blur-3xl"
-        style={{
-          background:
-            'radial-gradient(40% 50% at 50% 40%, rgb(229 117 69 / 0.24) 0%, rgb(253 243 238 / 0.5) 45%, transparent 72%)',
-        }}
-      />
+    <div className="flex min-h-screen">
+      {/* Левая половина: сама форма. На телефоне занимает весь экран. */}
+      <div className="flex w-full flex-col justify-center px-6 py-12 sm:px-12 lg:w-1/2 lg:px-16">
+        <Reveal immediate className="mx-auto w-full max-w-md">
+          <Link href="/" className="inline-block rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-brand-500">
+            <Logo size={28} />
+          </Link>
 
-      <Reveal className="w-full max-w-md">
-        <div className="rounded-[var(--radius-card)] border border-ink-200/80 bg-white p-8 shadow-[var(--shadow-float)] sm:p-10">
-          <div className="flex justify-center">
-            <Logo />
-          </div>
-          <h1 className="mt-7 text-center text-2xl font-semibold text-ink-900">{title}</h1>
-          <p className="mt-2 text-center text-sm leading-relaxed text-ink-500">{subtitle}</p>
+          <h1 className="mt-10 text-[2rem] font-semibold leading-tight tracking-tight text-ink-900">
+            {title}
+          </h1>
+          <p className="mt-2 text-[15px] leading-relaxed text-ink-500">{subtitle}</p>
 
           <div className="mt-8">{children}</div>
-        </div>
 
-        {footer && <div className="mt-6 text-center text-sm text-ink-500">{footer}</div>}
-      </Reveal>
+          {footer && <div className="mt-8 text-sm text-ink-500">{footer}</div>}
+        </Reveal>
+      </div>
+
+      {/*
+        Правая половина: цветное полотно с отзывом.
+
+        Смысл не в украшении. Экран входа — единственное место, где человек
+        ничего не получает, только отдаёт данные, и пустое поле рядом с формой
+        усиливает это ощущение. Живая цветная поверхность и одна фраза от
+        учителя дают понять, куда он входит.
+
+        Картинки нет: полотно собрано из наложенных градиентов. Так оно
+        весит ноль байт, мгновенно рисуется и не зависит от внешнего хостинга.
+        На экранах уже ноутбука скрывается целиком — на телефоне форма важнее.
+      */}
+      <div className="relative hidden overflow-hidden lg:block lg:w-1/2">
+        <div
+          aria-hidden
+          className="absolute inset-0"
+          style={{
+            background:
+              'radial-gradient(90% 70% at 15% 20%, #f6c0a8 0%, transparent 55%),' +
+              'radial-gradient(80% 80% at 85% 15%, #6d4aa8 0%, transparent 60%),' +
+              'radial-gradient(70% 70% at 75% 85%, #d85f2e 0%, transparent 55%),' +
+              'linear-gradient(135deg, #24425c 0%, #4d1f10 100%)',
+          }}
+        />
+
+        {/* Мягкие полосы поверх: без них крупная заливка выглядит плоской */}
+        <div
+          aria-hidden
+          className="absolute inset-0 opacity-30 mix-blend-soft-light"
+          style={{
+            background:
+              'repeating-linear-gradient(115deg, rgb(255 255 255 / 0.35) 0px, transparent 60px, transparent 120px)',
+          }}
+        />
+
+        <div className="relative flex h-full items-end p-12">
+          <motion.blockquote
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ ...EASE_OUT, delay: 0.2 }}
+            className="max-w-md rounded-[var(--radius-card)] border border-white/20 bg-white/15 p-6 backdrop-blur-md"
+          >
+            <p className="text-lg leading-relaxed text-white">
+              «Раньше я узнавала о пробелах класса на контрольной. Теперь вижу их на неделю
+              раньше — и успеваю разобрать тему до неё.»
+            </p>
+            <footer className="mt-4 flex items-center gap-3">
+              <span
+                aria-hidden
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-white/25 text-sm font-bold text-white"
+              >
+                А
+              </span>
+              <span className="text-sm text-white/70">
+                Айгуль, учитель математики
+                <br />
+                школа-партнёр в Астане
+              </span>
+            </footer>
+          </motion.blockquote>
+        </div>
+      </div>
     </div>
   );
 }

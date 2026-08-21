@@ -17,7 +17,7 @@ import { useStore } from '@/components/StoreProvider';
 import { Icon } from '@/components/Icon';
 import { Badge, Button, Card, EmptyState, Kicker } from '@/components/ui';
 import { usePublishedEvents } from '@/lib/supabase/events';
-import { SchoolAuthGate } from '@/components/SchoolAuthGate';
+import { GatedSection } from '@/components/GatedSection';
 import { EventPublishForm } from '@/components/EventPublishForm';
 
 const TEXT: Dict<{
@@ -383,22 +383,19 @@ export default function EventsPage() {
 
       {/* Публикация доступна только роли admin — учителя сюда не допущены,
           в отличие от материалов архива. */}
-      <div className="mt-16">
-        <Kicker>Опубликовать событие</Kicker>
-        <div className="mt-4">
-          <Suspense fallback={null}>
-            <SchoolAuthGate requireRole="admin" language={state.language}>
-              {(profile) => (
+      <GatedSection
+        title="Опубликовать событие"
+        requireRole="admin"
+        language={state.language}
+      >
+        {(profile) => (
                 <EventPublishForm
                   language={state.language}
                   adminId={profile.id}
                   onPublished={() => setPublishRefreshKey((key) => key + 1)}
                 />
               )}
-            </SchoolAuthGate>
-          </Suspense>
-        </div>
-      </div>
+      </GatedSection>
     </div>
   );
 }
