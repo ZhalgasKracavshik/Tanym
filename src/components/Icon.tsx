@@ -63,6 +63,11 @@ export type IconName =
   | 'menu'
   | 'arrowRight'
   | 'settings'
+  | 'instagram'
+  | 'tiktok'
+  | 'whatsapp'
+  | 'telegram'
+  | 'link'
   | 'eye'
   | 'eyeOff'
   | 'lock'
@@ -324,6 +329,32 @@ const PATHS: Record<IconName, React.ReactNode> = {
   ),
   menu: <path d="M4 7h16M4 12h16M4 17h16" />,
   arrowRight: <path d="M5 12h14M13 6l6 6-6 6" />,
+  instagram: (
+    <>
+      <rect x="3" y="3" width="18" height="18" rx="5" />
+      <circle cx="12" cy="12" r="4" />
+      <circle cx="17" cy="7" r="1.2" />
+    </>
+  ),
+  tiktok: (
+    <>
+      <path d="M14 4v10.5a3.5 3.5 0 1 1-3.5-3.5" />
+      <path d="M14 4c.5 2.2 2.2 3.8 4.5 4" />
+    </>
+  ),
+  whatsapp: (
+    <>
+      <path d="M3.5 20.5 5 16.5a8 8 0 1 1 3 3l-4.5 1Z" />
+      <path d="M9 9.5c0 3 2.5 5.5 5.5 5.5.6 0 1-.5 1-1l-1.5-1-1 1c-1-.4-2.1-1.5-2.5-2.5l1-1-1-1.5c-.5 0-1 .4-1 1Z" />
+    </>
+  ),
+  telegram: <path d="M21 4 3 11l5 2 2 6 3-4 5 3 3-14Zm-13 9 10-6-7 8" />,
+  link: (
+    <>
+      <path d="M10 13.5a4 4 0 0 0 5.7 0l3-3a4 4 0 1 0-5.7-5.7l-1.5 1.5" />
+      <path d="M14 10.5a4 4 0 0 0-5.7 0l-3 3a4 4 0 1 0 5.7 5.7l1.5-1.5" />
+    </>
+  ),
   settings: (
     <>
       <circle cx="12" cy="12" r="3" />

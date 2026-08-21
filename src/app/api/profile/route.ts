@@ -13,6 +13,7 @@
 
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { parseSocialLinks } from '@/lib/social';
 import { getServerProfile } from '@/lib/supabase/serverProfile';
 
 function randomClassCode(): string {
@@ -56,6 +57,13 @@ export async function PATCH(request: Request) {
   if (typeof body.goal === 'string') patch.goal = body.goal;
   if (typeof body.targetDate === 'string' || body.targetDate === null) patch.target_date = body.targetDate;
   if (typeof body.avatarColor === 'string') patch.avatar_color = body.avatarColor;
+  /*
+    Ссылки чистим на сервере повторно, а не доверяем клиенту.
+    Форма уже проверяет адрес, но PATCH — обычный HTTP-запрос: его можно
+    отправить в обход интерфейса и положить в профиль javascript:-ссылку,
+    которая сработает у того, кто откроет этот профиль.
+  */
+  if (Array.isArray(body.socialLinks)) patch.social_links = parseSocialLinks(body.socialLinks);
 
   if (Object.keys(patch).length === 0) {
     return NextResponse.json({ error: 'nothing_to_update' }, { status: 400 });

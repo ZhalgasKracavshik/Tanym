@@ -20,6 +20,9 @@ import { rankEntries } from '@/lib/leaderboard';
 import { summarize } from '@/lib/personalization';
 import { AchievementForm, PortfolioGrid, portfolioPoints, usePortfolio } from '@/components/Portfolio';
 import { Avatar } from '@/components/Avatar';
+import { SocialLinks } from '@/components/SocialLinks';
+import { parseSocialLinks } from '@/lib/social';
+import type { SocialLink } from '@/lib/social';
 import { Icon } from '@/components/Icon';
 import type { IconName } from '@/components/Icon';
 import { Reveal } from '@/components/motion';
@@ -49,6 +52,14 @@ export default function ProfilePage() {
   const { profile: schoolProfile, schoolClass, loading } = useSchoolAuth();
 
   const [refreshKey, setRefreshKey] = useState(0);
+
+  /*
+    Ссылки держим в локальном состоянии и подменяем сразу при изменении,
+    не дожидаясь ответа сервера: добавление ссылки — мелкое действие,
+    и ждать сеть ради него незачем. Расхождение невозможно, потому что
+    источник правды один и тот же профиль.
+  */
+  const [socialDraft, setSocialDraft] = useState<SocialLink[] | null>(null);
   const achievements = usePortfolio(schoolProfile?.id ?? null, refreshKey);
   const streakPoints = useOwnStreakPoints(schoolProfile?.id ?? null);
   const others = useSchoolLeaderboard(schoolProfile?.id ?? null);
@@ -60,6 +71,20 @@ export default function ProfilePage() {
         <Skeleton className="h-64 w-full" />
       </div>
     );
+  }
+
+  const socialLinks = socialDraft ?? parseSocialLinks(schoolProfile?.social_links);
+
+  function saveSocialLinks(next: SocialLink[]) {
+    setSocialDraft(next);
+    fetch('/api/profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ socialLinks: next }),
+    }).catch(() => {
+      // Сеть отвалилась: ссылка осталась на экране, но не сохранилась.
+      // Ронять профиль из-за этого нельзя — человек просто повторит.
+    });
   }
 
   const summary = summarize(state);
@@ -131,6 +156,18 @@ export default function ProfilePage() {
           )}
         </div>
       </Reveal>
+
+      {/*
+        Контакты под шапкой.
+
+        Ученик оставляет их не ради красоты: репетиторство, командные
+        проекты и просьба помочь с темой начинаются с того, что человека
+        находят где-то ещё. Свои ссылки редактируются здесь же — заводить
+        ради трёх кнопок отдельный экран настроек не за чем.
+      */}
+      <div className="mt-6">
+        <SocialLinks links={socialLinks} editable onChange={saveSocialLinks} />
+      </div>
 
       {/* Портфолио — главное на странице */}
       {isStudent ? (
