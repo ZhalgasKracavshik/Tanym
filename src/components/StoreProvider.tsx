@@ -50,6 +50,7 @@ interface StoreValue {
   removeCustomTopic: (topicId: string) => void;
   cachePlan: (plan: CachedPlan) => void;
   appendChat: (message: ChatMessage) => void;
+  replaceChat: (messages: ChatMessage[]) => void;
   clearChat: () => void;
   resetAll: () => void;
 }
@@ -211,6 +212,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setState((previous) => ({ ...previous, chat: [...previous.chat, message] }));
   }, []);
 
+  /**
+   * Подставляет историю целиком.
+   *
+   * Нужен для чата: переписка теперь хранится на сервере, и при открытии
+   * страницы её надо поднять в состояние одним куском, а не по сообщению
+   * через appendChat — иначе локальные и серверные реплики задвоятся.
+   */
+  const replaceChat = useCallback((messages: ChatMessage[]) => {
+    setState((previous) => ({ ...previous, chat: messages }));
+  }, []);
+
   const clearChat = useCallback(() => {
     setState((previous) => ({ ...previous, chat: [] }));
   }, []);
@@ -241,6 +253,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       removeCustomTopic,
       cachePlan,
       appendChat,
+      replaceChat,
       clearChat,
       resetAll,
     }),
@@ -262,6 +275,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       removeCustomTopic,
       cachePlan,
       appendChat,
+      replaceChat,
       clearChat,
       resetAll,
     ],

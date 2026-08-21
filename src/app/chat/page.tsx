@@ -3,10 +3,14 @@
 /**
  * AI-наставник: свободные вопросы по школьной программе.
  *
- * История разговора хранится в том же localStorage, что и прогресс, поэтому
- * диалог переживает перезагрузку страницы. Модель получает контекст ученика
- * (класс, цель, предмет) — иначе она отвечала бы одинаково семикласснику
- * и выпускнику.
+ * История разговора хранится в Supabase и подтягивается при открытии:
+ * раньше она лежала в localStorage и терялась при смене браузера, хотя
+ * вопросы ученик задаёт с любого устройства одни и те же. Локальное
+ * состояние осталось живым представлением — экран рисуется мгновенно,
+ * запись в базу идёт фоном.
+ *
+ * Модель получает контекст ученика (класс, цель, предмет) — иначе она
+ * отвечала бы одинаково семикласснику и выпускнику.
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -14,7 +18,11 @@ import { getSubject } from '@/data';
 import type { ChatRequest, ChatResponse } from '@/lib/ai/contracts';
 import type { Dict } from '@/lib/i18n';
 import { useStore } from '@/components/StoreProvider';
+import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
+import { useChatHistory } from '@/lib/supabase/chat';
 import { AiBadge } from '@/components/AiBadge';
+import { Icon } from '@/components/Icon';
+import { PressButton } from '@/components/motion';
 import { Button, ButtonLink, Card, EmptyState, Kicker, Skeleton } from '@/components/ui';
 
 /** Подписи страницы на трёх языках. Ключи одинаковые — за этим следит TypeScript. */
@@ -98,10 +106,25 @@ const TEXT: Dict<{
 };
 
 export default function ChatPage() {
-  const { state, hydrated, appendChat, clearChat } = useStore();
+  const { state, hydrated, appendChat, clearChat, replaceChat } = useStore();
+  const { profile: schoolProfile } = useSchoolAuth();
+  const { history, saveMessage, clearHistory } = useChatHistory(schoolProfile?.id ?? null);
   const t = TEXT[state.language];
   const [question, setQuestion] = useState('');
   const [loading, setLoading] = useState(false);
+
+  /*
+    Переливаем серверную историю в локальное состояние ровно один раз
+    за загрузку страницы. Флаг нужен, чтобы этот эффект не затирал
+    сообщения, отправленные уже после загрузки: history из хука
+    остаётся снимком на момент открытия.
+  */
+  const historyApplied = useRef(false);
+  useEffect(() => {
+    if (historyApplied.current || history === null) return;
+    historyApplied.current = true;
+    if (history.length > 0) replaceChat(history);
+  }, [history, replaceChat]);
 
   // useRef хранит ссылку на элемент разметки — нужен, чтобы прокрутить ленту вниз.
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -110,14 +133,27 @@ export default function ChatPage() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [state.chat.length, loading]);
 
+  /*
+    Личность берём из школьного аккаунта, а не из локального профиля.
+    Раньше проверялся state.profile, и вошедшему ученику, который ещё
+    не проходил онбординг, наставник отвечал «сначала создайте профиль» —
+    хотя аккаунт у него есть и имя известно.
+
+    Учебный контекст (предметы, цель) по-прежнему может быть пустым:
+    тогда модель просто получит меньше подробностей, а не откажет.
+  */
   const profile = state.profile;
-  const subject = getSubject(profile?.subjectIds[0]);
+  const displayName = schoolProfile?.name ?? profile?.name ?? '';
+  const subjectIds = profile?.subjectIds ?? [];
+  const subject = getSubject(subjectIds[0]);
 
   async function send(text: string) {
     const trimmed = text.trim();
     if (trimmed === '' || loading) return;
 
-    appendChat({ role: 'user', content: trimmed, at: new Date().toISOString() });
+    const userMessage = { role: 'user' as const, content: trimmed, at: new Date().toISOString() };
+    appendChat(userMessage);
+    saveMessage(userMessage);
     setQuestion('');
     setLoading(true);
 
@@ -143,8 +179,20 @@ export default function ChatPage() {
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
       const data: ChatResponse = await response.json();
-      appendChat({ role: 'assistant', content: data.text, at: new Date().toISOString(), live: data.live });
+      const reply = {
+        role: 'assistant' as const,
+        content: data.text,
+        at: new Date().toISOString(),
+        live: data.live,
+      };
+      appendChat(reply);
+      saveMessage(reply);
     } catch {
+      /*
+        Сетевую ошибку показываем, но в базу не пишем: это сообщение
+        про сбой связи, а не часть разговора — после перезагрузки видеть
+        его в истории бессмысленно.
+      */
       appendChat({
         role: 'assistant',
         content: t.networkError,
@@ -165,13 +213,13 @@ export default function ChatPage() {
     );
   }
 
-  if (!profile) {
+  if (!schoolProfile) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
         <EmptyState
           title={t.noProfileTitle}
           description={t.noProfileText}
-          action={<ButtonLink href="/onboarding">{t.createProfile}</ButtonLink>}
+          action={<ButtonLink href="/login">{t.createProfile}</ButtonLink>}
         />
       </div>
     );
@@ -181,7 +229,23 @@ export default function ChatPage() {
   const suggestions = t.suggestions;
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col px-4 py-10 sm:px-6">
+    <div className="relative isolate min-h-[calc(100vh-3.5rem)]">
+      {/*
+        Тёплое свечение за диалогом — то же, что на первом экране лендинга.
+        Разговор с наставником должен ощущаться отдельным местом, а не
+        очередной страницей со списком. Пятно уводится под контент
+        и не перехватывает клики.
+      */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[28rem] opacity-70 blur-3xl"
+        style={{
+          background:
+            'radial-gradient(45% 50% at 50% 25%, rgb(229 117 69 / 0.22) 0%, rgb(253 243 238 / 0.5) 45%, transparent 75%)',
+        }}
+      />
+
+      <div className="mx-auto flex max-w-3xl flex-col px-4 py-10 sm:px-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           {/* Микроподпись над заголовком: соседние по навигации страницы
@@ -195,7 +259,10 @@ export default function ChatPage() {
             variant="ghost"
             size="sm"
             onClick={() => {
-              if (window.confirm(t.confirmClear)) clearChat();
+              if (window.confirm(t.confirmClear)) {
+                clearChat();
+                clearHistory();
+              }
             }}
           >
             {t.clearHistory}
@@ -206,7 +273,7 @@ export default function ChatPage() {
       <div className="mt-6 space-y-3">
         {state.chat.length === 0 && !loading && (
           <Card>
-            <p className="text-ink-700">{t.greeting(profile.name.split(' ')[0])}</p>
+            <p className="text-ink-700">{t.greeting(displayName.split(' ')[0])}</p>
             <div className="mt-6 grid gap-2">
               {suggestions.map((item) => (
                 <button
@@ -249,9 +316,13 @@ export default function ChatPage() {
         <div ref={bottomRef} />
       </div>
 
-      {/* Поле ввода */}
-      <div className="sticky bottom-4 mt-6">
-        <div className="flex items-end gap-2 rounded-2xl border border-ink-200 bg-white p-2 shadow-[var(--shadow-rest)] transition-all duration-150 focus-within:border-brand-300 focus-within:shadow-[var(--shadow-lift)]">
+      {/*
+        Поле ввода: плавающая панель со скруглением до предела.
+        Держится над нижней навигацией телефона (bottom-24), на десктопе
+        опускается ниже — панели там нет.
+      */}
+      <div className="sticky bottom-24 z-10 mt-8 md:bottom-6">
+        <div className="flex items-end gap-2 rounded-[var(--radius-card)] border border-ink-200 bg-white/95 p-2.5 shadow-[var(--shadow-float)] backdrop-blur transition-all duration-200 focus-within:border-brand-300">
           <textarea
             value={question}
             onChange={(event) => setQuestion(event.target.value)}
@@ -265,12 +336,19 @@ export default function ChatPage() {
             rows={1}
             disabled={loading}
             placeholder={t.placeholder}
-            className="max-h-32 flex-1 resize-none px-3 py-2.5 outline-none disabled:bg-white"
+            className="max-h-32 flex-1 resize-none bg-transparent px-3 py-2.5 outline-none"
           />
-          <Button onClick={() => send(question)} disabled={loading || question.trim() === ''}>
-            {t.send}
-          </Button>
+          <PressButton
+            onClick={() => send(question)}
+            disabled={loading || question.trim() === ''}
+            aria-label={t.send}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] text-white shadow-[var(--shadow-glow)] transition-opacity disabled:opacity-40 disabled:shadow-none"
+            style={{ background: 'var(--gradient-brand)' }}
+          >
+            <Icon name="arrowRight" size={19} />
+          </PressButton>
         </div>
+      </div>
       </div>
     </div>
   );
