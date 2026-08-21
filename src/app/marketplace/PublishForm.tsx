@@ -41,7 +41,7 @@ const TEXT = {
     submit: 'Отправить на проверку',
     cancel: 'Отмена',
     published: 'Объявление отправлено на проверку школе.',
-    studentTypesOnly: 'Ученики размещают объявления в разделах «От учеников» и «Секции школы».',
+    studentTypesOnly: 'Ученики публикуют от своего имени. Секции школы размещает администрация.',
     error: 'Не получилось отправить. Проверьте поля.',
   },
 } as const;
@@ -77,14 +77,17 @@ export function PublishForm({ language, profile }: { language: Language; profile
   const [schedule, setSchedule] = useState('');
 
   /**
-   * Ученику доступны не все типы: курсы ведут учителя, а внешние центры
-   * размещает администрация. Ограничение снимает ложные ожидания ещё до
-   * отправки формы, а не после отказа модерации.
+   * Ученик публикует только от своего имени.
+   *
+   * «Секции школы» — это официальный кружок, за который отвечает школа,
+   * и объявление от ученика с такой плашкой выглядело бы как заявление
+   * от лица школы. Раньше этот тип был ученику доступен — теперь нет.
+   * Внешние центры остаются за администрацией: это платные партнёры.
    */
   const allowedTypes = LISTING_TYPES.filter((item) =>
     profile.role === 'teacher'
-      ? item.id !== 'external-center'
-      : item.id === 'student-service' || item.id === 'school-club',
+      ? item.id === 'teacher-course' || item.id === 'school-club'
+      : item.id === 'student-service',
   );
 
   const canSave =

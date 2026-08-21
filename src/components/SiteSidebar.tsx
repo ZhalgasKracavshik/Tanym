@@ -24,6 +24,7 @@ import type { IconName } from './Icon';
 import { Icon } from './Icon';
 import { Logo, LogoMark } from './Logo';
 import { Avatar } from './Avatar';
+import { MobileTabBar } from './MobileTabBar';
 
 /**
  * Пункты, скрытые от роли.
@@ -226,16 +227,13 @@ export function SiteSidebar() {
 
   return (
     <>
-      {/* Тонкая верхняя полоса: видна только на мобильном экране */}
+      {/*
+        Верхняя полоса на телефоне: только логотип и профиль.
+        Кнопка меню отсюда убрана — навигация переехала вниз, под палец
+        (MobileTabBar), а редкие разделы открываются оттуда же кнопкой «Ещё».
+      */}
       <div className="sticky top-0 z-40 flex h-14 items-center gap-3 border-b border-ink-200 bg-white/90 px-4 backdrop-blur md:hidden">
-        <button
-          onClick={() => setOpen(true)}
-          aria-label={t.openMenu}
-          className="flex h-9 w-9 items-center justify-center rounded-lg text-ink-600 outline-none transition-all duration-150 hover:bg-ink-50 focus-visible:ring-2 focus-visible:ring-brand-500"
-        >
-          <Icon name="menu" size={22} />
-        </button>
-        <Link href="/dashboard" className="flex min-w-0 items-center gap-2 outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded-lg">
+        <Link href="/dashboard" className="flex min-w-0 flex-1 items-center gap-2 outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded-lg">
           <LogoMark size={26} className="text-accent-500 shrink-0" />
           <span
             className="truncate text-base tracking-tight text-accent-500"
@@ -244,7 +242,20 @@ export function SiteSidebar() {
             Tanym
           </span>
         </Link>
+
+        {displayName && (
+          <Link
+            href="/profile"
+            aria-label={t.settings}
+            className="shrink-0 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+          >
+            <Avatar name={displayName} colorId={schoolProfile?.avatar_color} size={32} />
+          </Link>
+        )}
       </div>
+
+      {/* Нижняя панель под палец — заменила выезжающее меню как основной путь */}
+      <MobileTabBar onMore={() => setOpen(true)} />
 
       {/* Постоянная колонка: видна только от md и выше */}
       <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col gap-6 overflow-y-auto border-r border-ink-200 bg-white px-4 py-6 md:flex">

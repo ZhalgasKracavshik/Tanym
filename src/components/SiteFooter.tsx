@@ -12,9 +12,9 @@ import type { Dict } from '@/lib/i18n';
 import { useLang } from '@/lib/i18n';
 
 const TEXT: Dict<string> = {
-  ru: 'Tanym: учебный проект для Future Minds Hackathon 2026, трек Social Impact.',
-  kk: 'Tanym: Future Minds Hackathon 2026 байқауының Social Impact бағытына арналған оқу жобасы.',
-  en: 'Tanym is a student project for Future Minds Hackathon 2026, Social Impact track.',
+  ru: 'Tanym — персональный AI-наставник для школьников Казахстана.',
+  kk: 'Tanym — Қазақстан оқушыларына арналған жеке AI-тәлімгер.',
+  en: 'Tanym — a personal AI mentor for students in Kazakhstan.',
 };
 
 export function SiteFooter() {
