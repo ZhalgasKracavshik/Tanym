@@ -184,10 +184,18 @@ export function ActivityFeed({ limit = 20, refreshKey = 0 }: { limit?: number; r
                     </p>
 
                     <p className="mt-1 flex items-center gap-2 font-bold text-ink-900">
+                      {/*
+                        Значок 16px в кружке 28px, а не 13 в 24.
+
+                        Медаль и кубок — рисунки из нескольких линий, и на
+                        тринадцати пикселях они сливаются в закорючку: в
+                        ленте это читалось как непрогрузившийся символ, а
+                        не как значок типа записи.
+                      */}
                       <span
-                        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg ${meta.tone}`}
+                        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${meta.tone}`}
                       >
-                        <Icon name={meta.icon} size={13} />
+                        <Icon name={meta.icon} size={16} />
                       </span>
                       {item.title}
                     </p>
