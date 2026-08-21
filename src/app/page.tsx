@@ -38,6 +38,9 @@ const TEXT: Dict<{
   teacherTitle: string;
   teacherText: string;
   teacherCta: string;
+  partnersTitle: string;
+  partnersText: string;
+  partners: { href: string; icon: IconName; title: string; text: string; cta: string }[];
   finalTitle: string;
   finalText: string;
 }> = {
@@ -86,6 +89,25 @@ const TEXT: Dict<{
     teacherText:
       'Видно, кто отстал и по какой теме, без проверки тридцати тетрадей. Свои темы и задания добавляются прямо в панели.',
     teacherCta: 'Открыть панель учителя',
+    partnersTitle: 'Школам и учебным центрам',
+    partnersText:
+      'Для учеников Tanym бесплатен. Платят школы и центры — за инструменты и за доступ к аудитории.',
+    partners: [
+      {
+        href: '/for-schools',
+        icon: 'school',
+        title: 'Для школ',
+        text: 'Карта пробелов по каждому классу, свои материалы учителей и портфолио учеников в одном месте.',
+        cta: 'Условия для школ',
+      },
+      {
+        href: '/for-centers',
+        icon: 'building',
+        title: 'Для учебных центров',
+        text: 'Размещение в разделе «Возможности» с проверкой школой — ученик приходит, уже зная свой уровень.',
+        cta: 'Условия размещения',
+      },
+    ],
     finalTitle: 'Начни с диагностики, это всего 7 минут',
     finalText: 'План появится сразу после неё.',
   },
@@ -140,6 +162,25 @@ const TEXT: Dict<{
     teacherText:
       'Отыз дәптерді тексермей-ақ кімнің қай тақырыптан қалып қойғаны көрініп тұрады. Өз тақырыптарың мен тапсырмаларыңды панельдің өзінде қосасың.',
     teacherCta: 'Мұғалім панелін ашу',
+    partnersTitle: 'Мектептер мен оқу орталықтарына',
+    partnersText:
+      'Оқушыларға Tanym тегін. Мектептер мен орталықтар төлейді — құралдар мен аудиторияға қолжетімділік үшін.',
+    partners: [
+      {
+        href: '/for-schools',
+        icon: 'school',
+        title: 'Мектептерге',
+        text: 'Әр сынып бойынша олқылық картасы, мұғалімдердің өз материалдары және оқушы портфолиосы бір жерде.',
+        cta: 'Мектептерге шарттар',
+      },
+      {
+        href: '/for-centers',
+        icon: 'building',
+        title: 'Оқу орталықтарына',
+        text: '«Мүмкіндіктер» бөлімінде мектеп тексеруімен орналастыру — оқушы деңгейін біліп келеді.',
+        cta: 'Орналастыру шарттары',
+      },
+    ],
     finalTitle: 'Диагностикадан баста, бар болғаны 7 минут',
     finalText: 'Жоспар одан кейін бірден пайда болады.',
   },
@@ -191,6 +232,25 @@ const TEXT: Dict<{
     teacherText:
       'See who fell behind and on which topic without grading thirty notebooks. Your own topics and tasks are added right in the dashboard.',
     teacherCta: 'Open the teacher dashboard',
+    partnersTitle: 'For schools and learning centres',
+    partnersText:
+      'Tanym is free for students. Schools and centres pay — for the tools and for access to the audience.',
+    partners: [
+      {
+        href: '/for-schools',
+        icon: 'school',
+        title: 'For schools',
+        text: 'A gap map for every class, teachers’ own materials and student portfolios in one place.',
+        cta: 'Terms for schools',
+      },
+      {
+        href: '/for-centers',
+        icon: 'building',
+        title: 'For learning centres',
+        text: 'A listing under Opportunities, vetted by the school — students arrive already knowing their level.',
+        cta: 'Listing terms',
+      },
+    ],
     finalTitle: 'Start with the assessment, it takes just 7 minutes',
     finalText: 'Your plan appears right after it.',
   },
@@ -474,6 +534,51 @@ export default function HomePage() {
               </div>
             </div>
           </Reveal>
+        </div>
+      </section>
+
+      {/*
+        Партнёрам: школам и учебным центрам.
+
+        Отдельный блок, а не строчка в подвале: на этих двух аудиториях
+        держится вся модель — школа платит за класс, центр за размещение,
+        а ученик пользуется бесплатно. Карточки ведут на полноценные
+        страницы, открытые без регистрации: директор не станет заводить
+        аккаунт, чтобы прочитать предложение.
+      */}
+      <section className="border-b border-ink-200/70 bg-white">
+        <div className="mx-auto max-w-6xl px-6 py-20 sm:py-24">
+          <Reveal>
+            <h2 className="text-center text-3xl font-semibold text-ink-900 sm:text-4xl">
+              {t.partnersTitle}
+            </h2>
+            <p className="mx-auto mt-3 max-w-2xl text-center text-sm text-ink-500">
+              {t.partnersText}
+            </p>
+          </Reveal>
+
+          <StaggerGroup className="mt-12 grid gap-5 md:grid-cols-2">
+            {t.partners.map((partner) => (
+              <StaggerItem key={partner.href}>
+                <Link href={partner.href} className="block h-full">
+                  <LiftCard className="group h-full rounded-[var(--radius-card)] border border-ink-200/80 bg-white p-8 shadow-[var(--shadow-rest)]">
+                    <span
+                      className="flex h-12 w-12 items-center justify-center rounded-[var(--radius-control)] text-white"
+                      style={{ background: 'var(--gradient-brand)' }}
+                    >
+                      <Icon name={partner.icon} size={22} />
+                    </span>
+                    <h3 className="mt-5 text-xl font-bold text-ink-900">{partner.title}</h3>
+                    <p className="mt-2 text-sm leading-relaxed text-ink-500">{partner.text}</p>
+                    <span className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-brand-600">
+                      {partner.cta}
+                      <Icon name="arrowRight" size={16} />
+                    </span>
+                  </LiftCard>
+                </Link>
+              </StaggerItem>
+            ))}
+          </StaggerGroup>
         </div>
       </section>
 
