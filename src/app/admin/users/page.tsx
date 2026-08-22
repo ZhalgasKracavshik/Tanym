@@ -20,6 +20,7 @@ import { useStore } from '@/components/StoreProvider';
 import { SchoolAuthGate } from '@/components/SchoolAuthGate';
 import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
 import { createClient } from '@/lib/supabase/client';
+import { avatarPhotoUrl } from '@/lib/supabase/avatarPhoto';
 import { Avatar } from '@/components/Avatar';
 import { Alert, Badge, Skeleton } from '@/components/ui';
 import { AdminShell, Section, useRows } from '../parts';
@@ -39,7 +40,16 @@ function UsersPanel() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
 
-  const users = useRows('profiles', 'id, name, role, grade, avatar_color, avatar_emoji', refreshKey);
+  /*
+    Класс подтягивается связью, а не вторым запросом: подпись раздела в
+    навигации обещает «роли, классы и участники», а класс — то, по чему
+    администратор ищет человека в первую очередь («кто у нас в 10Б»).
+  */
+  const users = useRows(
+    'profiles',
+    'id, name, role, grade, avatar_color, avatar_emoji, avatar_photo_path, classes(name)',
+    refreshKey,
+  );
 
   async function setRole(id: string, role: string) {
     setBusyId(id);
@@ -56,9 +66,20 @@ function UsersPanel() {
     setRefreshKey((key) => key + 1);
   }
 
-  const filtered = (users ?? []).filter((row) =>
-    String(row.name ?? '').toLowerCase().includes(query.trim().toLowerCase()),
-  );
+  /*
+    Поиск идёт и по имени, и по классу: администратор чаще ищет «весь 10Б»,
+    чем конкретного человека по фамилии.
+  */
+  const needle = query.trim().toLowerCase();
+  const filtered = (users ?? []).filter((row) => {
+    const haystack = [
+      String(row.name ?? ''),
+      (row.classes as { name?: string } | null)?.name ?? '',
+    ]
+      .join(' ')
+      .toLowerCase();
+    return haystack.includes(needle);
+  });
 
   return (
     <div>
@@ -69,11 +90,11 @@ function UsersPanel() {
       )}
 
       <label className="block">
-        <span className="text-sm font-semibold text-ink-800">Поиск по имени</span>
+        <span className="text-sm font-semibold text-ink-800">Поиск</span>
         <input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Начните вводить имя"
+          placeholder="Имя или класс"
           className="mt-2 w-full rounded-[var(--radius-control)] border border-ink-200 px-4 py-2.5 text-sm outline-none transition-colors duration-150 focus:border-brand-400 focus-visible:ring-2 focus-visible:ring-brand-500"
         />
       </label>
@@ -88,6 +109,8 @@ function UsersPanel() {
             {filtered.map((row) => {
               const role = String(row.role);
               const isMe = row.id === me?.id;
+              // Связь приходит объектом, а у учеников без класса — null.
+              const className = (row.classes as { name?: string } | null)?.name ?? '';
 
               return (
                 <li key={row.id} className="flex flex-wrap items-center gap-3 py-3">
@@ -95,6 +118,7 @@ function UsersPanel() {
                     name={String(row.name ?? '')}
                     colorId={row.avatar_color as string | null}
                     emoji={row.avatar_emoji as string | null}
+                    photoUrl={avatarPhotoUrl(row.avatar_photo_path as string | null)}
                     size={36}
                   />
 
@@ -110,6 +134,7 @@ function UsersPanel() {
                     <p className="text-xs text-ink-400">
                       {ROLE_LABEL[role] ?? role}
                       {row.grade ? ` · ${String(row.grade)} класс` : ''}
+                      {className ? ` · ${className}` : ''}
                     </p>
                   </div>
 

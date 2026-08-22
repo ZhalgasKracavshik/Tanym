@@ -23,6 +23,7 @@ import { useReducedMotion } from 'framer-motion';
 import type { EventStatus, EventType, SchoolEvent } from '@/lib/events';
 import { Badge, Button } from './ui';
 import { Icon } from './Icon';
+import { DEFAULT_EVENT_COVER } from '@/lib/covers';
 import type { IconName } from './Icon';
 
 export interface EventCardText {
@@ -74,6 +75,9 @@ export function EventCard({
   const [flipped, setFlipped] = useState(false);
   const reduce = useReducedMotion();
 
+  // Загруженная обложка важнее готовой: администратор ставил её осознанно.
+  const cover = event.coverUrl ?? DEFAULT_EVENT_COVER[event.type] ?? null;
+
   const registerButton = registered ? (
     <div className="flex flex-wrap items-center gap-2">
       <span className="flex items-center gap-1.5 text-sm font-semibold text-success-700">
@@ -114,10 +118,10 @@ export function EventCard({
       >
         {/* Лицевая сторона */}
         <Face hidden={flipped} className={status === 'past' ? 'opacity-60' : ''}>
-          <div className={`relative h-32 shrink-0 ${event.coverUrl ? 'bg-ink-200' : bannerClass}`}>
-            {event.coverUrl ? (
+          <div className={`relative h-32 shrink-0 ${cover ? 'bg-ink-200' : bannerClass}`}>
+            {cover ? (
               // eslint-disable-next-line @next/next/no-img-element -- внешний бакет, домен для next/image не настроен
-              <img src={event.coverUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
+              <img src={cover} alt="" className="h-full w-full object-cover" loading="lazy" />
             ) : (
               typeIcon && (
                 <div className="flex h-full items-center justify-center">
