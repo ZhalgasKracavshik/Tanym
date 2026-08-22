@@ -20,6 +20,30 @@ import { EmptyState, Kicker } from '@/components/ui';
 import { usePublishedEvents } from '@/lib/supabase/events';
 import { PublishAction } from '@/components/PublishAction';
 
+/**
+ * «день / дня / дней» по числу.
+ *
+ * Короткого правила «1 — день, 2–4 — дня, остальное — дней» мало: оно врёт
+ * начиная с третьего десятка, а до ближайшего дедлайна в афише спокойно
+ * бывает 21 или 22 дня. Считать надо по последним двум цифрам, потому что
+ * 11–14 — исключение: там всегда «дней».
+ */
+function daysWordRu(n: number): string {
+  const lastTwo = n % 100;
+  const last = n % 10;
+  if (lastTwo >= 11 && lastTwo <= 14) return 'дней';
+  if (last === 1) return 'день';
+  if (last >= 2 && last <= 4) return 'дня';
+  return 'дней';
+}
+
+/*
+  Словарь ровно под то, что показывает эта страница.
+
+  Подписи записи («Записаться», «Вы записаны», «Отменить») отсюда ушли
+  вместе с кнопкой: решение о записи принимают на странице события, где
+  видно место, классы и что участие даёт, — и слова живут там же.
+*/
 const TEXT: Dict<{
   kicker: string;
   title: string;
@@ -28,10 +52,6 @@ const TEXT: Dict<{
   daysWord: (n: number) => string;
   all: string;
   myEvents: string;
-  register: string;
-  registered: string;
-  cancel: string;
-  confirmCancel: (title: string) => string;
   deadline: string;
   daysLeft: (n: number) => string;
   lastDay: string;
@@ -40,14 +60,11 @@ const TEXT: Dict<{
   online: string;
   free: string;
   paid: string;
-  grades: (list: string) => string;
-  prize: string;
   empty: string;
   emptyMine: string;
   statusOpen: string;
   statusClosing: string;
   details: string;
-  back: string;
   prevImage: string;
   nextImage: string;
 }> = {
@@ -56,29 +73,30 @@ const TEXT: Dict<{
     title: 'Афиша',
     subtitle: 'Олимпиады, конкурсы и события. Главное: не пропустить срок регистрации.',
     nearestDeadline: 'Ближайший дедлайн',
-    daysWord: (n) => (n === 1 ? 'день' : n > 1 && n < 5 ? 'дня' : 'дней'),
+    daysWord: daysWordRu,
     all: 'Все',
     myEvents: 'Мои записи',
-    register: 'Записаться',
-    registered: 'Вы записаны',
-    cancel: 'Отменить запись',
-    confirmCancel: (title) => `Отменить запись на «${title}»?`,
     deadline: 'Регистрация до',
-    daysLeft: (n) => (n === 1 ? 'остался 1 день' : n < 5 ? `осталось ${n} дня` : `осталось ${n} дней`),
+    // Глагол согласуется вместе с существительным: «остался 21 день», но
+    // «осталось 22 дня». Отдельная ветка на единицу этого не покрывала.
+    daysLeft: (n) => `${daysWordRu(n) === 'день' ? 'остался' : 'осталось'} ${n} ${daysWordRu(n)}`,
     lastDay: 'сегодня последний день',
-    closed: 'Регистрация закрыта',
-    past: 'Уже прошло',
+    /*
+      Подписи статуса короткие: это плашка в углу обложки шириной с ноготь,
+      а не строка отчёта. «Регистрация открыта» занимала там половину шапки
+      и упиралась в вид события. Полные формулировки остались на странице
+      события, где для них есть место.
+    */
+    closed: 'Запись закрыта',
+    past: 'Прошло',
     online: 'Онлайн',
     free: 'Бесплатно',
     paid: 'Платное участие',
-    grades: (list) => `${list} класс`,
-    prize: 'Что даёт',
     empty: 'В этой категории пока нет событий.',
     emptyMine: 'Вы пока никуда не записались. Загляните в другие категории.',
-    statusOpen: 'Регистрация открыта',
-    statusClosing: 'Регистрация закрывается',
+    statusOpen: 'Идёт запись',
+    statusClosing: 'Скоро закрытие',
     details: 'Подробнее',
-    back: 'Назад',
     prevImage: 'Предыдущее фото',
     nextImage: 'Следующее фото',
   },
@@ -90,26 +108,19 @@ const TEXT: Dict<{
     daysWord: () => 'күн қалды',
     all: 'Барлығы',
     myEvents: 'Менің жазылымдарым',
-    register: 'Тіркелу',
-    registered: 'Сіз тіркелдіңіз',
-    cancel: 'Тіркеуді болдырмау',
-    confirmCancel: (title) => `«${title}» іс-шарасына тіркеу болдырылсын ба?`,
     deadline: 'Тіркелу мерзімі',
     daysLeft: (n) => `${n} күн қалды`,
     lastDay: 'бүгін соңғы күн',
-    closed: 'Тіркелу жабық',
-    past: 'Өтіп кетті',
+    closed: 'Тіркеу жабық',
+    past: 'Өтті',
     online: 'Онлайн',
     free: 'Тегін',
     paid: 'Ақылы қатысу',
-    grades: (list) => `${list} сынып`,
-    prize: 'Не береді',
     empty: 'Бұл санатта әзірге іс-шара жоқ.',
     emptyMine: 'Сіз әзірге ешқайда тіркелген жоқсыз. Басқа санаттарды қараңыз.',
-    statusOpen: 'Тіркелу ашық',
-    statusClosing: 'Тіркелу жабылып жатыр',
+    statusOpen: 'Тіркеу ашық',
+    statusClosing: 'Жабылады',
     details: 'Толығырақ',
-    back: 'Артқа',
     prevImage: 'Алдыңғы сурет',
     nextImage: 'Келесі сурет',
   },
@@ -121,26 +132,19 @@ const TEXT: Dict<{
     daysWord: (n) => (n === 1 ? 'day left' : 'days left'),
     all: 'All',
     myEvents: 'My registrations',
-    register: 'Register',
-    registered: 'You are registered',
-    cancel: 'Cancel registration',
-    confirmCancel: (title) => `Cancel your registration for “${title}”?`,
     deadline: 'Register by',
     daysLeft: (n) => (n === 1 ? '1 day left' : `${n} days left`),
     lastDay: 'today is the last day',
-    closed: 'Registration closed',
-    past: 'Already held',
+    closed: 'Sign-up closed',
+    past: 'Past',
     online: 'Online',
     free: 'Free',
     paid: 'Paid entry',
-    grades: (list) => `grades ${list}`,
-    prize: 'What you get',
     empty: 'No events in this category yet.',
     emptyMine: 'You have not registered for anything yet. Take a look at the other categories.',
-    statusOpen: 'Registration open',
-    statusClosing: 'Registration closing',
+    statusOpen: 'Sign-up open',
+    statusClosing: 'Closing soon',
     details: 'Details',
-    back: 'Back',
     prevImage: 'Previous image',
     nextImage: 'Next image',
   },
@@ -167,7 +171,12 @@ const TYPE_BANNER: Record<EventType, string> = {
 };
 
 export default function EventsPage() {
-  const { state, toggleEventRegistration } = useStore();
+  /*
+    Записи из хранилища здесь только читаются: фильтр «мои» и счётчик рядом
+    с ним. Переключать запись отсюда больше нечем — это делает страница
+    события.
+  */
+  const { state } = useStore();
   const t = TEXT[state.language];
 
   const [filter, setFilter] = useState<EventType | 'all' | 'mine'>('all');
@@ -295,9 +304,6 @@ export default function EventsPage() {
           {sorted.map((event) => {
             const status = eventStatus(event);
             const meta = EVENT_TYPES.find((type) => type.id === event.type);
-            const registered = state.eventRegistrations.includes(event.id);
-            const daysLeft = daysLeftUntil(event.registrationDeadline);
-            const canRegister = status === 'open' || status === 'closing-soon';
 
             return (
               <EventCard
@@ -309,11 +315,8 @@ export default function EventsPage() {
                 bannerClass={TYPE_BANNER[event.type]}
                 typeIcon={meta?.icon}
                 typeTitle={meta?.title[state.language]}
-                registered={registered}
-                daysLeft={daysLeft}
-                canRegister={canRegister}
+                daysLeft={daysLeftUntil(event.registrationDeadline)}
                 deadlineLabel={formatEventDate(event.registrationDeadline, state.language)}
-                onToggleRegistration={() => toggleEventRegistration(event.id)}
                 t={t}
               />
             );

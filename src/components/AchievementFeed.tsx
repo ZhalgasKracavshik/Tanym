@@ -9,8 +9,7 @@ import { useEffect, useState } from 'react';
 import { ACHIEVEMENTS } from '@/lib/achievements';
 import type { Language } from '@/lib/types';
 import { createClient } from '@/lib/supabase/client';
-import { Icon } from './Icon';
-import { Card } from './ui';
+import { AchievementCard } from './AchievementCard';
 
 interface Post {
   id: string;
@@ -77,20 +76,23 @@ export function AchievementFeed({ language, refreshKey }: { language: Language; 
           : null;
 
         return (
-          <Card key={post.id} className="overflow-hidden p-0">
-            {photoUrl && (
-              // eslint-disable-next-line @next/next/no-img-element -- фото из внешнего бакета, без домена для next/image
-              <img src={photoUrl} alt="" className="h-40 w-full object-cover" />
-            )}
-            <div className="p-4">
-              <p className="flex items-center gap-2 text-sm font-bold text-ink-900">
-                {def && <Icon name={def.icon} size={16} className="text-accent-500" />}
-                {def?.title[language] ?? post.achievement_key}
-              </p>
-              <p className="mt-1 text-xs text-ink-400">{names[post.student_id] ?? '…'}</p>
-              {post.caption && <p className="mt-2 text-sm text-ink-600">{post.caption}</p>}
-            </div>
-          </Card>
+          /*
+            Та же карточка, что и в портфолио. Здесь фотографию выкладывает
+            сам ученик — это не скан документа, а снимок с события, поэтому
+            он разворачивается на всю карточку без оговорок. Подпись поста
+            идёт третьей строкой: ради неё пост и публикуют.
+          */
+          <AchievementCard
+            key={post.id}
+            title={def?.title[language] ?? post.achievement_key}
+            subtitle={names[post.student_id] ?? '…'}
+            description={post.caption}
+            date={post.created_at}
+            language={language}
+            photoUrl={photoUrl}
+            tone="brand"
+            icon={def?.icon}
+          />
         );
       })}
     </div>

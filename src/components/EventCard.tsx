@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Карточка события.
+ * Карточка события в афише.
  *
  * Наверху — то, что прислал организатор: афиша, фото с прошлого года, схема
  * площадки. Их листают, потому что решение «идти или нет» по одной картинке
@@ -11,16 +11,18 @@
  * не прислал, шапка остаётся типографской: крупный вид события на плотной
  * заливке — честно и не притворяется фотографией.
  *
- * Оборота у карточки больше нет. Он прятал описание за лишним действием,
- * хотя описание — главное, ради чего в карточку смотрят. Теперь текст на
- * месте сразу, а по кнопке разворачиваются подробности: место, формат,
- * классы, награда.
+ * Карточка больше не принимает решений. Раньше на ней стояла «Записаться»:
+ * человек соглашался участвовать, прочитав три строки описания и не увидев
+ * ни места, ни классов, ни того, что событие даёт. Теперь единственное
+ * действие — «Подробнее», а запись живёт на странице события, где есть всё,
+ * на чём это решение можно основывать. Заодно исчез и оборот с подробностями:
+ * он дублировал ту же страницу, только в щели высотой в четыре строки.
  */
 
 import { useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import type { EventStatus, SchoolEvent } from '@/lib/events';
-import { Badge, Button } from './ui';
+import { Badge, ButtonLink } from './ui';
 import { Icon } from './Icon';
 import type { IconName } from './Icon';
 
@@ -36,20 +38,12 @@ const SLIDE = {
 };
 
 export interface EventCardText {
-  register: string;
-  registered: string;
-  cancel: string;
-  confirmCancel: (title: string) => string;
-  deadline: string;
   daysLeft: (n: number) => string;
   lastDay: string;
   online: string;
   free: string;
   paid: string;
-  grades: (list: string) => string;
-  prize: string;
   details: string;
-  back: string;
   prevImage: string;
   nextImage: string;
 }
@@ -62,11 +56,8 @@ export function EventCard({
   bannerClass,
   typeIcon,
   typeTitle,
-  registered,
   daysLeft,
-  canRegister,
   deadlineLabel,
-  onToggleRegistration,
   t,
 }: {
   event: SchoolEvent;
@@ -76,20 +67,23 @@ export function EventCard({
   bannerClass: string;
   typeIcon?: IconName;
   typeTitle?: string;
-  registered: boolean;
   daysLeft: number;
-  canRegister: boolean;
   deadlineLabel: string;
-  onToggleRegistration: () => void;
   t: EventCardText;
 }) {
   const reduce = useReducedMotion();
   const [index, setIndex] = useState(0);
   const [direction, setDirection] = useState(0);
-  const [expanded, setExpanded] = useState(false);
 
   const images = event.coverUrls ?? [];
   const hasImages = images.length > 0;
+
+  /*
+    Считается здесь, а не приходит пропсом: значение полностью выводится из
+    статуса, который уже пришёл. Лишний проп — это ещё одно место, где
+    вызывающий может передать одно, а показать другое.
+  */
+  const registrationRuns = status === 'open' || status === 'closing-soon';
 
   function move(step: number) {
     setDirection(step);
@@ -152,21 +146,45 @@ export function EventCard({
           />
         )}
 
-        <div className="absolute left-3 top-3 flex flex-wrap gap-2">
-          <span className="flex items-center gap-1.5 rounded-[var(--radius-pill)] bg-white/85 px-2.5 py-1 text-xs font-bold text-ink-800 backdrop-blur-sm">
+        {/*
+          Все плашки — вид события, формат и статус — лежат в одном
+          переносящемся ряду, а не двумя группами по углам.
+
+          Почему не две группы с justify-between. Так было, и статус всё
+          равно наезжал на вид события. Сжать левую группу через min-w-0
+          недостаточно: плашка внутри неё упирается в собственную
+          min-content ширину (самое длинное слово плюс поля) и дальше не
+          сжимается, а просто вылезает за границу группы — под бейдж, у
+          которого shrink-0. Замер на карточке 224px: «Курсы и вебинары»
+          против «Скоро закрытие» давали перекрытие в 19px, против «Запись
+          закрыта» — 16px, в английском «Sign-up open» — 2px. Не помещается
+          не текст, а сумма: карточка в сетке нигде не шире ~330px, и
+          130 + 8 + 118 в неё не влезает ни при каком сокращении подписей.
+
+          Один flex-wrap решает это тем, что лишнему просто некуда наехать:
+          не поместившийся бейдж переносится на вторую строку. ml-auto
+          держит его прижатым вправо и на своей строке, поэтому в обычном
+          случае (короткий вид события) ряд выглядит ровно как раньше —
+          вид слева, статус справа, одна строка. whitespace-nowrap на
+          плашках нужен затем, чтобы вместо переноса бейджа они не начали
+          ломаться пополам внутри себя.
+        */}
+        <div className="absolute inset-x-3 top-3 flex flex-wrap items-start gap-2">
+          <span className="flex items-center gap-1.5 whitespace-nowrap rounded-[var(--radius-pill)] bg-white/85 px-2.5 py-1 text-xs font-bold text-ink-800 backdrop-blur-sm">
             {typeIcon && <Icon name={typeIcon} size={13} />}
             {typeTitle}
           </span>
+
           {event.online && (
-            <span className="rounded-[var(--radius-pill)] bg-white/85 px-2.5 py-1 text-xs font-bold text-ink-800 backdrop-blur-sm">
+            <span className="whitespace-nowrap rounded-[var(--radius-pill)] bg-white/85 px-2.5 py-1 text-xs font-bold text-ink-800 backdrop-blur-sm">
               {t.online}
             </span>
           )}
-        </div>
 
-        <span className="absolute right-3 top-3">
-          <Badge tone={statusTone}>{statusLabel}</Badge>
-        </span>
+          <Badge tone={statusTone} className="ml-auto shrink-0 whitespace-nowrap">
+            {statusLabel}
+          </Badge>
+        </div>
 
         {/* Стрелки появляются при наведении и только когда листать есть что */}
         {images.length > 1 && (
@@ -202,39 +220,18 @@ export function EventCard({
           {deadlineLabel} · {event.organizer}
         </p>
 
-        <p className="mt-3 line-clamp-3 text-sm leading-relaxed text-ink-600">{event.description}</p>
+        {/*
+          mb-4 у описания, а не mt у подвала: подвал прижат книзу через
+          mt-auto, и у самой высокой карточки в ряду это «авто» равно нулю —
+          линия подвала прилипла бы к последней строке текста.
+        */}
+        <p className="mt-3 mb-4 line-clamp-3 text-sm leading-relaxed text-ink-600">{event.description}</p>
 
-        <AnimatePresence initial={false}>
-          {expanded && (
-            <motion.div
-              initial={reduce ? false : { height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={reduce ? { opacity: 0 } : { height: 0, opacity: 0 }}
-              transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-              className="overflow-hidden"
-            >
-              <dl className="mt-4 space-y-2 border-t border-ink-100 pt-3 text-sm">
-                <Row icon="pin" value={event.online ? t.online : event.location} />
-                <Row icon="users" value={t.grades(event.grades.join(', '))} />
-                {event.prize && <Row icon="trophy" value={event.prize} />}
-              </dl>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <button
-          onClick={() => setExpanded((value) => !value)}
-          aria-expanded={expanded}
-          className="mt-3 w-fit text-sm font-semibold text-brand-600 underline-offset-4 transition-colors duration-150 hover:underline focus-visible:ring-2 focus-visible:ring-brand-500"
-        >
-          {expanded ? t.back : t.details}
-        </button>
-
-        {/* --- Низ: цена и действие --- */}
+        {/* --- Низ: цена, срок и переход на страницу события --- */}
         <div className="mt-auto flex flex-wrap items-center justify-between gap-3 border-t border-ink-200 pt-4">
           <div>
             <p className="font-bold text-ink-900">{event.free ? t.free : t.paid}</p>
-            {canRegister && (
+            {registrationRuns && (
               <p
                 className={`text-xs font-semibold ${
                   status === 'closing-soon' ? 'text-danger-600' : 'text-ink-400'
@@ -245,34 +242,14 @@ export function EventCard({
             )}
           </div>
 
-          {registered ? (
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="flex items-center gap-1.5 text-sm font-semibold text-success-700">
-                <Icon name="check" size={16} />
-                {t.registered}
-              </span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  if (window.confirm(t.confirmCancel(event.title))) onToggleRegistration();
-                }}
-              >
-                {t.cancel}
-              </Button>
-            </div>
-          ) : (
-            canRegister && (
-              <Button size="sm" onClick={onToggleRegistration} className="group/cta">
-                {t.register}
-                <Icon
-                  name="arrow-right"
-                  size={15}
-                  className="transition-transform duration-300 group-hover/cta:translate-x-1"
-                />
-              </Button>
-            )
-          )}
+          <ButtonLink href={`/events/${event.id}`} size="sm" className="group/cta">
+            {t.details}
+            <Icon
+              name="arrow-right"
+              size={15}
+              className="transition-transform duration-300 group-hover/cta:translate-x-1"
+            />
+          </ButtonLink>
         </div>
       </div>
     </motion.article>
@@ -303,16 +280,5 @@ function CarouselButton({
     >
       <Icon name={side === 'left' ? 'chevron-left' : 'chevron-right'} size={16} />
     </button>
-  );
-}
-
-function Row({ icon, value }: { icon: IconName; value: string }) {
-  return (
-    <div className="flex items-start gap-2">
-      <dt className="mt-0.5 shrink-0 text-ink-400">
-        <Icon name={icon} size={15} />
-      </dt>
-      <dd className="text-ink-700">{value}</dd>
-    </div>
   );
 }

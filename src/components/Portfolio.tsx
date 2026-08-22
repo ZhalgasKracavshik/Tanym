@@ -22,8 +22,13 @@ import {
   type PortfolioAchievement,
 } from '@/lib/portfolio';
 import type { Language } from '@/lib/types';
+import {
+  ACHIEVEMENT_ACTION_CLASS,
+  AchievementCard as AchievementPhotoCard,
+  type AchievementCardTone,
+} from './AchievementCard';
 import { Icon } from './Icon';
-import { LiftCard, PressButton, Spinner, StaggerGroup, StaggerItem } from './motion';
+import { PressButton, Spinner, StaggerGroup, StaggerItem } from './motion';
 
 interface Row {
   id: string;
@@ -58,13 +63,24 @@ function rowToAchievement(row: Row): PortfolioAchievement {
 }
 
 export function usePortfolio(studentId: string | null, refreshKey = 0) {
-  const [items, setItems] = useState<PortfolioAchievement[] | null>(null);
+  /*
+    Достижения хранятся вместе с тем, чьи они.
+
+    Раньше в начале эффекта стоял setItems([]) на случай неизвестного
+    ученика. Это давало две беды сразу: лишний синхронный setState внутри
+    эффекта и — что хуже — «пусто» вместо «грузится». Пока профиль
+    подтягивается, studentId равен null, и владельцу полного портфолио
+    успевал мигнуть экран «здесь появятся ваши олимпиады». Несовпадение
+    идентификаторов само означает «ещё грузится», и подставить чужие
+    достижения в этой схеме невозможно.
+  */
+  const [loaded, setLoaded] = useState<{ studentId: string; items: PortfolioAchievement[] } | null>(
+    null,
+  );
 
   useEffect(() => {
-    if (!studentId) {
-      setItems([]);
-      return;
-    }
+    if (!studentId) return;
+
     const supabase = createClient();
     let cancelled = false;
 
@@ -74,7 +90,11 @@ export function usePortfolio(studentId: string | null, refreshKey = 0) {
       .eq('student_id', studentId)
       .order('happened_on', { ascending: false })
       .then(({ data }) => {
-        if (!cancelled) setItems(((data as Row[] | null) ?? []).map(rowToAchievement));
+        if (cancelled) return;
+        setLoaded({
+          studentId,
+          items: ((data as Row[] | null) ?? []).map(rowToAchievement),
+        });
       });
 
     return () => {
@@ -82,107 +102,104 @@ export function usePortfolio(studentId: string | null, refreshKey = 0) {
     };
   }, [studentId, refreshKey]);
 
-  return items;
+  return loaded !== null && loaded.studentId === studentId ? loaded.items : null;
 }
 
-const TONE_CLASS: Record<ReturnType<typeof placeTone>, string> = {
-  gold: 'bg-accent-100 text-accent-700 border-accent-200',
-  silver: 'bg-ink-100 text-ink-600 border-ink-200',
-  bronze: 'bg-brand-100 text-brand-700 border-brand-200',
-  neutral: 'bg-ink-50 text-ink-500 border-ink-200',
+/**
+ * Медальный оттенок места — в заливку карточки, когда фото нет.
+ *
+ * Второе место и участие делят один тёмно-синий: придумывать им отдельные
+ * цвета — значит вводить различие, которого в предметной области нет.
+ */
+const PLACE_FILL: Record<ReturnType<typeof placeTone>, AchievementCardTone> = {
+  gold: 'accent',
+  silver: 'ink',
+  bronze: 'brand',
+  neutral: 'ink',
 };
 
-const STATUS_TEXT: Record<AchievementStatus, Record<Language, string>> = {
-  pending: { ru: 'На проверке', kk: 'Тексеруде', en: 'Under review' },
-  approved: { ru: 'Подтверждено', kk: 'Расталды', en: 'Verified' },
-  rejected: { ru: 'Отклонено', kk: 'Қабылданбады', en: 'Rejected' },
-};
+/** Скан PDF нельзя положить фоном — только открыть ссылкой. */
+function isImageProof(url: string): boolean {
+  return !/\.pdf(\?|#|$)/i.test(url);
+}
 
+/**
+ * Достижение портфолио в виде карточки-снимка.
+ *
+ * Здесь живёт только перевод предметной модели в подписи: заголовок — само
+ * событие, подзаголовок — место, уровень и направление, третья строка —
+ * рассказ ученика.
+ */
 export function AchievementCard({
   achievement,
   language,
   onDelete,
+  showProof = true,
 }: {
   achievement: PortfolioAchievement;
   language: Language;
   onDelete?: () => void;
+  /**
+   * Разворачивать ли скан грамоты на всю карточку.
+   *
+   * На скане обычно напечатано имя ребёнка и название школы. В собственном
+   * портфолио это нормально — владелец смотрит на свой документ. Если такая
+   * же сетка когда-нибудь появится в общешкольной ленте или в чужом
+   * профиле, сюда передаётся `false`: карточка уйдёт на заливку, а сам
+   * документ останется доступен по ссылке «Диплом» — то есть по осознанному
+   * действию, а не в превью для всех подряд.
+   */
+  showProof?: boolean;
 }) {
-  const tone = TONE_CLASS[placeTone(achievement.place)];
   const proofUrl = achievement.proofPath
     ? createClient().storage.from('achievement-proofs').getPublicUrl(achievement.proofPath).data.publicUrl
     : null;
 
+  const subtitle = [
+    PLACE_TITLES[achievement.place][language],
+    LEVEL_TITLES[achievement.level][language],
+    achievement.category.trim(),
+  ]
+    .filter(Boolean)
+    .join(' · ');
+
+  const hasActions = Boolean(proofUrl || onDelete);
+
   return (
-    <LiftCard
-      className={`h-full rounded-[var(--radius-card)] border bg-white p-6 shadow-[var(--shadow-rest)] ${
-        achievement.status === 'rejected' ? 'border-ink-200 opacity-60' : 'border-ink-200/80'
-      }`}
-    >
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <span
-          className={`inline-flex items-center gap-1.5 rounded-[var(--radius-pill)] border px-3 py-1 text-xs font-bold ${tone}`}
-        >
-          <Icon name="medal" size={13} />
-          {PLACE_TITLES[achievement.place][language]}
-        </span>
+    <AchievementPhotoCard
+      title={achievement.title}
+      subtitle={subtitle}
+      description={achievement.description}
+      date={achievement.happenedOn}
+      language={language}
+      photoUrl={showProof && proofUrl && isImageProof(proofUrl) ? proofUrl : null}
+      status={achievement.status}
+      points={achievement.points}
+      tone={PLACE_FILL[placeTone(achievement.place)]}
+      icon="medal"
+      actions={
+        hasActions ? (
+          <>
+            {proofUrl && (
+              <a
+                href={proofUrl}
+                target="_blank"
+                rel="noreferrer"
+                className={ACHIEVEMENT_ACTION_CLASS}
+              >
+                Диплом
+              </a>
+            )}
 
-        {/* Баллы показываем только у подтверждённых: у заявки на проверке
-            их ещё нет, и число 0 читалось бы как «твоё достижение ничего
-            не стоит», хотя его просто не успели посмотреть. */}
-        {achievement.status === 'approved' && achievement.points > 0 && (
-          <span className="text-lg font-semibold tabular-nums text-brand-600">
-            +{achievement.points}
-          </span>
-        )}
-      </div>
-
-      <h3 className="mt-4 font-bold leading-snug text-ink-900">{achievement.title}</h3>
-
-      <p className="mt-2 text-xs text-ink-400">
-        {LEVEL_TITLES[achievement.level][language]}
-        {achievement.category && ` · ${achievement.category}`}
-        {' · '}
-        {new Date(achievement.happenedOn).toLocaleDateString(language)}
-      </p>
-
-      {achievement.description && (
-        <p className="mt-3 text-sm leading-relaxed text-ink-600">{achievement.description}</p>
-      )}
-
-      <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-ink-100 pt-4">
-        <span
-          className={`text-xs font-semibold ${
-            achievement.status === 'approved'
-              ? 'text-success-700'
-              : achievement.status === 'pending'
-                ? 'text-accent-700'
-                : 'text-ink-400'
-          }`}
-        >
-          {STATUS_TEXT[achievement.status][language]}
-        </span>
-
-        {proofUrl && (
-          <a
-            href={proofUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="text-xs font-semibold text-brand-600 hover:underline"
-          >
-            Диплом
-          </a>
-        )}
-
-        {onDelete && (
-          <button
-            onClick={onDelete}
-            className="ml-auto text-xs font-semibold text-danger-600 hover:underline"
-          >
-            Удалить
-          </button>
-        )}
-      </div>
-    </LiftCard>
+            {onDelete && (
+              <button onClick={onDelete} className={`ml-auto ${ACHIEVEMENT_ACTION_CLASS}`}>
+                Удалить
+              </button>
+            )}
+          </>
+        ) : undefined
+      }
+    />
   );
 }
 
@@ -388,11 +405,14 @@ export function PortfolioGrid({
   language,
   onDelete,
   emptyText,
+  showProof = true,
 }: {
   items: PortfolioAchievement[];
   language: Language;
   onDelete?: (id: string) => void;
   emptyText: string;
+  /** См. одноимённый проп `AchievementCard`: сетка только передаёт его дальше. */
+  showProof?: boolean;
 }) {
   if (items.length === 0) {
     return (
@@ -413,6 +433,7 @@ export function PortfolioGrid({
             achievement={item}
             language={language}
             onDelete={onDelete ? () => onDelete(item.id) : undefined}
+            showProof={showProof}
           />
         </StaggerItem>
       ))}
