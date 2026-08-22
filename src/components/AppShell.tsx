@@ -11,7 +11,6 @@
 import { usePathname } from 'next/navigation';
 import { SiteHeader } from './SiteHeader';
 import { SiteSidebar } from './SiteSidebar';
-import { SiteFooter } from './SiteFooter';
 
 /**
  * Экраны входа живут без навигации вообще.
@@ -36,7 +35,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <>
         <SiteHeader />
         <main className="flex-1">{children}</main>
-        <SiteFooter />
       </>
     );
   }
@@ -61,7 +59,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       */}
       <div className="flex min-w-0 flex-1 flex-col pb-20 md:pb-0">
         <main className="flex-1">{children}</main>
-        <SiteFooter />
       </div>
     </div>
   );

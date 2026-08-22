@@ -9,6 +9,7 @@
  * И формулировка честная: скрывается имя, а не участие.
  */
 
+import Link from 'next/link';
 import { useState } from 'react';
 import { pseudonym, rankEntries } from '@/lib/leaderboard';
 import type { LeaderboardEntry } from '@/lib/leaderboard';
@@ -143,8 +144,8 @@ const TIER_STYLE: Record<LevelTier, string> = {
 
 export default function LeaderboardPage() {
   const [visibleCount, setVisibleCount] = useState(10);
-  const { state, hydrated, setLeaderboardAnonymous } = useStore();
-  const { profile: schoolProfile, refresh } = useSchoolAuth();
+  const { state, hydrated } = useStore();
+  const { profile: schoolProfile } = useSchoolAuth();
   const realEntries = useSchoolLeaderboard(schoolProfile?.id ?? null);
   const myAchievements = usePortfolio(schoolProfile?.id ?? null);
   const myAchievementPoints = portfolioPoints(myAchievements);
@@ -168,24 +169,6 @@ export default function LeaderboardPage() {
     баллы за достижения уже лежали в базе.
   */
   const profile = state.profile;
-  /**
-   * Сохраняет анонимность в профиль, а не только на устройстве.
-   *
-   * Локальная копия остаётся: на ней держится подпись под таблицей, пока
-   * ответ сервера не пришёл. Но источник правды теперь база — иначе на
-   * втором устройстве настройка сбрасывалась бы, а одноклассники всё равно
-   * видели бы настоящее имя.
-   */
-  async function saveAnonymity(anonymous: boolean) {
-    setLeaderboardAnonymous(anonymous);
-    await fetch('/api/profile', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ leaderboardAnonymous: anonymous }),
-    }).catch(() => {});
-    await refresh();
-  }
-
   const isStudent = schoolProfile?.role === 'student';
   const summary = summarize(state);
 
@@ -487,27 +470,22 @@ export default function LeaderboardPage() {
       )}
 
       {/*
-        Всё, что не таблица, ушло вниз в отдельную область: переключатель
-        анонимности это настройка, а не данные, и над таблицей он перебивал
-        собой главное. Решение всё равно принимается здесь, а не в дальних
-        настройках, — сразу после того, как ученик увидел себя в списке.
+        Настройка анонимности отсюда убрана — она живёт в настройках.
+
+        Флажок с абзацем пояснения под таблицей перебивал собой сам
+        рейтинг: страницу открывают, чтобы увидеть места, а не чтобы
+        настраивать видимость. Строка ниже сообщает, как ученика видят
+        сейчас, и ведёт туда, где это меняется, — этого достаточно.
       */}
       {me ? (
-        <div className="mt-16 border-t border-ink-200 pt-6">
-          <p className="text-xs font-medium uppercase tracking-wide text-ink-400">{t.anonymityTitle}</p>
-          <label className="mt-4 flex cursor-pointer items-start gap-3">
-            <input
-              type="checkbox"
-              checked={schoolProfile?.leaderboard_anonymous ?? false}
-              onChange={(event) => saveAnonymity(event.target.checked)}
-              className="mt-0.5 h-5 w-5 shrink-0 rounded border-ink-300 accent-brand-500"
-            />
-            <span>
-              <span className="font-semibold text-ink-900">{t.anonymityToggle}</span>
-              <span className="mt-2 block text-sm text-ink-500">{t.anonymityHelp}</span>
-            </span>
-          </label>
-          <p className="mt-2 text-sm text-ink-600">{t.seenAs(visibleName(me))}</p>
+        <div className="mt-12 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-ink-200 pt-6 text-sm">
+          <span className="text-ink-500">{t.seenAs(visibleName(me))}</span>
+          <Link
+            href="/settings"
+            className="font-semibold text-brand-600 underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:ring-brand-500"
+          >
+            {t.anonymityTitle}
+          </Link>
         </div>
       ) : profile ? (
         /*
