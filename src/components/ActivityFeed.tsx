@@ -12,6 +12,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import { AchievementCard, type AchievementCardTone } from './AchievementCard';
 import { Avatar } from './Avatar';
 import { Icon } from './Icon';
 import type { IconName } from './Icon';
@@ -55,10 +56,36 @@ const KIND_META: Record<FeedKind, { icon: IconName; label: string; tone: string 
   },
 };
 
-/** Бакет, в котором лежит вложение конкретного типа события. */
+/**
+ * Бакет, вложение из которого лента разворачивает картинкой.
+ *
+ * 'achievement_approved' сюда не входит, и это не упущение. В его вложении —
+ * скан грамоты из achievement-proofs, а на нём почти всегда напечатаны имя
+ * ребёнка, класс и школа. Развернуть такой документ во всю ширину
+ * общешкольной ленты значит опубликовать персональные данные за ученика и без
+ * его участия. Сам диплом остаётся доступен по ссылке в портфолио — то есть
+ * по отдельному действию.
+ *
+ * Ключа нет вовсе, а не «есть, но мы его отфильтруем ниже»: пока адрес скана
+ * вычисляется, кто-нибудь однажды подставит его в photoUrl — ровно так утечка
+ * и появилась на странице src/app/feed/page.tsx, где карта бакетов своя.
+ */
 const MEDIA_BUCKET: Partial<Record<FeedKind, string>> = {
   achievement_post: 'achievement-photos',
-  achievement_approved: 'achievement-proofs',
+};
+
+/**
+ * Типы записей, которые в ленте рисуются карточкой достижения.
+ *
+ * Заодно это и признак «достижение ли это»: ключ есть — рисуем карточкой,
+ * ключа нет (объявление) — остаётся обычная строка. Значение — цвет заливки
+ * для случая «фотографии нет»: подтверждённое достижение уходит в медальный
+ * янтарь, добровольный пост — в фирменный оранжевый, как в общей ленте
+ * достижений.
+ */
+const ACHIEVEMENT_TONE: Partial<Record<FeedKind, AchievementCardTone>> = {
+  achievement_approved: 'accent',
+  achievement_post: 'brand',
 };
 
 /** «5 минут назад» вместо даты: лента читается как поток, а не как архив. */
@@ -146,17 +173,81 @@ export function ActivityFeed({ limit = 20, refreshKey = 0 }: { limit?: number; r
   }
 
   return (
-    <StaggerGroup className="space-y-3">
+    /*
+      Интервал шире прежнего: у «глиняной» карточки крупная мягкая тень,
+      и на трёх пикселях зазора она наползала на соседнюю запись.
+    */
+    <StaggerGroup className="space-y-5">
       {items.map((item) => {
         const meta = KIND_META[item.kind];
-        const bucket = MEDIA_BUCKET[item.kind];
-        const mediaUrl =
-          item.media_path && bucket
-            ? supabase.storage.from(bucket).getPublicUrl(item.media_path).data.publicUrl
-            : null;
-        // Картинку показываем только для изображений: у диплома вложением
-        // часто идёт PDF, и <img> на него отрисовался бы битой иконкой.
-        const isImage = mediaUrl ? !/\.pdf($|\?)/i.test(mediaUrl) : false;
+        const cardTone = ACHIEVEMENT_TONE[item.kind];
+
+        if (cardTone) {
+          const isPost = item.kind === 'achievement_post';
+          // Бакет задан только у поста ученика — почему, написано у MEDIA_BUCKET.
+          const bucket = MEDIA_BUCKET[item.kind];
+          const mediaUrl =
+            item.media_path && bucket
+              ? supabase.storage.from(bucket).getPublicUrl(item.media_path).data.publicUrl
+              : null;
+
+          /*
+            Фоном кладём только изображение. Форму публикации ограничивает
+            accept="image/*", но это подсказка файловому диалогу, а не
+            запрет: подсунуть в бакет PDF ничто не мешает, и <img> на него
+            отрисовался бы битой иконкой во всю карточку.
+          */
+          const photoUrl = mediaUrl && !/\.pdf($|\?)/i.test(mediaUrl) ? mediaUrl : null;
+
+          return (
+            <StaggerItem key={`${item.kind}-${item.id}`}>
+              {/*
+                Автор идёт строкой над карточкой, а не поверх неё: лента
+                читается сверху вниз по столбцу «кто — что», и подпись,
+                уехавшая на фотографию, выпадает из этого столбца.
+              */}
+              <Link href={item.link} className="block">
+                <div className="flex items-center gap-3">
+                  <Avatar
+                    name={item.actorName}
+                    colorId={item.actorColor}
+                    photoUrl={item.actorPhoto}
+                    size={40}
+                  />
+                  <p className="min-w-0 text-sm text-ink-500">
+                    <span className="font-semibold text-ink-900">{item.actorName}</span>{' '}
+                    {meta.label}
+                    <span className="text-ink-300"> · {relativeTime(item.created_at)}</span>
+                  </p>
+                </div>
+
+                {/*
+                  Карточка вертикальная (4:5), поэтому её ширина ограничена:
+                  на всю ленту в тысячу пикселей она развернулась бы в экран
+                  высотой, и одна запись съела бы всю прокрутку.
+                */}
+                <div className="mt-3 w-full max-w-xs">
+                  <AchievementCard
+                    title={item.title}
+                    /*
+                      У подтверждённого достижения в detail лежит короткое
+                      направление («Физика») — это подзаголовок. У поста там
+                      подпись самого ученика, её место третьей строкой.
+                    */
+                    subtitle={isPost ? undefined : (item.detail ?? undefined)}
+                    description={isPost ? (item.detail ?? undefined) : undefined}
+                    date={item.created_at}
+                    // Лента школы целиком на русском — переключателя языка у неё нет.
+                    language="ru"
+                    photoUrl={photoUrl}
+                    tone={cardTone}
+                    icon={meta.icon}
+                  />
+                </div>
+              </Link>
+            </StaggerItem>
+          );
+        }
 
         return (
           <StaggerItem key={`${item.kind}-${item.id}`}>
@@ -204,15 +295,12 @@ export function ActivityFeed({ limit = 20, refreshKey = 0 }: { limit?: number; r
                     {item.detail && <p className="mt-1 text-sm text-ink-500">{item.detail}</p>}
                   </div>
                 </div>
-
-                {isImage && mediaUrl && (
-                  // eslint-disable-next-line @next/next/no-img-element -- внешний бакет, домен для next/image не настроен
-                  <img
-                    src={mediaUrl}
-                    alt=""
-                    className="mt-4 h-48 w-full rounded-[var(--radius-control)] object-cover"
-                  />
-                )}
+                {/*
+                  Вложения в этой ветке нет намеренно: сюда доходят только
+                  объявления, а для listing_published бакет в MEDIA_BUCKET не
+                  задан — файл объявления живёт на его собственной странице,
+                  и лента его не показывает.
+                */}
               </Link>
             </LiftCard>
           </StaggerItem>

@@ -9,7 +9,6 @@
  * И формулировка честная: скрывается имя, а не участие.
  */
 
-import Link from 'next/link';
 import { useState } from 'react';
 import { pseudonym, rankEntries } from '@/lib/leaderboard';
 import type { LeaderboardEntry } from '@/lib/leaderboard';
@@ -49,15 +48,10 @@ const TEXT: Dict<{
   colStreak: string;
   gradeLabel: (grade: number) => string;
   you: string;
-  anonymityTitle: string;
-  anonymityToggle: string;
-  anonymityHelp: string;
-  seenAs: (name: string) => string;
   noProfileTitle: string;
   noProfileText: string;
   createProfile: string;
   teacherNote: string;
-  demoNote: string;
 }> = {
   ru: {
     title: 'Рейтинг школы',
@@ -72,16 +66,10 @@ const TEXT: Dict<{
     colStreak: 'Серия',
     gradeLabel: (grade) => `${grade} класс`,
     you: 'вы',
-    anonymityTitle: 'Анонимный режим',
-    anonymityToggle: 'Скрыть моё имя в рейтинге',
-    anonymityHelp:
-      'Одноклассники увидят псевдоним вместо имени. Очки продолжают начисляться, место сохраняется, из рейтинга вы не выпадаете.',
-    seenAs: (name) => `Сейчас вас видят как «${name}».`,
     noProfileTitle: 'Вы пока вне рейтинга',
     noProfileText: 'Создайте профиль ученика, решите первые задания или добавьте достижение в портфолио — строка появится сама.',
     createProfile: 'Создать профиль',
     teacherNote: 'Рейтинг ведут ученики. Вы видите весь список целиком — баллы и уровни начисляются только ученикам.',
-    demoNote: 'Баллы складываются из решённых заданий и подтверждённых достижений портфолио: победа на олимпиаде весит больше десятка тестов.',
   },
   kk: {
     title: 'Мектеп рейтингі',
@@ -96,16 +84,10 @@ const TEXT: Dict<{
     colStreak: 'Күн сериясы',
     gradeLabel: (grade) => `${grade} сынып`,
     you: 'сіз',
-    anonymityTitle: 'Жасырын режим',
-    anonymityToggle: 'Рейтингте атымды жасыру',
-    anonymityHelp:
-      'Сыныптастар атыңыздың орнына бүркеншік атты көреді. Ұпай бұрынғыдай есептеледі, орныңыз сақталады, рейтингтен шығып қалмайсыз.',
-    seenAs: (name) => `Қазір сізді «${name}» деп көреді.`,
     noProfileTitle: 'Сіз әзірге рейтингте жоқсыз',
     noProfileText: 'Оқушы профилін құрып, алғашқы тапсырмаларды шешіңіз, сонда жолыңыз өзі пайда болады.',
     createProfile: 'Профиль құру',
     teacherNote: 'Рейтингті оқушылар жүргізеді. Сіз тізімді толық көресіз — ұпайлар мен деңгейлер тек оқушыларға беріледі.',
-    demoNote: 'Ұпай шешілген тапсырмалар мен расталған портфолио жетістіктерінен жиналады: олимпиададағы жеңіс ондаған тесттен ауыр.',
   },
   en: {
     title: 'School leaderboard',
@@ -120,16 +102,10 @@ const TEXT: Dict<{
     colStreak: 'Streak',
     gradeLabel: (grade) => `grade ${grade}`,
     you: 'you',
-    anonymityTitle: 'Anonymous mode',
-    anonymityToggle: 'Hide my name in the leaderboard',
-    anonymityHelp:
-      'Classmates will see a pseudonym instead of your name. Points keep adding up and your place stays, so you do not drop out of the ranking.',
-    seenAs: (name) => `Others currently see you as “${name}”.`,
     noProfileTitle: 'You are not in the ranking yet',
     noProfileText: 'Create a student profile and solve your first tasks, and your row will appear on its own.',
     createProfile: 'Create profile',
     teacherNote: 'The ranking belongs to students. You see the full list — points and levels are awarded to students only.',
-    demoNote: 'Points come from solved tasks and verified portfolio achievements: an olympiad win outweighs dozens of quizzes.',
   },
 };
 
@@ -430,9 +406,18 @@ export default function LeaderboardPage() {
                               TIER_LABEL[levelFromPoints(entry.points).tier]
                             }`}
                           </span>
-                          <span className="text-xs tabular-nums text-ink-400">
-                            {t.gradeLabel(entry.grade)}
-                          </span>
+                          {/*
+                            Класс показываем, только если он known. У админа и
+                            у не заполнившего профиль в базе стоит null, из
+                            которого в тип Grade приходил ноль, — и в списке
+                            висело «0 класс». Ноль здесь не значение, а
+                            отсутствие значения, и печатать его нельзя.
+                          */}
+                          {entry.grade > 0 && (
+                            <span className="text-xs tabular-nums text-ink-400">
+                              {t.gradeLabel(entry.grade)}
+                            </span>
+                          )}
                         </span>
                       </div>
                     </div>
@@ -477,17 +462,13 @@ export default function LeaderboardPage() {
         настраивать видимость. Строка ниже сообщает, как ученика видят
         сейчас, и ведёт туда, где это меняется, — этого достаточно.
       */}
-      {me ? (
-        <div className="mt-12 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-ink-200 pt-6 text-sm">
-          <span className="text-ink-500">{t.seenAs(visibleName(me))}</span>
-          <Link
-            href="/settings"
-            className="font-semibold text-brand-600 underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:ring-brand-500"
-          >
-            {t.anonymityTitle}
-          </Link>
-        </div>
-      ) : profile ? (
+      {/*
+        Ученику внизу страницы ничего не дописываем: рейтинг заканчивается
+        таблицей. Настройка видимости живёт в настройках, объяснение того,
+        как считаются баллы, — в справке рядом с самими баллами.
+      */}
+      {me ? null : profile ? (
+
         /*
           Учителю — спокойная карточка, а не строка-оправдание внизу страницы.
 
@@ -519,9 +500,6 @@ export default function LeaderboardPage() {
         </div>
       )}
 
-      {/* Честное примечание: лучше сказать про демо-данные прямо,
-          чем оставить ученика гадать, откуда взялись одноклассники */}
-      <p className="mt-4 text-sm text-ink-400">{t.demoNote}</p>
     </div>
   );
 }

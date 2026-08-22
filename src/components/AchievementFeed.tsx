@@ -68,7 +68,9 @@ export function AchievementFeed({ language, refreshKey }: { language: Language; 
   const supabase = createClient();
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    /* Зазор шире прежнего: «глиняная» тень карточки крупная и на gap-4
+       наползала на соседку, из-за чего ряд выглядел слипшимся. */
+    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
       {posts.map((post) => {
         const def = ACHIEVEMENTS.find((item) => item.id === post.achievement_key);
         const photoUrl = post.photo_path
