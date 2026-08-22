@@ -25,6 +25,9 @@ import { AVATAR_COLORS, AVATAR_EMOJI } from '@/lib/avatar';
 import { Icon } from '@/components/Icon';
 import { PasswordField, SubmitButton } from '@/components/auth-ui';
 import { Alert, Button, ButtonLink, Card, Kicker, Skeleton } from '@/components/ui';
+import { COVER_TYPES, coverError } from '@/components/ImageField';
+import { avatarPhotoUrl } from '@/lib/supabase/avatarPhoto';
+import { createClient } from '@/lib/supabase/client';
 
 /** Языки интерфейса — те же три, что и в переключателе меню. */
 const LANGUAGE_OPTIONS: { id: 'ru' | 'kk' | 'en'; title: string }[] = [
@@ -41,6 +44,8 @@ export default function SettingsPage() {
   const { profile: schoolProfile, schoolClass, email, signOut, updatePassword, refresh } = useSchoolAuth();
 
   const [saved, setSaved] = useState(false);
+  const [photoStatus, setPhotoStatus] = useState<'idle' | 'uploading'>('idle');
+  const [photoError, setPhotoError] = useState<string | null>(null);
   /*
     null означает «поле не трогали» — тогда показываем текущее имя.
     Синхронизировать состояние с профилем через эффект было бы хуже:
@@ -81,6 +86,39 @@ export default function SettingsPage() {
       .catch(() => {
         // Молча: настройка уже применена локально, ронять экран незачем.
       });
+  }
+
+  /**
+   * Загружает фотографию и сохраняет путь к ней.
+   *
+   * Файл кладётся в папку с id пользователя: политика бакета разрешает
+   * писать только туда, поэтому подменить чужой аватар нельзя даже прямым
+   * обращением к storage. Имя со временем — чтобы замена не упиралась в
+   * кэш браузера по прежнему адресу.
+   */
+  async function uploadPhoto(file: File) {
+    if (!schoolProfile) return;
+    const problem = coverError(file);
+    if (problem) {
+      setPhotoError(problem);
+      return;
+    }
+    setPhotoError(null);
+    setPhotoStatus('uploading');
+
+    const supabase = createClient();
+    const extension = file.name.split('.').pop()?.toLowerCase() ?? 'jpg';
+    const path = `${schoolProfile.id}/${Date.now()}.${extension}`;
+
+    const { error } = await supabase.storage.from('avatars').upload(path, file);
+    if (error) {
+      setPhotoStatus('idle');
+      setPhotoError('Не удалось загрузить фотографию. Попробуйте ещё раз.');
+      return;
+    }
+
+    setPhotoStatus('idle');
+    save({}, { avatarPhotoPath: path });
   }
 
   function toggleSubject(id: string) {
@@ -131,6 +169,7 @@ export default function SettingsPage() {
             name={displayName}
             colorId={schoolProfile?.avatar_color}
             emoji={schoolProfile?.avatar_emoji}
+            photoUrl={avatarPhotoUrl(schoolProfile?.avatar_photo_path)}
             size={64}
           />
           <div className="min-w-0 flex-1">
@@ -178,12 +217,49 @@ export default function SettingsPage() {
         </div>
 
         {/*
+          Фотография — первый из двух способов, но не обязательный.
+
+          Требовать снимок ребёнка школьная платформа не вправе: у кого-то
+          дома это не разрешают, кому-то просто не хочется. Поэтому рядом
+          лежит выбор символа, и оба варианта равноправны — разница только
+          в том, что фотография при наличии побеждает.
+        */}
+        <p className="mt-8 text-sm font-semibold text-ink-800">Фотография</p>
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <label className="inline-flex cursor-pointer items-center gap-2 rounded-[var(--radius-control)] border border-ink-200 bg-white px-4 py-2.5 text-sm font-semibold text-ink-700 transition-colors duration-150 hover:border-brand-300 hover:bg-brand-50/50 focus-within:ring-2 focus-within:ring-brand-500">
+            <Icon name="image" size={17} className="text-brand-500" />
+            {photoStatus === 'uploading' ? 'Загружаю…' : schoolProfile?.avatar_photo_path ? 'Заменить фото' : 'Загрузить фото'}
+            <input
+              type="file"
+              accept={COVER_TYPES.join(',')}
+              className="sr-only"
+              disabled={photoStatus === 'uploading'}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.target.value = '';
+                if (file) uploadPhoto(file);
+              }}
+            />
+          </label>
+
+          {schoolProfile?.avatar_photo_path && (
+            <button
+              onClick={() => save({}, { avatarPhotoPath: null })}
+              className="text-sm font-semibold text-ink-400 underline-offset-2 hover:text-danger-600 hover:underline"
+            >
+              Убрать фото
+            </button>
+          )}
+        </div>
+        {photoError && <p className="mt-2 text-xs font-medium text-danger-600">{photoError}</p>}
+
+        {/*
           Символ идёт первым, а цвет вторым: выбор картинки ощущается как
           «поставить себе аватарку», ради чего сюда и заходят, а фон —
           доводка. Обратный порядок делал бы главным менее важное.
         */}
-        <div className="mt-6 flex items-baseline justify-between gap-3">
-          <p className="text-sm font-semibold text-ink-800">Символ</p>
+        <div className="mt-8 flex items-baseline justify-between gap-3">
+          <p className="text-sm font-semibold text-ink-800">Или символ</p>
           {schoolProfile?.avatar_emoji && (
             <button
               onClick={() => save({}, { avatarEmoji: null })}

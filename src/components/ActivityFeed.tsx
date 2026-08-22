@@ -16,6 +16,7 @@ import { Avatar } from './Avatar';
 import { Icon } from './Icon';
 import type { IconName } from './Icon';
 import { LiftCard, StaggerGroup, StaggerItem } from './motion';
+import { avatarPhotoUrl } from '@/lib/supabase/avatarPhoto';
 
 type FeedKind = 'achievement_post' | 'achievement_approved' | 'listing_published';
 
@@ -34,6 +35,7 @@ interface FeedItem extends FeedRow {
   actorName: string;
   actorColor: string | null;
   actorEmoji: string | null;
+  actorPhoto: string | null;
 }
 
 const KIND_META: Record<FeedKind, { icon: IconName; label: string; tone: string }> = {
@@ -100,7 +102,7 @@ export function useActivityFeed(limit = 20, refreshKey = 0) {
       const ids = [...new Set(rows.map((row) => row.actor_id))];
       const { data: profiles } = await supabase
         .from('profiles')
-        .select('id, name, avatar_color, avatar_emoji')
+        .select('id, name, avatar_color, avatar_emoji, avatar_photo_path')
         .in('id', ids);
 
       if (cancelled) return;
@@ -112,6 +114,7 @@ export function useActivityFeed(limit = 20, refreshKey = 0) {
           actorName: byId[row.actor_id]?.name ?? 'Ученик',
           actorColor: byId[row.actor_id]?.avatar_color ?? null,
           actorEmoji: byId[row.actor_id]?.avatar_emoji ?? null,
+          actorPhoto: avatarPhotoUrl(byId[row.actor_id]?.avatar_photo_path as string | null),
         })),
       );
     }
@@ -173,6 +176,7 @@ export function ActivityFeed({ limit = 20, refreshKey = 0 }: { limit?: number; r
                     name={item.actorName}
                     colorId={item.actorColor}
                     emoji={item.actorEmoji}
+                    photoUrl={item.actorPhoto}
                     size={40}
                   />
 

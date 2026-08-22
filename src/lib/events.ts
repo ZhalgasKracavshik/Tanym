@@ -41,6 +41,8 @@ export interface SchoolEvent {
   /** Награда или что даёт участие. */
   prize?: string;
   free: boolean;
+  /** Готовая ссылка на обложку. Нет — карточка рисует цветную плашку. */
+  coverUrl?: string | null;
 }
 
 /**

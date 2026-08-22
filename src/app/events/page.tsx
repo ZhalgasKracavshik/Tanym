@@ -11,11 +11,12 @@
 
 import { useState } from 'react';
 import { EVENT_TYPES, daysLeftUntil, eventStatus, formatEventDate } from '@/lib/events';
+import { EventCard } from '@/components/EventCard';
 import type { EventStatus, EventType, SchoolEvent } from '@/lib/events';
 import type { Dict } from '@/lib/i18n';
 import { useStore } from '@/components/StoreProvider';
 import { Icon } from '@/components/Icon';
-import { Badge, Button, Card, EmptyState, Kicker } from '@/components/ui';
+import { EmptyState, Kicker } from '@/components/ui';
 import { usePublishedEvents } from '@/lib/supabase/events';
 import { PublishAction } from '@/components/PublishAction';
 
@@ -45,6 +46,8 @@ const TEXT: Dict<{
   emptyMine: string;
   statusOpen: string;
   statusClosing: string;
+  details: string;
+  back: string;
 }> = {
   ru: {
     kicker: 'Олимпиады и конкурсы',
@@ -72,6 +75,8 @@ const TEXT: Dict<{
     emptyMine: 'Вы пока никуда не записались. Загляните в другие категории.',
     statusOpen: 'Регистрация открыта',
     statusClosing: 'Регистрация закрывается',
+    details: 'Подробнее',
+    back: 'Назад',
   },
   kk: {
     kicker: 'Олимпиадалар мен байқаулар',
@@ -99,6 +104,8 @@ const TEXT: Dict<{
     emptyMine: 'Сіз әзірге ешқайда тіркелген жоқсыз. Басқа санаттарды қараңыз.',
     statusOpen: 'Тіркелу ашық',
     statusClosing: 'Тіркелу жабылып жатыр',
+    details: 'Толығырақ',
+    back: 'Артқа',
   },
   en: {
     kicker: 'Olympiads and contests',
@@ -126,6 +133,8 @@ const TEXT: Dict<{
     emptyMine: 'You have not registered for anything yet. Take a look at the other categories.',
     statusOpen: 'Registration open',
     statusClosing: 'Registration closing',
+    details: 'Details',
+    back: 'Back',
   },
 };
 
@@ -283,108 +292,22 @@ export default function EventsPage() {
             const canRegister = status === 'open' || status === 'closing-soon';
 
             return (
-              <Card
+              <EventCard
                 key={event.id}
-                className={`group flex flex-col overflow-hidden p-0 transition-all duration-300 hover:shadow-[var(--shadow-lift)] ${
-                  status === 'past' ? 'opacity-60' : ''
-                }`}
-              >
-                {/*
-                  Настоящих фотографий у события нет, поэтому баннер — цветная
-                  плашка с иконкой вида события, а не пустое место. Плашка
-                  состояния регистрации лежит поверх, как цена на карточке услуги.
-                */}
-                <div className={`relative flex h-24 items-center justify-center ${TYPE_BANNER[event.type]}`}>
-                  {meta && (
-                    <Icon
-                      name={meta.icon}
-                      size={34}
-                      className="text-white/85 transition-transform duration-500 group-hover:scale-110"
-                    />
-                  )}
-                  <span className="absolute right-3 top-3">
-                    <Badge tone={STATUS_TONE[status]}>{statusLabel[status]}</Badge>
-                  </span>
-                </div>
-
-                <div className="flex flex-1 flex-col p-5 sm:p-6">
-                  <Badge tone="brand" className="w-fit">
-                    {meta && <Icon name={meta.icon} size={14} />}
-                    {meta?.title[state.language]}
-                  </Badge>
-
-                  <h2 className="mt-3 line-clamp-2 text-lg font-bold text-ink-900">{event.title}</h2>
-                  <p className="mt-2 text-sm text-ink-400">{event.organizer}</p>
-                  <p className="mt-2 line-clamp-2 text-sm text-ink-600">{event.description}</p>
-
-                  <p className="mt-2 text-sm tabular-nums text-ink-500">
-                    {[
-                      event.online ? t.online : null,
-                      event.free ? t.free : t.paid,
-                      t.grades(event.grades.join(', ')),
-                    ]
-                      .filter(Boolean)
-                      .join(' · ')}
-                  </p>
-
-                  {event.prize && (
-                    <p className="mt-2 text-sm text-ink-600">
-                      <span className="font-semibold text-ink-800">{t.prize}: </span>
-                      {event.prize}
-                    </p>
-                  )}
-
-                  {/* Сроки и действие прибиты к низу, чтобы карточки в ряду
-                      выравнивались по нижнему краю независимо от длины текста */}
-                  <div className="mt-auto pt-4">
-                    <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2 border-t border-ink-200 pt-4">
-                      <div>
-                        <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-ink-400">
-                          <Icon name="calendar" size={14} />
-                          {t.deadline}
-                        </p>
-                        <p className="mt-2 font-semibold tabular-nums text-ink-900">
-                          {formatEventDate(event.registrationDeadline, state.language)}
-                        </p>
-                        {canRegister && (
-                          <p
-                            className={`mt-1 text-sm font-semibold ${
-                              status === 'closing-soon' ? 'text-danger-600' : 'text-ink-500'
-                            }`}
-                          >
-                            {daysLeft === 0 ? t.lastDay : t.daysLeft(daysLeft)}
-                          </p>
-                        )}
-                      </div>
-                      <p className="text-sm tabular-nums text-ink-500">{event.location}</p>
-                    </div>
-
-                    <div className="mt-4">
-                      {registered ? (
-                        <div className="flex flex-wrap items-center gap-3">
-                          <span className="flex items-center gap-2 font-semibold text-success-700">
-                            <Icon name="check" size={18} />
-                            {t.registered}
-                          </span>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              if (window.confirm(t.confirmCancel(event.title))) toggleEventRegistration(event.id);
-                            }}
-                          >
-                            {t.cancel}
-                          </Button>
-                        </div>
-                      ) : (
-                        canRegister && (
-                          <Button onClick={() => toggleEventRegistration(event.id)}>{t.register}</Button>
-                        )
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </Card>
+                event={event}
+                status={status}
+                statusTone={STATUS_TONE[status]}
+                statusLabel={statusLabel[status]}
+                bannerClass={TYPE_BANNER[event.type]}
+                typeIcon={meta?.icon}
+                typeTitle={meta?.title[state.language]}
+                registered={registered}
+                daysLeft={daysLeft}
+                canRegister={canRegister}
+                deadlineLabel={formatEventDate(event.registrationDeadline, state.language)}
+                onToggleRegistration={() => toggleEventRegistration(event.id)}
+                t={t}
+              />
             );
           })}
         </div>

@@ -13,6 +13,7 @@ import type { Language } from '@/lib/types';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from './ui';
 import { Icon } from './Icon';
+import { ImageField } from './ImageField';
 
 const TEXT = {
   ru: {
@@ -54,7 +55,24 @@ export function ListingPublishForm({ language, adminId, onPublished }: { languag
   const [schedule, setSchedule] = useState('');
   const [contact, setContact] = useState('');
   const [verified, setVerified] = useState(true);
+  const [cover, setCover] = useState<File | null>(null);
   const [status, setStatus] = useState<'idle' | 'sending' | 'done' | 'error'>('idle');
+
+
+  /**
+   * Кладёт обложку в бакет и возвращает путь.
+   *
+   * undefined — настоящая ошибка загрузки, null — картинки просто нет.
+   * Разделять важно: публикацию без обложки останавливать не за что, а
+   * публикацию с потерянной обложкой — есть.
+   */
+  async function uploadCover(supabase: ReturnType<typeof createClient>): Promise<string | null | undefined> {
+    if (!cover) return null;
+    const extension = cover.name.split('.').pop()?.toLowerCase() ?? 'jpg';
+    const path = `${Date.now()}-${Math.round(Math.random() * 1e6)}.${extension}`;
+    const { error } = await supabase.storage.from('card-covers').upload(path, cover);
+    return error ? undefined : path;
+  }
 
   async function submit() {
     if (!title.trim()) {
@@ -64,7 +82,14 @@ export function ListingPublishForm({ language, adminId, onPublished }: { languag
     setStatus('sending');
     const supabase = createClient();
 
+    const coverPath = await uploadCover(supabase);
+    if (coverPath === undefined) {
+      setStatus('error');
+      return;
+    }
+
     const { error } = await supabase.from('published_listings').insert({
+      cover_path: coverPath,
       admin_id: adminId,
       type,
       title,
@@ -86,6 +111,7 @@ export function ListingPublishForm({ language, adminId, onPublished }: { languag
       return;
     }
     setStatus('done');
+    setCover(null);
     setTitle('');
     setDescription('');
     onPublished();
@@ -152,6 +178,9 @@ export function ListingPublishForm({ language, adminId, onPublished }: { languag
 
       {status === 'done' && <p className="text-sm font-semibold text-success-700">{t.done}</p>}
       {status === 'error' && <p className="text-sm font-semibold text-danger-600">{t.error}</p>}
+
+
+      <ImageField file={cover} onChange={setCover} />
 
       <Button onClick={submit} disabled={status === 'sending'}>
         {status === 'sending' ? t.publishing : t.publish}

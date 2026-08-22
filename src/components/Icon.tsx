@@ -51,6 +51,7 @@ export type IconName =
   | 'bell'
   | 'star'
   | 'pin'
+  | 'image'
   | 'pencil'
   | 'bulb'
   | 'columns'
@@ -284,6 +285,16 @@ const PATHS: Record<IconName, React.ReactNode> = {
     <>
       <path d="M9 3h6l-1 6 3.5 3H6.5L10 9 9 3Z" />
       <path d="M12 12v9" />
+    </>
+  ),
+  // Рамка, солнце и линия горизонта — знак изображения, узнаваемый
+  // без подписи. Рисуется тем же контуром, что и остальной набор.
+  image: (
+    <>
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <circle cx="8.5" cy="9.5" r="1.5" />
+      <path d="m4 17 4.5-4.5a2 2 0 0 1 2.8 0L16 17" />
+      <path d="m14 15 1.6-1.6a2 2 0 0 1 2.8 0L20 15" />
     </>
   ),
   pencil: (

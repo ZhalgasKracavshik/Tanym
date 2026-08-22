@@ -26,6 +26,7 @@ export interface LeaderboardEntry {
   /** Оформление аватара — чтобы список не был колонкой одинаковых кружков. */
   avatarColor?: string | null;
   avatarEmoji?: string | null;
+  avatarPhoto?: string | null;
 }
 
 /**

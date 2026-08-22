@@ -28,6 +28,7 @@ import type { IconName } from '@/components/Icon';
 import { Reveal } from '@/components/motion';
 import { TIER_LABEL, levelFromPoints, pointsWord } from '@/lib/level';
 import { ButtonLink, Kicker, Skeleton } from '@/components/ui';
+import { avatarPhotoUrl } from '@/lib/supabase/avatarPhoto';
 
 /** Показатель в шапке профиля. */
 function Stat({ icon, value, label }: { icon: IconName; value: number | string; label: string }) {
@@ -135,6 +136,7 @@ export default function ProfilePage() {
               name={name}
               colorId={schoolProfile?.avatar_color}
               emoji={schoolProfile?.avatar_emoji}
+              photoUrl={avatarPhotoUrl(schoolProfile?.avatar_photo_path)}
               size={80}
             />
             <div className="min-w-0">

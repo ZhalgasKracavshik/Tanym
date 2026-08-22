@@ -11,6 +11,7 @@ import type { Language } from '@/lib/types';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from './ui';
 import { Icon } from './Icon';
+import { ImageField } from './ImageField';
 
 const TEXT = {
   ru: {
@@ -45,7 +46,25 @@ export function EventPublishForm({ language, adminId, onPublished }: { language:
   const [grades, setGrades] = useState('9,10,11');
   const [prize, setPrize] = useState('');
   const [free, setFree] = useState(true);
+  const [cover, setCover] = useState<File | null>(null);
   const [status, setStatus] = useState<'idle' | 'sending' | 'done' | 'error'>('idle');
+
+
+  /**
+   * Кладёт обложку в бакет и возвращает путь.
+   *
+   * Возвращает undefined только при настоящей ошибке загрузки; отсутствие
+   * файла — это null, штатный случай. Разделять важно: публикацию без
+   * картинки останавливать не за что, а публикацию с потерянной картинкой —
+   * есть, иначе карточка молча выйдет пустой.
+   */
+  async function uploadCover(supabase: ReturnType<typeof createClient>): Promise<string | null | undefined> {
+    if (!cover) return null;
+    const extension = cover.name.split('.').pop()?.toLowerCase() ?? 'jpg';
+    const path = `${Date.now()}-${Math.round(Math.random() * 1e6)}.${extension}`;
+    const { error } = await supabase.storage.from('card-covers').upload(path, cover);
+    return error ? undefined : path;
+  }
 
   async function submit() {
     if (!title.trim() || !startsAt || !deadline) {
@@ -59,7 +78,14 @@ export function EventPublishForm({ language, adminId, onPublished }: { language:
       .map((item) => Number(item.trim()))
       .filter((item) => Number.isFinite(item) && item > 0);
 
+    const coverPath = await uploadCover(supabase);
+    if (coverPath === undefined) {
+      setStatus('error');
+      return;
+    }
+
     const { error } = await supabase.from('published_events').insert({
+      cover_path: coverPath,
       admin_id: adminId,
       type,
       title,
@@ -79,6 +105,7 @@ export function EventPublishForm({ language, adminId, onPublished }: { language:
       return;
     }
     setStatus('done');
+    setCover(null);
     setTitle('');
     setOrganizer('');
     setDescription('');
@@ -138,6 +165,9 @@ export function EventPublishForm({ language, adminId, onPublished }: { language:
 
       {status === 'done' && <p className="text-sm font-semibold text-success-700">{t.done}</p>}
       {status === 'error' && <p className="text-sm font-semibold text-danger-600">{t.error}</p>}
+
+
+      <ImageField file={cover} onChange={setCover} />
 
       <Button onClick={submit} disabled={status === 'sending'}>
         {status === 'sending' ? t.publishing : t.publish}

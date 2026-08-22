@@ -26,6 +26,7 @@ interface PublishedEventRow {
   subject_id: string | null;
   prize: string | null;
   free: boolean;
+  cover_path: string | null;
 }
 
 function rowToEvent(row: PublishedEventRow): SchoolEvent {
@@ -43,6 +44,9 @@ function rowToEvent(row: PublishedEventRow): SchoolEvent {
     subjectId: row.subject_id ?? undefined,
     prize: row.prize ?? undefined,
     free: row.free,
+    coverUrl: row.cover_path
+      ? createClient().storage.from('card-covers').getPublicUrl(row.cover_path).data.publicUrl
+      : null,
   };
 }
 

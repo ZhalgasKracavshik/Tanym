@@ -64,6 +64,17 @@ export async function PATCH(request: Request) {
     невидимые управляющие символы, которые растянули бы кружок аватара
     во всех списках сразу. Пустая строка — это «убрать символ».
   */
+  /*
+    Путь к фотографии, а не готовая ссылка: ссылку клиент мог бы прислать
+    любую, включая чужой домен, и она бы отрисовалась в ленте у всех.
+    Путь же осмысленен только внутри нашего бакета.
+  */
+  if (body.avatarPhotoPath === null || body.avatarPhotoPath === '') {
+    patch.avatar_photo_path = null;
+  } else if (typeof body.avatarPhotoPath === 'string' && !body.avatarPhotoPath.includes('..')) {
+    patch.avatar_photo_path = body.avatarPhotoPath;
+  }
+
   if (body.avatarEmoji === null || body.avatarEmoji === '') {
     patch.avatar_emoji = null;
   } else if (typeof body.avatarEmoji === 'string' && AVATAR_EMOJI.includes(body.avatarEmoji)) {

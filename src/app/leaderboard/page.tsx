@@ -23,6 +23,7 @@ import { Avatar } from '@/components/Avatar';
 import { TIER_LABEL, levelFromPoints } from '@/lib/level';
 import type { LevelTier } from '@/lib/level';
 import { Badge, ButtonLink, EmptyState, Panel, Skeleton } from '@/components/ui';
+import { avatarPhotoUrl } from '@/lib/supabase/avatarPhoto';
 
 /**
  * Цвет медали для первых трёх мест. Место всё равно показано числом, медаль
@@ -78,7 +79,7 @@ const TEXT: Dict<{
     noProfileTitle: 'Вы пока вне рейтинга',
     noProfileText: 'Создайте профиль ученика, решите первые задания или добавьте достижение в портфолио — строка появится сама.',
     createProfile: 'Создать профиль',
-    teacherNote: 'Вы вошли как учитель: в ученический рейтинг ваша строка не добавляется.',
+    teacherNote: 'Рейтинг ведут ученики. Вы видите весь список целиком — баллы и уровни начисляются только ученикам.',
     demoNote: 'Баллы складываются из решённых заданий и подтверждённых достижений портфолио: победа на олимпиаде весит больше десятка тестов.',
   },
   kk: {
@@ -102,7 +103,7 @@ const TEXT: Dict<{
     noProfileTitle: 'Сіз әзірге рейтингте жоқсыз',
     noProfileText: 'Оқушы профилін құрып, алғашқы тапсырмаларды шешіңіз, сонда жолыңыз өзі пайда болады.',
     createProfile: 'Профиль құру',
-    teacherNote: 'Сіз мұғалім ретінде кірдіңіз: оқушылар рейтингіне сіздің жолыңыз қосылмайды.',
+    teacherNote: 'Рейтингті оқушылар жүргізеді. Сіз тізімді толық көресіз — ұпайлар мен деңгейлер тек оқушыларға беріледі.',
     demoNote: 'Ұпай шешілген тапсырмалар мен расталған портфолио жетістіктерінен жиналады: олимпиададағы жеңіс ондаған тесттен ауыр.',
   },
   en: {
@@ -126,7 +127,7 @@ const TEXT: Dict<{
     noProfileTitle: 'You are not in the ranking yet',
     noProfileText: 'Create a student profile and solve your first tasks, and your row will appear on its own.',
     createProfile: 'Create profile',
-    teacherNote: 'You are signed in as a teacher, so your row is not added to the student ranking.',
+    teacherNote: 'The ranking belongs to students. You see the full list — points and levels are awarded to students only.',
     demoNote: 'Points come from solved tasks and verified portfolio achievements: an olympiad win outweighs dozens of quizzes.',
   },
 };
@@ -186,6 +187,7 @@ export default function LeaderboardPage() {
           // символ на месте, а у себя почему-то буква.
           avatarColor: schoolProfile.avatar_color,
           avatarEmoji: schoolProfile.avatar_emoji,
+          avatarPhoto: avatarPhotoUrl(schoolProfile.avatar_photo_path),
           // Свои баллы складываются из тех же трёх источников, что и у
           // остальных строк (задания + подтверждённые достижения + бонусы
           // за серии), иначе собственное место считалось бы по другим
@@ -307,6 +309,7 @@ export default function LeaderboardPage() {
                   name={visibleName(entry)}
                   colorId={entry.anonymous ? 'slate' : entry.avatarColor}
                   emoji={entry.anonymous ? null : entry.avatarEmoji}
+                  photoUrl={entry.anonymous ? null : entry.avatarPhoto}
                   size={isWinner ? 64 : 52}
                   className={isWinner ? 'ring-2 ring-accent-400 ring-offset-2' : ''}
                 />
@@ -403,6 +406,7 @@ export default function LeaderboardPage() {
                         name={visibleName(entry)}
                         colorId={entry.anonymous ? 'slate' : entry.avatarColor}
                         emoji={entry.anonymous ? null : entry.avatarEmoji}
+                        photoUrl={entry.anonymous ? null : entry.avatarPhoto}
                         size={36}
                       />
                       <div className="min-w-0">
@@ -491,7 +495,20 @@ export default function LeaderboardPage() {
           <p className="mt-2 text-sm text-ink-600">{t.seenAs(visibleName(me))}</p>
         </div>
       ) : profile ? (
-        <p className="mt-16 border-t border-ink-200 pt-6 text-sm text-ink-600">{t.teacherNote}</p>
+        /*
+          Учителю — спокойная карточка, а не строка-оправдание внизу страницы.
+
+          Раньше здесь висело «ваша строка не добавляется»: фраза объясняла
+          через отрицание и читалась как отказ, хотя учитель ничего не терял.
+          Смысл обратный: список он видит целиком, просто соревнуются в нём
+          ученики.
+        */
+        <div className="mt-16 flex items-start gap-4 rounded-[var(--radius-card)] border border-ink-200 bg-white p-5">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-brand-50 text-brand-600">
+            <Icon name="cap" size={20} />
+          </span>
+          <p className="text-sm leading-relaxed text-ink-600">{t.teacherNote}</p>
+        </div>
       ) : (
         <div className="mt-16">
           {/* Иконка вынесена рядом: проп icon в EmptyState принимает строку,

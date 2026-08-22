@@ -25,6 +25,7 @@ import { Icon } from './Icon';
 import { Logo, LogoMark } from './Logo';
 import { Avatar } from './Avatar';
 import { MobileTabBar } from './MobileTabBar';
+import { avatarPhotoUrl } from '@/lib/supabase/avatarPhoto';
 
 /**
  * Пункты, скрытые от роли.
@@ -217,6 +218,7 @@ export function SiteSidebar() {
           name={displayName}
           colorId={schoolProfile?.avatar_color}
           emoji={schoolProfile?.avatar_emoji}
+          photoUrl={avatarPhotoUrl(schoolProfile?.avatar_photo_path)}
           size={32}
         />
         <span className="truncate text-sm font-semibold text-ink-700">
@@ -263,6 +265,7 @@ export function SiteSidebar() {
           name={displayName}
           colorId={schoolProfile?.avatar_color}
           emoji={schoolProfile?.avatar_emoji}
+          photoUrl={avatarPhotoUrl(schoolProfile?.avatar_photo_path)}
           size={32}
         />
           </Link>

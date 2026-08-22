@@ -38,6 +38,7 @@ export interface SchoolProfile {
   class_id: string | null;
   avatar_color: string | null;
   avatar_emoji: string | null;
+  avatar_photo_path: string | null;
   social_links: unknown;
   subject_ids: string[] | null;
   goal: string | null;

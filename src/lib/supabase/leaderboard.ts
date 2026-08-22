@@ -11,6 +11,7 @@ import { useEffect, useState } from 'react';
 import { createClient } from './client';
 import type { LeaderboardEntry } from '@/lib/leaderboard';
 import type { Grade } from '@/lib/types';
+import { avatarPhotoUrl } from '@/lib/supabase/avatarPhoto';
 
 interface ProgressRow {
   student_id: string;
@@ -86,7 +87,7 @@ export function useSchoolLeaderboard(excludeStudentId: string | null) {
 
       const { data: profiles } = await supabase
         .from('profiles')
-        .select('id, name, grade, avatar_color, avatar_emoji')
+        .select('id, name, grade, avatar_color, avatar_emoji, avatar_photo_path')
         .in('id', ids);
       if (cancelled) return;
 
@@ -110,6 +111,7 @@ export function useSchoolLeaderboard(excludeStudentId: string | null) {
               streak: p?.streak_current ?? 0,
               avatarColor: profile.avatar_color,
               avatarEmoji: profile.avatar_emoji,
+              avatarPhoto: avatarPhotoUrl(profile.avatar_photo_path),
             };
           })
           // Ученик без единого балла в списке не нужен: он попал бы туда
