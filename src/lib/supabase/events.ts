@@ -27,6 +27,7 @@ interface PublishedEventRow {
   prize: string | null;
   free: boolean;
   cover_path: string | null;
+  cover_paths: string[] | null;
 }
 
 function rowToEvent(row: PublishedEventRow): SchoolEvent {
@@ -44,9 +45,13 @@ function rowToEvent(row: PublishedEventRow): SchoolEvent {
     subjectId: row.subject_id ?? undefined,
     prize: row.prize ?? undefined,
     free: row.free,
-    coverUrl: row.cover_path
-      ? createClient().storage.from('card-covers').getPublicUrl(row.cover_path).data.publicUrl
-      : null,
+    /*
+      cover_path остаётся как запасной источник: колонка была одиночной,
+      и у событий, опубликованных до перехода на галерею, ссылка лежит
+      именно там. Терять их из-за смены схемы незачем.
+    */
+    coverUrls: (row.cover_paths?.length ? row.cover_paths : [row.cover_path].filter(Boolean) as string[])
+      .map((path) => createClient().storage.from('card-covers').getPublicUrl(path).data.publicUrl),
   };
 }
 

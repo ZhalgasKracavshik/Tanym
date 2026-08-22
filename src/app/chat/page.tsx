@@ -18,6 +18,7 @@ import { getSubject } from '@/data';
 import type { ChatRequest, ChatResponse } from '@/lib/ai/contracts';
 import type { Dict } from '@/lib/i18n';
 import { useStore } from '@/components/StoreProvider';
+import { useEffectiveProfile } from '@/lib/useEffectiveProfile';
 import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
 import { useChatHistory } from '@/lib/supabase/chat';
 import { AiBadge } from '@/components/AiBadge';
@@ -108,7 +109,7 @@ const TEXT: Dict<{
 export default function ChatPage() {
   const { state, hydrated, appendChat, clearChat, replaceChat } = useStore();
   const { profile: schoolProfile } = useSchoolAuth();
-  const { history, saveMessage, clearHistory } = useChatHistory(schoolProfile?.id ?? null);
+  const { history, historyFor, saveMessage, clearHistory } = useChatHistory(schoolProfile?.id ?? null);
   const t = TEXT[state.language];
   const [question, setQuestion] = useState('');
   const [loading, setLoading] = useState(false);
@@ -119,12 +120,22 @@ export default function ChatPage() {
     сообщения, отправленные уже после загрузки: history из хука
     остаётся снимком на момент открытия.
   */
-  const historyApplied = useRef(false);
+  /*
+    Историю подставляем один раз — и только ту, что принадлежит текущему
+    ученику.
+
+    Раньше флаг взводился по первому же значению. Но пока профиль не
+    подгрузился, хук отдавал пустой массив, флаг вставал на нём, и
+    настоящая переписка, приходившая следом, на экран уже не попадала:
+    в базе сообщения были, на экране — пусто.
+  */
+  const appliedFor = useRef<string | null>(null);
   useEffect(() => {
-    if (historyApplied.current || history === null) return;
-    historyApplied.current = true;
+    if (history === null || historyFor === null) return;
+    if (appliedFor.current === historyFor) return;
+    appliedFor.current = historyFor;
     if (history.length > 0) replaceChat(history);
-  }, [history, replaceChat]);
+  }, [history, historyFor, replaceChat]);
 
   // useRef хранит ссылку на элемент разметки — нужен, чтобы прокрутить ленту вниз.
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -142,7 +153,7 @@ export default function ChatPage() {
     Учебный контекст (предметы, цель) по-прежнему может быть пустым:
     тогда модель просто получит меньше подробностей, а не откажет.
   */
-  const profile = state.profile;
+  const profile = useEffectiveProfile();
   const displayName = schoolProfile?.name ?? profile?.name ?? '';
   const subjectIds = profile?.subjectIds ?? [];
   const subject = getSubject(subjectIds[0]);

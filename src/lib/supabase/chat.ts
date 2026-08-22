@@ -31,19 +31,32 @@ interface Row {
  *
  * Возвращает `null`, пока грузит, чтобы страница не мигнула пустым
  * экраном «начните диалог» у того, у кого переписка на самом деле есть.
+ *
+ * Вместе с историей отдаётся `historyFor` — чьи это сообщения. Без него
+ * страница не могла отличить «у ученика пусто» от «ученик ещё не известен»:
+ * пока профиль не подгрузился, studentId равен null, хук отдавал пустой
+ * массив, страница принимала его за загруженную историю и больше к ней не
+ * возвращалась. Переписка оставалась в базе и не появлялась на экране.
  */
 export function useChatHistory(studentId: string | null): {
   history: ChatMessage[] | null;
+  /** Идентификатор ученика, которому принадлежит history. */
+  historyFor: string | null;
   saveMessage: (message: ChatMessage) => void;
   clearHistory: () => Promise<void>;
 } {
-  const [history, setHistory] = useState<ChatMessage[] | null>(null);
+  /*
+    Сообщения хранятся вместе с тем, чьи они.
+
+    Раздельные состояния пришлось бы сбрасывать в начале эффекта, а это
+    лишний рендер и повод показать чужую переписку в промежутке. Здесь
+    несовпадение идентификаторов само означает «ещё грузится», и подставить
+    прошлые сообщения новому ученику невозможно в принципе.
+  */
+  const [loaded, setLoaded] = useState<{ studentId: string; messages: ChatMessage[] } | null>(null);
 
   useEffect(() => {
-    if (!studentId) {
-      setHistory([]);
-      return;
-    }
+    if (!studentId) return;
 
     const supabase = createClient();
     let cancelled = false;
@@ -59,20 +72,25 @@ export function useChatHistory(studentId: string | null): {
       .limit(200)
       .then(({ data }) => {
         if (cancelled) return;
-        setHistory(
-          ((data as Row[] | null) ?? []).map((row) => ({
+        setLoaded({
+          studentId,
+          messages: ((data as Row[] | null) ?? []).map((row) => ({
             role: row.role,
             content: row.content,
             at: row.created_at,
             live: row.live,
           })),
-        );
+        });
       });
 
     return () => {
       cancelled = true;
     };
   }, [studentId]);
+
+  const fresh = loaded !== null && loaded.studentId === studentId;
+  const history = fresh ? loaded.messages : null;
+  const historyFor = fresh ? loaded.studentId : null;
 
   const saveMessage = useCallback(
     (message: ChatMessage) => {
@@ -93,8 +111,8 @@ export function useChatHistory(studentId: string | null): {
   const clearHistory = useCallback(async () => {
     if (!studentId) return;
     await createClient().from('chat_messages').delete().eq('student_id', studentId);
-    setHistory([]);
+    setLoaded({ studentId, messages: [] });
   }, [studentId]);
 
-  return { history, saveMessage, clearHistory };
+  return { history, historyFor, saveMessage, clearHistory };
 }

@@ -11,7 +11,7 @@ import type { Language } from '@/lib/types';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from './ui';
 import { Icon } from './Icon';
-import { ImageField } from './ImageField';
+import { ImageGalleryField } from './ImageGalleryField';
 
 const TEXT = {
   ru: {
@@ -46,24 +46,31 @@ export function EventPublishForm({ language, adminId, onPublished }: { language:
   const [grades, setGrades] = useState('9,10,11');
   const [prize, setPrize] = useState('');
   const [free, setFree] = useState(true);
-  const [cover, setCover] = useState<File | null>(null);
+  const [covers, setCovers] = useState<File[]>([]);
   const [status, setStatus] = useState<'idle' | 'sending' | 'done' | 'error'>('idle');
 
 
   /**
-   * Кладёт обложку в бакет и возвращает путь.
+   * Кладёт изображения в бакет и возвращает их пути по порядку.
    *
-   * Возвращает undefined только при настоящей ошибке загрузки; отсутствие
-   * файла — это null, штатный случай. Разделять важно: публикацию без
-   * картинки останавливать не за что, а публикацию с потерянной картинкой —
-   * есть, иначе карточка молча выйдет пустой.
+   * undefined — настоящая ошибка загрузки, пустой массив — картинок просто
+   * нет. Разделять важно: публикацию без изображений останавливать не за
+   * что, а публикацию, где половина картинок потерялась, — есть, иначе
+   * карточка выйдет с дырами, а организатор об этом не узнает.
    */
-  async function uploadCover(supabase: ReturnType<typeof createClient>): Promise<string | null | undefined> {
-    if (!cover) return null;
-    const extension = cover.name.split('.').pop()?.toLowerCase() ?? 'jpg';
-    const path = `${Date.now()}-${Math.round(Math.random() * 1e6)}.${extension}`;
-    const { error } = await supabase.storage.from('card-covers').upload(path, cover);
-    return error ? undefined : path;
+  async function uploadCovers(supabase: ReturnType<typeof createClient>): Promise<string[] | undefined> {
+    if (covers.length === 0) return [];
+
+    const paths: string[] = [];
+    for (const [position, file] of covers.entries()) {
+      const extension = file.name.split('.').pop()?.toLowerCase() ?? 'jpg';
+      // Позиция в имени — чтобы порядок читался прямо по бакету при разборе.
+      const path = `${Date.now()}-${position}-${Math.round(Math.random() * 1e6)}.${extension}`;
+      const { error } = await supabase.storage.from('card-covers').upload(path, file);
+      if (error) return undefined;
+      paths.push(path);
+    }
+    return paths;
   }
 
   async function submit() {
@@ -78,14 +85,14 @@ export function EventPublishForm({ language, adminId, onPublished }: { language:
       .map((item) => Number(item.trim()))
       .filter((item) => Number.isFinite(item) && item > 0);
 
-    const coverPath = await uploadCover(supabase);
-    if (coverPath === undefined) {
+    const coverPaths = await uploadCovers(supabase);
+    if (coverPaths === undefined) {
       setStatus('error');
       return;
     }
 
     const { error } = await supabase.from('published_events').insert({
-      cover_path: coverPath,
+      cover_paths: coverPaths,
       admin_id: adminId,
       type,
       title,
@@ -105,7 +112,7 @@ export function EventPublishForm({ language, adminId, onPublished }: { language:
       return;
     }
     setStatus('done');
-    setCover(null);
+    setCovers([]);
     setTitle('');
     setOrganizer('');
     setDescription('');
@@ -167,7 +174,7 @@ export function EventPublishForm({ language, adminId, onPublished }: { language:
       {status === 'error' && <p className="text-sm font-semibold text-danger-600">{t.error}</p>}
 
 
-      <ImageField file={cover} onChange={setCover} />
+      <ImageGalleryField files={covers} onChange={setCovers} />
 
       <Button onClick={submit} disabled={status === 'sending'}>
         {status === 'sending' ? t.publishing : t.publish}

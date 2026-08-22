@@ -48,6 +48,8 @@ const TEXT: Dict<{
   statusClosing: string;
   details: string;
   back: string;
+  prevImage: string;
+  nextImage: string;
 }> = {
   ru: {
     kicker: 'Олимпиады и конкурсы',
@@ -77,6 +79,8 @@ const TEXT: Dict<{
     statusClosing: 'Регистрация закрывается',
     details: 'Подробнее',
     back: 'Назад',
+    prevImage: 'Предыдущее фото',
+    nextImage: 'Следующее фото',
   },
   kk: {
     kicker: 'Олимпиадалар мен байқаулар',
@@ -106,6 +110,8 @@ const TEXT: Dict<{
     statusClosing: 'Тіркелу жабылып жатыр',
     details: 'Толығырақ',
     back: 'Артқа',
+    prevImage: 'Алдыңғы сурет',
+    nextImage: 'Келесі сурет',
   },
   en: {
     kicker: 'Olympiads and contests',
@@ -135,6 +141,8 @@ const TEXT: Dict<{
     statusClosing: 'Registration closing',
     details: 'Details',
     back: 'Back',
+    prevImage: 'Previous image',
+    nextImage: 'Next image',
   },
 };
 

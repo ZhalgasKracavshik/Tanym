@@ -1,30 +1,39 @@
 'use client';
 
 /**
- * Карточка события с оборотом.
+ * Карточка события.
  *
- * Раньше всё содержимое лежало на одной стороне, и карточка была компромиссом:
- * описание обрезалось на второй строке, а место, формат и награда стояли
- * одной серой строкой через точку. Прочесть событие целиком было нельзя
- * нигде — отдельной страницы у события нет.
+ * Наверху — то, что прислал организатор: афиша, фото с прошлого года, схема
+ * площадки. Их листают, потому что решение «идти или нет» по одной картинке
+ * не принимают. Придуманных иллюстраций здесь нет намеренно: нарисованная
+ * заставка вместо настоящего снимка — это украшение пустоты, и на десяти
+ * карточках подряд она сразу читается как заглушка. Если организатор ничего
+ * не прислал, шапка остаётся типографской: крупный вид события на плотной
+ * заливке — честно и не притворяется фотографией.
  *
- * Оборот решает это, не заводя новых экранов: лицевая сторона отвечает на
- * вопрос «что это и когда закрывается», оборотная — «стоит ли идти».
- * Записаться можно с обеих: решение приходит и до, и после подробностей,
- * и заставлять переворачивать карточку обратно ради кнопки было бы глупо.
- *
- * Переворот по кнопке, а не по наведению. На телефоне наведения нет вовсе,
- * а на ноутбуке карточка, которая крутится от проезжающей мимо мыши, мешает
- * читать соседние. Кнопка работает одинаково и там, и там, и с клавиатуры.
+ * Оборота у карточки больше нет. Он прятал описание за лишним действием,
+ * хотя описание — главное, ради чего в карточку смотрят. Теперь текст на
+ * месте сразу, а по кнопке разворачиваются подробности: место, формат,
+ * классы, награда.
  */
 
 import { useState } from 'react';
-import { useReducedMotion } from 'framer-motion';
-import type { EventStatus, EventType, SchoolEvent } from '@/lib/events';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import type { EventStatus, SchoolEvent } from '@/lib/events';
 import { Badge, Button } from './ui';
 import { Icon } from './Icon';
-import { DEFAULT_EVENT_COVER } from '@/lib/covers';
 import type { IconName } from './Icon';
+
+/*
+  Направление приходит в variants через `custom`: кадр должен уезжать в ту
+  сторону, откуда пришёл следующий, иначе листание назад выглядит как
+  листание вперёд.
+*/
+const SLIDE = {
+  enter: (direction: number) => ({ x: direction > 0 ? '100%' : '-100%', opacity: 0 }),
+  center: { x: 0, opacity: 1 },
+  exit: (direction: number) => ({ x: direction < 0 ? '100%' : '-100%', opacity: 0 }),
+};
 
 export interface EventCardText {
   register: string;
@@ -41,6 +50,8 @@ export interface EventCardText {
   prize: string;
   details: string;
   back: string;
+  prevImage: string;
+  nextImage: string;
 }
 
 export function EventCard({
@@ -72,189 +83,226 @@ export function EventCard({
   onToggleRegistration: () => void;
   t: EventCardText;
 }) {
-  const [flipped, setFlipped] = useState(false);
   const reduce = useReducedMotion();
+  const [index, setIndex] = useState(0);
+  const [direction, setDirection] = useState(0);
+  const [expanded, setExpanded] = useState(false);
 
-  // Загруженная обложка важнее готовой: администратор ставил её осознанно.
-  const cover = event.coverUrl ?? DEFAULT_EVENT_COVER[event.type] ?? null;
+  const images = event.coverUrls ?? [];
+  const hasImages = images.length > 0;
 
-  const registerButton = registered ? (
-    <div className="flex flex-wrap items-center gap-2">
-      <span className="flex items-center gap-1.5 text-sm font-semibold text-success-700">
-        <Icon name="check" size={16} />
-        {t.registered}
-      </span>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => {
-          if (window.confirm(t.confirmCancel(event.title))) onToggleRegistration();
-        }}
-      >
-        {t.cancel}
-      </Button>
-    </div>
-  ) : (
-    canRegister && (
-      <Button size="sm" onClick={onToggleRegistration}>
-        {t.register}
-      </Button>
-    )
-  );
+  function move(step: number) {
+    setDirection(step);
+    setIndex((current) => (current + step + images.length) % images.length);
+  }
 
-  /*
-    Высота задана и одинакова у всех карточек. Обе стороны выведены из
-    потока (absolute), и сжаться по содержимому контейнеру не от чего —
-    без явной высоты он схлопнулся бы в ноль.
-  */
   return (
-    <div className="h-[27rem] [perspective:2000px]">
-      <div
-        className="relative h-full w-full transition-transform duration-700 [transform-style:preserve-3d]"
-        style={{
-          transform: flipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
-          transitionDuration: reduce ? '0ms' : undefined,
-        }}
-      >
-        {/* Лицевая сторона */}
-        <Face hidden={flipped} className={status === 'past' ? 'opacity-60' : ''}>
-          <div className={`relative h-32 shrink-0 ${cover ? 'bg-ink-200' : bannerClass}`}>
-            {cover ? (
-              // eslint-disable-next-line @next/next/no-img-element -- внешний бакет, домен для next/image не настроен
-              <img src={cover} alt="" className="h-full w-full object-cover" loading="lazy" />
-            ) : (
-              typeIcon && (
-                <div className="flex h-full items-center justify-center">
-                  <Icon name={typeIcon} size={34} className="text-white/85" />
-                </div>
-              )
-            )}
-            <span className="absolute right-3 top-3">
-              <Badge tone={statusTone}>{statusLabel}</Badge>
+    <motion.article
+      initial={reduce ? false : { opacity: 0, y: 18 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.25 }}
+      transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+      /*
+        Подъём на пружине, а не на линейном переходе: карточка должна
+        отзываться как предмет, который приподняли, а не как слайд.
+      */
+      whileHover={reduce ? undefined : { y: -4, transition: { type: 'spring', stiffness: 300, damping: 22 } }}
+      className={`group flex flex-col overflow-hidden rounded-[var(--radius-card)] border border-ink-200 bg-white shadow-[var(--shadow-rest)] transition-shadow duration-300 hover:shadow-[var(--shadow-float)] ${
+        status === 'past' ? 'opacity-60' : ''
+      }`}
+    >
+      {/* --- Шапка --- */}
+      <div className={`relative h-48 shrink-0 overflow-hidden ${hasImages ? 'bg-ink-900' : bannerClass}`}>
+        {hasImages ? (
+          <AnimatePresence initial={false} custom={direction}>
+            <motion.img
+              key={index}
+              src={images[index]}
+              alt=""
+              loading="lazy"
+              custom={direction}
+              variants={SLIDE}
+              initial={reduce ? false : 'enter'}
+              animate="center"
+              exit={reduce ? { opacity: 0 } : 'exit'}
+              transition={{
+                x: { type: 'spring', stiffness: 300, damping: 30 },
+                opacity: { duration: 0.2 },
+              }}
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+          </AnimatePresence>
+        ) : (
+          /*
+            Без фотографий — не иконка на цветной плашке, а название вида
+            события крупно. Иконка в пустом прямоугольнике сообщает «здесь
+            должна была быть картинка»; слово ничего не обещает и читается
+            как оформление.
+          */
+          <div className="flex h-full items-end p-5">
+            <span className="text-2xl font-semibold leading-tight text-white/90">{typeTitle}</span>
+          </div>
+        )}
+
+        {/* Затемнение снизу — иначе белые бейджи теряются на светлом снимке */}
+        {hasImages && (
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 bg-gradient-to-t from-ink-900/45 via-transparent to-ink-900/25"
+          />
+        )}
+
+        <div className="absolute left-3 top-3 flex flex-wrap gap-2">
+          <span className="flex items-center gap-1.5 rounded-[var(--radius-pill)] bg-white/85 px-2.5 py-1 text-xs font-bold text-ink-800 backdrop-blur-sm">
+            {typeIcon && <Icon name={typeIcon} size={13} />}
+            {typeTitle}
+          </span>
+          {event.online && (
+            <span className="rounded-[var(--radius-pill)] bg-white/85 px-2.5 py-1 text-xs font-bold text-ink-800 backdrop-blur-sm">
+              {t.online}
             </span>
-          </div>
+          )}
+        </div>
 
-          <div className="flex flex-1 flex-col overflow-hidden p-5">
-            <Badge tone="brand" className="w-fit">
-              {typeIcon && <Icon name={typeIcon} size={14} />}
-              {typeTitle}
-            </Badge>
+        <span className="absolute right-3 top-3">
+          <Badge tone={statusTone}>{statusLabel}</Badge>
+        </span>
 
-            <h2 className="mt-3 line-clamp-2 text-lg font-bold text-ink-900">{event.title}</h2>
-            <p className="mt-1 truncate text-sm text-ink-400">{event.organizer}</p>
+        {/* Стрелки появляются при наведении и только когда листать есть что */}
+        {images.length > 1 && (
+          <>
+            <CarouselButton side="left" label={t.prevImage} onClick={() => move(-1)} />
+            <CarouselButton side="right" label={t.nextImage} onClick={() => move(1)} />
 
-            <div className="mt-auto border-t border-ink-200 pt-3">
-              <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-ink-400">
-                <Icon name="calendar" size={14} />
-                {t.deadline}
-              </p>
-              <div className="mt-1 flex flex-wrap items-baseline justify-between gap-x-3">
-                <p className="font-semibold tabular-nums text-ink-900">{deadlineLabel}</p>
-                {canRegister && (
-                  <p
-                    className={`text-sm font-semibold ${
-                      status === 'closing-soon' ? 'text-danger-600' : 'text-ink-500'
-                    }`}
-                  >
-                    {daysLeft === 0 ? t.lastDay : t.daysLeft(daysLeft)}
-                  </p>
-                )}
-              </div>
-
-              <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+            <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1.5">
+              {images.map((image, dot) => (
                 <button
-                  onClick={() => setFlipped(true)}
-                  className="group/more inline-flex items-center gap-1.5 rounded-[var(--radius-control)] px-2 py-1.5 -ml-2 text-sm font-semibold text-brand-600 transition-colors duration-150 hover:bg-brand-50 focus-visible:ring-2 focus-visible:ring-brand-500"
-                >
-                  {t.details}
-                  <Icon
-                    name="compass"
-                    size={15}
-                    className="transition-transform duration-300 group-hover/more:translate-x-0.5"
-                  />
-                </button>
-                {registerButton}
-              </div>
+                  key={image}
+                  onClick={() => {
+                    setDirection(dot > index ? 1 : -1);
+                    setIndex(dot);
+                  }}
+                  aria-label={`${dot + 1}`}
+                  aria-current={dot === index}
+                  className={`h-1.5 rounded-full transition-all duration-300 ${
+                    dot === index ? 'w-4 bg-white' : 'w-1.5 bg-white/55 hover:bg-white/80'
+                  }`}
+                />
+              ))}
             </div>
-          </div>
-        </Face>
+          </>
+        )}
+      </div>
 
-        {/* Оборот */}
-        <Face back hidden={!flipped}>
-          <div className="flex h-full flex-col p-5">
-            <div className="flex items-start justify-between gap-3">
-              <h2 className="line-clamp-2 text-lg font-bold text-ink-900">{event.title}</h2>
-              <button
-                onClick={() => setFlipped(false)}
-                aria-label={t.back}
-                className="shrink-0 rounded-full p-1.5 text-ink-400 transition-colors duration-150 hover:bg-ink-100 hover:text-ink-700 focus-visible:ring-2 focus-visible:ring-brand-500"
-              >
-                <Icon name="close" size={18} />
-              </button>
-            </div>
+      {/* --- Содержание --- */}
+      <div className="flex flex-1 flex-col p-5">
+        <h2 className="text-lg font-bold leading-snug text-ink-900">{event.title}</h2>
 
-            {/* Длинное описание прокручивается внутри карточки: высота
-                общая для всей сетки, растягивать её под самый подробный
-                текст значило бы оставить дыры под всеми остальными. */}
-            <div className="mt-3 min-h-0 flex-1 overflow-y-auto pr-1">
-              <p className="whitespace-pre-line text-sm leading-relaxed text-ink-600">
-                {event.description}
-              </p>
+        <p className="mt-1.5 text-sm text-ink-400">
+          {deadlineLabel} · {event.organizer}
+        </p>
 
-              <dl className="mt-4 space-y-2 border-t border-ink-200 pt-3 text-sm">
+        <p className="mt-3 line-clamp-3 text-sm leading-relaxed text-ink-600">{event.description}</p>
+
+        <AnimatePresence initial={false}>
+          {expanded && (
+            <motion.div
+              initial={reduce ? false : { height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={reduce ? { opacity: 0 } : { height: 0, opacity: 0 }}
+              transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+              className="overflow-hidden"
+            >
+              <dl className="mt-4 space-y-2 border-t border-ink-100 pt-3 text-sm">
                 <Row icon="pin" value={event.online ? t.online : event.location} />
-                <Row icon="gem" value={event.free ? t.free : t.paid} />
                 <Row icon="users" value={t.grades(event.grades.join(', '))} />
                 {event.prize && <Row icon="trophy" value={event.prize} />}
               </dl>
-            </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-            <div className="mt-3 flex items-center justify-between gap-2 border-t border-ink-200 pt-3">
-              <button
-                onClick={() => setFlipped(false)}
-                className="inline-flex items-center gap-1.5 rounded-[var(--radius-control)] px-2 py-1.5 -ml-2 text-sm font-semibold text-ink-500 transition-colors duration-150 hover:bg-ink-100 focus-visible:ring-2 focus-visible:ring-brand-500"
+        <button
+          onClick={() => setExpanded((value) => !value)}
+          aria-expanded={expanded}
+          className="mt-3 w-fit text-sm font-semibold text-brand-600 underline-offset-4 transition-colors duration-150 hover:underline focus-visible:ring-2 focus-visible:ring-brand-500"
+        >
+          {expanded ? t.back : t.details}
+        </button>
+
+        {/* --- Низ: цена и действие --- */}
+        <div className="mt-auto flex flex-wrap items-center justify-between gap-3 border-t border-ink-200 pt-4">
+          <div>
+            <p className="font-bold text-ink-900">{event.free ? t.free : t.paid}</p>
+            {canRegister && (
+              <p
+                className={`text-xs font-semibold ${
+                  status === 'closing-soon' ? 'text-danger-600' : 'text-ink-400'
+                }`}
               >
-                {t.back}
-              </button>
-              {registerButton}
-            </div>
+                {daysLeft === 0 ? t.lastDay : t.daysLeft(daysLeft)}
+              </p>
+            )}
           </div>
-        </Face>
+
+          {registered ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="flex items-center gap-1.5 text-sm font-semibold text-success-700">
+                <Icon name="check" size={16} />
+                {t.registered}
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  if (window.confirm(t.confirmCancel(event.title))) onToggleRegistration();
+                }}
+              >
+                {t.cancel}
+              </Button>
+            </div>
+          ) : (
+            canRegister && (
+              <Button size="sm" onClick={onToggleRegistration} className="group/cta">
+                {t.register}
+                <Icon
+                  name="arrow-right"
+                  size={15}
+                  className="transition-transform duration-300 group-hover/cta:translate-x-1"
+                />
+              </Button>
+            )
+          )}
+        </div>
       </div>
-    </div>
+    </motion.article>
   );
 }
 
-/**
- * Одна сторона карточки.
- *
- * backface-visibility скрывает изнанку не во всех браузерах одинаково,
- * поэтому невидимая сторона дополнительно гасится opacity и убирается из
- * дерева доступности: иначе скринридер и поиск по странице находили бы на
- * карточке два комплекта кнопок, включая невидимый.
- */
-function Face({
-  children,
-  back = false,
-  hidden,
-  className = '',
+function CarouselButton({
+  side,
+  label,
+  onClick,
 }: {
-  children: React.ReactNode;
-  back?: boolean;
-  hidden: boolean;
-  className?: string;
+  side: 'left' | 'right';
+  label: string;
+  onClick: () => void;
 }) {
   return (
-    <div
-      aria-hidden={hidden}
-      inert={hidden ? true : undefined}
-      className={`absolute inset-0 flex flex-col overflow-hidden rounded-[var(--radius-card)] border border-ink-200 bg-white shadow-[var(--shadow-rest)] transition-opacity duration-300 [backface-visibility:hidden] ${
-        hidden ? 'opacity-0' : 'opacity-100'
-      } ${className}`}
-      style={{ transform: back ? 'rotateY(180deg)' : undefined }}
+    <button
+      onClick={onClick}
+      aria-label={label}
+      /*
+        opacity-0 только там, где наведение вообще есть. На телефоне
+        (hover:none) кнопки видны всегда — иначе листать было бы нечем:
+        карусель без стрелок и без свайпа осталась бы на первом кадре.
+      */
+      className={`absolute top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-ink-900/45 text-white backdrop-blur-sm transition-all duration-200 hover:bg-ink-900/70 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-white [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 ${
+        side === 'left' ? 'left-2' : 'right-2'
+      }`}
     >
-      {children}
-    </div>
+      <Icon name={side === 'left' ? 'chevron-left' : 'chevron-right'} size={16} />
+    </button>
   );
 }
 
@@ -268,5 +316,3 @@ function Row({ icon, value }: { icon: IconName; value: string }) {
     </div>
   );
 }
-
-export type { EventType };

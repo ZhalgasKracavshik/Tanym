@@ -52,6 +52,9 @@ export type IconName =
   | 'star'
   | 'pin'
   | 'image'
+  | 'chevron-left'
+  | 'chevron-right'
+  | 'arrow-right'
   | 'pencil'
   | 'bulb'
   | 'columns'
@@ -289,6 +292,14 @@ const PATHS: Record<IconName, React.ReactNode> = {
   ),
   // Рамка, солнце и линия горизонта — знак изображения, узнаваемый
   // без подписи. Рисуется тем же контуром, что и остальной набор.
+  'chevron-left': <path d="m15 18-6-6 6-6" />,
+  'chevron-right': <path d="m9 18 6-6-6-6" />,
+  'arrow-right': (
+    <>
+      <path d="M5 12h14" />
+      <path d="m12 5 7 7-7 7" />
+    </>
+  ),
   image: (
     <>
       <rect x="3" y="4" width="18" height="16" rx="2" />
