@@ -69,18 +69,35 @@ export function ButtonLink({
   size = 'md',
   className = '',
   children,
+  external = false,
 }: {
   href: string;
   variant?: ButtonVariant;
   size?: ButtonSize;
   className?: string;
   children: ReactNode;
+  /**
+   * true — обычный `<a target="_blank">`, а не next/link.
+   *
+   * Нужен для ссылок, которые вводит не разработчик, а пользователь при
+   * публикации (например, адрес внешней регистрации на событие): такой
+   * переход должен открываться в новой вкладке и не участвовать в
+   * префетче/маршрутизации Next — это чужой домен, а не страница проекта.
+   */
+  external?: boolean;
 }) {
+  const cls = `${BUTTON_BASE} ${BUTTON_VARIANTS[variant]} ${BUTTON_SIZES[size]} ${className}`;
+
+  if (external) {
+    return (
+      <a href={href} target="_blank" rel="noopener noreferrer" className={cls}>
+        {children}
+      </a>
+    );
+  }
+
   return (
-    <Link
-      href={href}
-      className={`${BUTTON_BASE} ${BUTTON_VARIANTS[variant]} ${BUTTON_SIZES[size]} ${className}`}
-    >
+    <Link href={href} className={cls}>
       {children}
     </Link>
   );

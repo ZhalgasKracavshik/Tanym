@@ -26,6 +26,7 @@ import { EVENT_TYPES } from '@/lib/events';
 import type { EventType } from '@/lib/events';
 import type { Language } from '@/lib/types';
 import { createClient } from '@/lib/supabase/client';
+import { normalizeSocialUrl } from '@/lib/social';
 import { Button } from './ui';
 import { Icon } from './Icon';
 import { ImageGalleryField, MAX_IMAGES } from './ImageGalleryField';
@@ -43,6 +44,11 @@ const TEXT = {
     grades: 'Классы (через запятую, например 9,10,11)',
     prize: 'Что даёт участие (необязательно)',
     free: 'Бесплатно',
+    registrationUrl: 'Ссылка для записи (необязательно)',
+    registrationUrlPlaceholder: 'Google-форма, чат или страница курса',
+    registrationUrlHint:
+      'Если оставить пустым, на странице события останется только личная отметка «иду», без перехода куда-либо.',
+    registrationUrlError: 'Проверьте ссылку для записи — она должна быть настоящим адресом.',
     covers: 'Уже загруженные изображения',
     coversHint: 'Первое изображение — обложка в афише.',
     coversFull: `Загружено ${MAX_IMAGES} из ${MAX_IMAGES} — чтобы добавить новое, уберите старое.`,
@@ -73,6 +79,8 @@ export interface EventEditInitial {
   grades: number[];
   prize: string;
   free: boolean;
+  /** Пустая строка — ссылки для записи нет. */
+  registrationUrl: string;
   /** Пути в бакете card-covers, а не публичные ссылки. */
   coverPaths: string[];
 }
@@ -105,11 +113,12 @@ export function EventEditForm({
   const [grades, setGrades] = useState(initial.grades.join(','));
   const [prize, setPrize] = useState(initial.prize);
   const [free, setFree] = useState(initial.free);
+  const [registrationUrl, setRegistrationUrl] = useState(initial.registrationUrl);
 
   /** Что из уже загруженного остаётся, в том порядке, в каком останется. */
   const [keptPaths, setKeptPaths] = useState<string[]>(initial.coverPaths);
   const [newFiles, setNewFiles] = useState<File[]>([]);
-  const [status, setStatus] = useState<'idle' | 'sending' | 'error' | 'denied'>('idle');
+  const [status, setStatus] = useState<'idle' | 'sending' | 'error' | 'denied' | 'bad-url'>('idle');
 
   const room = MAX_IMAGES - keptPaths.length;
 
@@ -152,6 +161,13 @@ export function EventEditForm({
       setStatus('error');
       return;
     }
+
+    const safeRegistrationUrl = registrationUrl.trim() === '' ? null : normalizeSocialUrl(registrationUrl);
+    if (registrationUrl.trim() !== '' && safeRegistrationUrl === null) {
+      setStatus('bad-url');
+      return;
+    }
+
     setStatus('sending');
 
     const supabase = createClient();
@@ -186,6 +202,7 @@ export function EventEditForm({
         grades: gradeList,
         prize: prize || null,
         free,
+        registration_url: safeRegistrationUrl,
         cover_paths: [...keptPaths, ...uploaded],
         /*
           Старая одиночная колонка гасится намеренно. Если её оставить, то
@@ -285,6 +302,20 @@ export function EventEditForm({
         </label>
       </div>
 
+      <div>
+        <label className="text-sm font-semibold text-ink-700" htmlFor="event-edit-registration-url">
+          {t.registrationUrl}
+        </label>
+        <input
+          id="event-edit-registration-url"
+          value={registrationUrl}
+          onChange={(e) => setRegistrationUrl(e.target.value)}
+          placeholder={t.registrationUrlPlaceholder}
+          className={`${inputCls} mt-2`}
+        />
+        <p className="mt-1 text-xs text-ink-400">{t.registrationUrlHint}</p>
+      </div>
+
       {keptPaths.length > 0 && (
         <div>
           <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -350,6 +381,7 @@ export function EventEditForm({
 
       {status === 'error' && <p className="text-sm font-semibold text-danger-600">{t.error}</p>}
       {status === 'denied' && <p className="text-sm font-semibold text-danger-600">{t.denied}</p>}
+      {status === 'bad-url' && <p className="text-sm font-semibold text-danger-600">{t.registrationUrlError}</p>}
 
       <div className="flex flex-wrap gap-3">
         <Button onClick={submit} disabled={status === 'sending'}>

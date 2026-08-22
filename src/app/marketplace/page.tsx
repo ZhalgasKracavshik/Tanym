@@ -37,6 +37,7 @@ interface PublishedListingRow {
   schedule: string;
   contact: string;
   verified: boolean;
+  cover_path: string | null;
 }
 
 function rowToListing(row: PublishedListingRow): Listing {
@@ -55,6 +56,9 @@ function rowToListing(row: PublishedListingRow): Listing {
     contact: row.contact,
     spots: row.spots ?? undefined,
     verified: row.verified,
+    coverUrl: row.cover_path
+      ? createClient().storage.from('card-covers').getPublicUrl(row.cover_path).data.publicUrl
+      : null,
   };
 }
 
@@ -260,14 +264,37 @@ export default function MarketplacePage() {
                 key={listing.id}
                 className="group flex flex-col overflow-hidden p-0 transition-all duration-300 hover:shadow-[var(--shadow-lift)]"
               >
-                {/* Цветной баннер с иконкой вида объявления, цена поверх — как на афише */}
-                <div className={`relative flex h-24 items-center justify-center ${TYPE_BANNER[listing.type]}`}>
-                  {meta && (
-                    <Icon
-                      name={meta.icon}
-                      size={34}
-                      className="text-white/85 transition-transform duration-500 group-hover:scale-110"
+                {/*
+                  Обложка, если её загрузили при публикации, иначе — цветной
+                  баннер с иконкой вида, как на афише.
+
+                  Поле загрузки в форме публикации существовало и раньше, но
+                  сюда, на саму карточку, картинка не попадала никогда: вью
+                  запроса просто не забирала колонку cover_path. То есть
+                  человек загружал фото, оно сохранялось в хранилище, а
+                  увидеть его на «Возможностях» было негде.
+                */}
+                <div
+                  className={`relative flex h-24 items-center justify-center overflow-hidden ${
+                    listing.coverUrl ? 'bg-ink-200' : TYPE_BANNER[listing.type]
+                  }`}
+                >
+                  {listing.coverUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- внешний бакет, домен для next/image не настроен
+                    <img
+                      src={listing.coverUrl}
+                      alt=""
+                      loading="lazy"
+                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
+                  ) : (
+                    meta && (
+                      <Icon
+                        name={meta.icon}
+                        size={34}
+                        className="text-white/85 transition-transform duration-500 group-hover:scale-110"
+                      />
+                    )
                   )}
                   <span className="absolute right-3 top-3">
                     <Badge tone={listing.price === null ? 'success' : 'neutral'} className="tabular-nums">

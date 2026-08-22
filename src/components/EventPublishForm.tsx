@@ -9,6 +9,7 @@ import { EVENT_TYPES } from '@/lib/events';
 import type { EventType } from '@/lib/events';
 import type { Language } from '@/lib/types';
 import { createClient } from '@/lib/supabase/client';
+import { normalizeSocialUrl } from '@/lib/social';
 import { Button } from './ui';
 import { Icon } from './Icon';
 import { ImageGalleryField } from './ImageGalleryField';
@@ -26,6 +27,11 @@ const TEXT = {
     grades: 'Классы (через запятую, например 9,10,11)',
     prize: 'Что даёт участие (необязательно)',
     free: 'Бесплатно',
+    registrationUrl: 'Ссылка для записи (необязательно)',
+    registrationUrlPlaceholder: 'Google-форма, чат или страница курса',
+    registrationUrlHint:
+      'Если оставить пустым, на странице события останется только личная отметка «иду», без перехода куда-либо.',
+    registrationUrlError: 'Проверьте ссылку для записи — она должна быть настоящим адресом.',
     publish: 'Опубликовать',
     publishing: 'Публикуем…',
     done: 'Событие опубликовано и видно в афише.',
@@ -46,8 +52,9 @@ export function EventPublishForm({ language, adminId, onPublished }: { language:
   const [grades, setGrades] = useState('9,10,11');
   const [prize, setPrize] = useState('');
   const [free, setFree] = useState(true);
+  const [registrationUrl, setRegistrationUrl] = useState('');
   const [covers, setCovers] = useState<File[]>([]);
-  const [status, setStatus] = useState<'idle' | 'sending' | 'done' | 'error'>('idle');
+  const [status, setStatus] = useState<'idle' | 'sending' | 'done' | 'error' | 'bad-url'>('idle');
 
 
   /**
@@ -78,6 +85,20 @@ export function EventPublishForm({ language, adminId, onPublished }: { language:
       setStatus('error');
       return;
     }
+
+    /*
+      Пустая ссылка допустима — событие может быть без внешней записи, тогда
+      на странице останется только личная отметка. А вот непустая, но
+      нерабочая строка сохраняться не должна: она превратилась бы в мёртвую
+      кнопку «Записаться», ведущую в никуда, и это заметили бы только те,
+      кто на неё нажал.
+    */
+    const safeRegistrationUrl = registrationUrl.trim() === '' ? null : normalizeSocialUrl(registrationUrl);
+    if (registrationUrl.trim() !== '' && safeRegistrationUrl === null) {
+      setStatus('bad-url');
+      return;
+    }
+
     setStatus('sending');
     const supabase = createClient();
     const gradeList = grades
@@ -105,6 +126,7 @@ export function EventPublishForm({ language, adminId, onPublished }: { language:
       grades: gradeList,
       prize: prize || null,
       free,
+      registration_url: safeRegistrationUrl,
     });
 
     if (error) {
@@ -117,6 +139,7 @@ export function EventPublishForm({ language, adminId, onPublished }: { language:
     setOrganizer('');
     setDescription('');
     setPrize('');
+    setRegistrationUrl('');
     onPublished();
   }
 
@@ -170,9 +193,23 @@ export function EventPublishForm({ language, adminId, onPublished }: { language:
         </label>
       </div>
 
+      <div>
+        <label className="text-sm font-semibold text-ink-700" htmlFor="event-registration-url">
+          {t.registrationUrl}
+        </label>
+        <input
+          id="event-registration-url"
+          value={registrationUrl}
+          onChange={(e) => setRegistrationUrl(e.target.value)}
+          placeholder={t.registrationUrlPlaceholder}
+          className={`${inputCls} mt-2`}
+        />
+        <p className="mt-1 text-xs text-ink-400">{t.registrationUrlHint}</p>
+      </div>
+
       {status === 'done' && <p className="text-sm font-semibold text-success-700">{t.done}</p>}
       {status === 'error' && <p className="text-sm font-semibold text-danger-600">{t.error}</p>}
-
+      {status === 'bad-url' && <p className="text-sm font-semibold text-danger-600">{t.registrationUrlError}</p>}
 
       <ImageGalleryField files={covers} onChange={setCovers} />
 

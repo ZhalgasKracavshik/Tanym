@@ -7,9 +7,16 @@
  * и посты лежали каждый на своей странице, и увидеть «что вообще
  * происходит в школе» было негде. Читается из вью activity_feed —
  * она же гарантирует, что заявки на модерации сюда не попадают.
+ *
+ * Разметка одной записи — `ActivityFeedItem` — экспортируется отдельно и
+ * не дублируется больше нигде. Раньше у страницы /feed была своя копия
+ * этой разметки, и когда здесь чинили утечку (скан диплома не должен
+ * разворачиваться в общей ленте), копию на /feed забыли — она продолжала
+ * показывать документ ребёнка. Общий источник делает такое расхождение
+ * невозможным: правка в одном месте одна на оба места её использования.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { AchievementCard, type AchievementCardTone } from './AchievementCard';
@@ -32,7 +39,7 @@ interface FeedRow {
   link: string;
 }
 
-interface FeedItem extends FeedRow {
+export interface FeedItem extends FeedRow {
   actorName: string;
   actorColor: string | null;
   actorPhoto: string | null;
@@ -66,12 +73,15 @@ const KIND_META: Record<FeedKind, { icon: IconName; label: string; tone: string 
  * его участия. Сам диплом остаётся доступен по ссылке в портфолио — то есть
  * по отдельному действию.
  *
- * Ключа нет вовсе, а не «есть, но мы его отфильтруем ниже»: пока адрес скана
- * вычисляется, кто-нибудь однажды подставит его в photoUrl — ровно так утечка
- * и появилась на странице src/app/feed/page.tsx, где карта бакетов своя.
+ * У этого ключа нет причины бояться расшириться: 'achievement_post' и
+ * 'listing_published' — вложения, которые публикующий выбрал сам и
+ * осознанно, зная, что это увидит вся школа (личное фото, обложка
+ * объявления). У 'achievement_approved' выбора не было — учитель прикрепил
+ * скан для проверки, а не для показа всем.
  */
 const MEDIA_BUCKET: Partial<Record<FeedKind, string>> = {
   achievement_post: 'achievement-photos',
+  listing_published: 'card-covers',
 };
 
 /**
@@ -89,7 +99,7 @@ const ACHIEVEMENT_TONE: Partial<Record<FeedKind, AchievementCardTone>> = {
 };
 
 /** «5 минут назад» вместо даты: лента читается как поток, а не как архив. */
-function relativeTime(iso: string): string {
+export function relativeTime(iso: string): string {
   const diffMs = Date.now() - new Date(iso).getTime();
   const minutes = Math.floor(diffMs / 60000);
   if (minutes < 1) return 'только что';
@@ -153,9 +163,136 @@ export function useActivityFeed(limit = 20, refreshKey = 0) {
   return items;
 }
 
+/**
+ * Одна запись ленты.
+ *
+ * `footer` — то, что дополнительно рисует конкретная страница под записью:
+ * страница /feed кладёт туда реакцию, здесь (в общей ленте достижений)
+ * ничего не передаётся. Сама карточка от этого не меняется — расхождение,
+ * из-за которого была утечка, было именно в разметке самой записи.
+ */
+export function ActivityFeedItem({ item, footer }: { item: FeedItem; footer?: ReactNode }) {
+  const supabase = createClient();
+  const meta = KIND_META[item.kind];
+  const cardTone = ACHIEVEMENT_TONE[item.kind];
+
+  const bucket = MEDIA_BUCKET[item.kind];
+  const mediaUrl =
+    item.media_path && bucket ? supabase.storage.from(bucket).getPublicUrl(item.media_path).data.publicUrl : null;
+
+  /*
+    Фоном кладём только изображение. Формы публикации ограничивают выбор
+    файла через accept, но это подсказка диалогу, а не запрет: подсунуть в
+    бакет PDF ничто не мешает, и <img> на него отрисовался бы битой иконкой
+    во всю карточку.
+  */
+  const imageUrl = mediaUrl && !/\.pdf($|\?)/i.test(mediaUrl) ? mediaUrl : null;
+
+  if (cardTone) {
+    const isPost = item.kind === 'achievement_post';
+
+    return (
+      <>
+        {/*
+          Автор идёт строкой над карточкой, а не поверх неё: лента
+          читается сверху вниз по столбцу «кто — что», и подпись,
+          уехавшая на фотографию, выпадает из этого столбца.
+        */}
+        <Link href={item.link} className="block">
+          <div className="flex items-center gap-3">
+            <Avatar name={item.actorName} colorId={item.actorColor} photoUrl={item.actorPhoto} size={40} />
+            <p className="min-w-0 text-sm text-ink-500">
+              <span className="font-semibold text-ink-900">{item.actorName}</span> {meta.label}
+              <span className="text-ink-300"> · {relativeTime(item.created_at)}</span>
+            </p>
+          </div>
+
+          {/*
+            Карточка вертикальная (4:5), поэтому её ширина ограничена:
+            на всю ленту в тысячу пикселей она развернулась бы в экран
+            высотой, и одна запись съела бы всю прокрутку.
+          */}
+          <div className="mt-3 w-full max-w-xs">
+            <AchievementCard
+              title={item.title}
+              /*
+                У подтверждённого достижения в detail лежит короткое
+                направление («Физика») — это подзаголовок. У поста там
+                подпись самого ученика, её место третьей строкой.
+              */
+              subtitle={isPost ? undefined : (item.detail ?? undefined)}
+              description={isPost ? (item.detail ?? undefined) : undefined}
+              date={item.created_at}
+              // Лента школы целиком на русском — переключателя языка у неё нет.
+              language="ru"
+              photoUrl={imageUrl}
+              tone={cardTone}
+              icon={meta.icon}
+            />
+          </div>
+        </Link>
+        {footer}
+      </>
+    );
+  }
+
+  return (
+    <LiftCard className="overflow-hidden rounded-[var(--radius-card)] border border-ink-200/80 bg-white shadow-[var(--shadow-rest)]">
+      <Link href={item.link} className="block">
+        <div className="flex items-start gap-3 p-5">
+          {/*
+            Через общий Avatar, а не свой кружок: здесь раньше цвет
+            подставлялся в CSS напрямую (`background: item.actorColor`),
+            но в колонке лежит идентификатор вроде «brand», а не
+            градиент — браузер такое правило отбрасывал, и белая буква
+            оказывалась на белой карточке.
+          */}
+          <Avatar name={item.actorName} colorId={item.actorColor} photoUrl={item.actorPhoto} size={40} />
+
+          <div className="min-w-0 flex-1">
+            <p className="text-sm text-ink-500">
+              <span className="font-semibold text-ink-900">{item.actorName}</span> {meta.label}
+              <span className="text-ink-300"> · {relativeTime(item.created_at)}</span>
+            </p>
+
+            <p className="mt-1 flex items-center gap-2 font-bold text-ink-900">
+              {/*
+                Значок 16px в кружке 28px, а не 13 в 24.
+
+                Медаль и кубок — рисунки из нескольких линий, и на
+                тринадцати пикселях они сливаются в закорючку: в
+                ленте это читалось как непрогрузившийся символ, а
+                не как значок типа записи.
+              */}
+              <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${meta.tone}`}>
+                <Icon name={meta.icon} size={16} />
+              </span>
+              {item.title}
+            </p>
+
+            {item.detail && <p className="mt-1 text-sm text-ink-500">{item.detail}</p>}
+          </div>
+        </div>
+
+        {/*
+          Обложка объявления — снизу, во всю ширину карточки. Раньше здесь
+          не рисовалось ничего: у listing_published не было записи в
+          MEDIA_BUCKET, а объявления и правда шли без картинки — вью запроса
+          отдавала NULL, даже когда обложку загружали. Сейчас вью читает
+          published_listings.cover_path по-настоящему.
+        */}
+        {imageUrl && (
+          // eslint-disable-next-line @next/next/no-img-element -- внешний бакет, домен для next/image не настроен
+          <img src={imageUrl} alt="" loading="lazy" className="h-40 w-full bg-ink-50 object-cover" />
+        )}
+      </Link>
+      {footer}
+    </LiftCard>
+  );
+}
+
 export function ActivityFeed({ limit = 20, refreshKey = 0 }: { limit?: number; refreshKey?: number }) {
   const items = useActivityFeed(limit, refreshKey);
-  const supabase = createClient();
 
   if (items === null) return null;
 
@@ -178,134 +315,11 @@ export function ActivityFeed({ limit = 20, refreshKey = 0 }: { limit?: number; r
       и на трёх пикселях зазора она наползала на соседнюю запись.
     */
     <StaggerGroup className="space-y-5">
-      {items.map((item) => {
-        const meta = KIND_META[item.kind];
-        const cardTone = ACHIEVEMENT_TONE[item.kind];
-
-        if (cardTone) {
-          const isPost = item.kind === 'achievement_post';
-          // Бакет задан только у поста ученика — почему, написано у MEDIA_BUCKET.
-          const bucket = MEDIA_BUCKET[item.kind];
-          const mediaUrl =
-            item.media_path && bucket
-              ? supabase.storage.from(bucket).getPublicUrl(item.media_path).data.publicUrl
-              : null;
-
-          /*
-            Фоном кладём только изображение. Форму публикации ограничивает
-            accept="image/*", но это подсказка файловому диалогу, а не
-            запрет: подсунуть в бакет PDF ничто не мешает, и <img> на него
-            отрисовался бы битой иконкой во всю карточку.
-          */
-          const photoUrl = mediaUrl && !/\.pdf($|\?)/i.test(mediaUrl) ? mediaUrl : null;
-
-          return (
-            <StaggerItem key={`${item.kind}-${item.id}`}>
-              {/*
-                Автор идёт строкой над карточкой, а не поверх неё: лента
-                читается сверху вниз по столбцу «кто — что», и подпись,
-                уехавшая на фотографию, выпадает из этого столбца.
-              */}
-              <Link href={item.link} className="block">
-                <div className="flex items-center gap-3">
-                  <Avatar
-                    name={item.actorName}
-                    colorId={item.actorColor}
-                    photoUrl={item.actorPhoto}
-                    size={40}
-                  />
-                  <p className="min-w-0 text-sm text-ink-500">
-                    <span className="font-semibold text-ink-900">{item.actorName}</span>{' '}
-                    {meta.label}
-                    <span className="text-ink-300"> · {relativeTime(item.created_at)}</span>
-                  </p>
-                </div>
-
-                {/*
-                  Карточка вертикальная (4:5), поэтому её ширина ограничена:
-                  на всю ленту в тысячу пикселей она развернулась бы в экран
-                  высотой, и одна запись съела бы всю прокрутку.
-                */}
-                <div className="mt-3 w-full max-w-xs">
-                  <AchievementCard
-                    title={item.title}
-                    /*
-                      У подтверждённого достижения в detail лежит короткое
-                      направление («Физика») — это подзаголовок. У поста там
-                      подпись самого ученика, её место третьей строкой.
-                    */
-                    subtitle={isPost ? undefined : (item.detail ?? undefined)}
-                    description={isPost ? (item.detail ?? undefined) : undefined}
-                    date={item.created_at}
-                    // Лента школы целиком на русском — переключателя языка у неё нет.
-                    language="ru"
-                    photoUrl={photoUrl}
-                    tone={cardTone}
-                    icon={meta.icon}
-                  />
-                </div>
-              </Link>
-            </StaggerItem>
-          );
-        }
-
-        return (
-          <StaggerItem key={`${item.kind}-${item.id}`}>
-            <LiftCard className="overflow-hidden rounded-[var(--radius-card)] border border-ink-200/80 bg-white shadow-[var(--shadow-rest)]">
-              <Link href={item.link} className="block p-5">
-                <div className="flex items-start gap-3">
-                  {/*
-                    Через общий Avatar, а не свой кружок: здесь раньше цвет
-                    подставлялся в CSS напрямую (`background: item.actorColor`),
-                    но в колонке лежит идентификатор вроде «brand», а не
-                    градиент — браузер такое правило отбрасывал, и белая буква
-                    оказывалась на белой карточке.
-                  */}
-                  <Avatar
-                    name={item.actorName}
-                    colorId={item.actorColor}
-                    photoUrl={item.actorPhoto}
-                    size={40}
-                  />
-
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm text-ink-500">
-                      <span className="font-semibold text-ink-900">{item.actorName}</span>{' '}
-                      {meta.label}
-                      <span className="text-ink-300"> · {relativeTime(item.created_at)}</span>
-                    </p>
-
-                    <p className="mt-1 flex items-center gap-2 font-bold text-ink-900">
-                      {/*
-                        Значок 16px в кружке 28px, а не 13 в 24.
-
-                        Медаль и кубок — рисунки из нескольких линий, и на
-                        тринадцати пикселях они сливаются в закорючку: в
-                        ленте это читалось как непрогрузившийся символ, а
-                        не как значок типа записи.
-                      */}
-                      <span
-                        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${meta.tone}`}
-                      >
-                        <Icon name={meta.icon} size={16} />
-                      </span>
-                      {item.title}
-                    </p>
-
-                    {item.detail && <p className="mt-1 text-sm text-ink-500">{item.detail}</p>}
-                  </div>
-                </div>
-                {/*
-                  Вложения в этой ветке нет намеренно: сюда доходят только
-                  объявления, а для listing_published бакет в MEDIA_BUCKET не
-                  задан — файл объявления живёт на его собственной странице,
-                  и лента его не показывает.
-                */}
-              </Link>
-            </LiftCard>
-          </StaggerItem>
-        );
-      })}
+      {items.map((item) => (
+        <StaggerItem key={`${item.kind}-${item.id}`}>
+          <ActivityFeedItem item={item} />
+        </StaggerItem>
+      ))}
     </StaggerGroup>
   );
 }

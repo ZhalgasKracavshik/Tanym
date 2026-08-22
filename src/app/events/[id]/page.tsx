@@ -26,6 +26,7 @@ import type { EventStatus, EventType, SchoolEvent } from '@/lib/events';
 import type { Dict } from '@/lib/i18n';
 import type { Language } from '@/lib/types';
 import { createClient } from '@/lib/supabase/client';
+import { normalizeSocialUrl } from '@/lib/social';
 import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
 import { useStore } from '@/components/StoreProvider';
 import { EventEditForm } from '@/components/EventEditForm';
@@ -73,10 +74,20 @@ const TEXT: Dict<{
   lastDay: string;
   closedNote: string;
   pastNote: string;
+  /** Внешняя ссылка организатора — единственное, что теперь называется «Записаться». */
   register: string;
-  registered: string;
-  cancel: string;
-  confirmCancel: (title: string) => string;
+  /**
+   * Личная пометка «собираюсь пойти», отдельная от register.
+   *
+   * Раньше оба смысла делила одна кнопка: локальный переключатель в
+   * localStorage назывался «Записаться», хотя ни организатор, ни школа
+   * о нажатии не узнавали. Разведены явно, чтобы кнопка с внешней ссылкой
+   * не выглядела так же, как заметка для себя.
+   */
+  markGoing: string;
+  going: string;
+  unmark: string;
+  confirmUnmark: (title: string) => string;
   edit: string;
   editTitle: string;
   statusOpen: string;
@@ -110,9 +121,10 @@ const TEXT: Dict<{
     closedNote: 'Регистрация закрыта',
     pastNote: 'Событие уже прошло',
     register: 'Записаться',
-    registered: 'Вы записаны',
-    cancel: 'Отменить запись',
-    confirmCancel: (title) => `Отменить запись на «${title}»?`,
+    markGoing: 'Отметить, что иду',
+    going: 'Вы отметили, что идёте',
+    unmark: 'Убрать отметку',
+    confirmUnmark: (title) => `Убрать отметку «иду» с «${title}»?`,
     edit: 'Редактировать',
     editTitle: 'Правка события',
     statusOpen: 'Регистрация открыта',
@@ -146,9 +158,10 @@ const TEXT: Dict<{
     closedNote: 'Тіркелу жабық',
     pastNote: 'Іс-шара өтіп кетті',
     register: 'Тіркелу',
-    registered: 'Сіз тіркелдіңіз',
-    cancel: 'Тіркеуді болдырмау',
-    confirmCancel: (title) => `«${title}» іс-шарасына тіркеу болдырылсын ба?`,
+    markGoing: 'Баратынымды белгілеу',
+    going: 'Сіз баратыныңызды белгіледіңіз',
+    unmark: 'Белгіні алып тастау',
+    confirmUnmark: (title) => `«${title}» іс-шарасына «барамын» белгісі алынсын ба?`,
     edit: 'Өңдеу',
     editTitle: 'Іс-шараны өңдеу',
     statusOpen: 'Тіркелу ашық',
@@ -182,9 +195,10 @@ const TEXT: Dict<{
     closedNote: 'Registration closed',
     pastNote: 'The event is over',
     register: 'Register',
-    registered: 'You are registered',
-    cancel: 'Cancel registration',
-    confirmCancel: (title) => `Cancel your registration for “${title}”?`,
+    markGoing: "Mark that I'm going",
+    going: "You marked you're going",
+    unmark: 'Remove mark',
+    confirmUnmark: (title) => `Remove your "going" mark for "${title}"?`,
     edit: 'Edit',
     editTitle: 'Edit event',
     statusOpen: 'Registration open',
@@ -240,6 +254,7 @@ interface EventRow {
   subject_id: string | null;
   prize: string | null;
   free: boolean;
+  registration_url: string | null;
   cover_path: string | null;
   cover_paths: string[] | null;
 }
@@ -265,6 +280,7 @@ function rowToEvent(row: EventRow): SchoolEvent {
     subjectId: row.subject_id ?? undefined,
     prize: row.prize ?? undefined,
     free: row.free,
+    registrationUrl: row.registration_url,
     coverUrls: coverPathsOf(row).map(
       (path) => supabase.storage.from('card-covers').getPublicUrl(path).data.publicUrl,
     ),
@@ -388,6 +404,14 @@ function EventBody({
   const status = eventStatus(event);
   const daysLeft = daysLeftUntil(event.registrationDeadline);
   const registrationRuns = status === 'open' || status === 'closing-soon';
+  /*
+    Проверяется повторно здесь же, а не только при сохранении формы.
+    Публикация события — прямая запись в Supabase с этой же страницы,
+    без отдельного серверного роута, и колонка уходит прямиком в href —
+    то есть это та же защита, что и у ссылок в профиле (parseSocialLinks):
+    источником правды считается момент показа, а не момент записи.
+  */
+  const safeRegistrationUrl = event.registrationUrl ? normalizeSocialUrl(event.registrationUrl) : null;
   const meta = EVENT_TYPES.find((type) => type.id === event.type);
   const images = event.coverUrls ?? [];
   /*
@@ -417,6 +441,7 @@ function EventBody({
       grades,
       prize: event.prize ?? '',
       free: event.free,
+      registrationUrl: row.registration_url ?? '',
       coverPaths: coverPathsOf(row),
     };
 
@@ -528,37 +553,58 @@ function EventBody({
         </div>
 
         {/*
-          Отменить запись можно и после закрытия регистрации: человек уже
-          числится участником, и запереть его в этом списке было бы
-          нечестно. Записаться заново — уже нет, срок есть срок.
+          Две разные кнопки для двух разных вещей — раньше на их месте
+          стояла одна, и это и было нечестно.
+
+          «Записаться» — настоящая внешняя ссылка. Её даёт организатор при
+          публикации, ведёт на его форму или в его чат, и открывается в
+          новой вкладке. Нет ссылки — нет и кнопки: обещать действие,
+          которого нет, хуже, чем не предлагать никакого.
+
+          Отметка «иду» — то, что раньше называлось «Записаться», хотя
+          менялась только строка в браузере: ни организатор, ни школа об
+          этом не узнавали. Смысл остаётся полезным — по нему строится
+          фильтр «Мои записи» в афише и виджет «ближайшее событие» в
+          кабинете, — просто назван так, как есть: личная заметка, а не
+          запись куда-либо.
         */}
-        {registered ? (
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="flex items-center gap-2 font-semibold text-success-700">
-              <Icon name="check" size={18} />
-              {t.registered}
-            </span>
-            <Button
-              variant="ghost"
-              onClick={() => {
-                if (window.confirm(t.confirmCancel(event.title))) onToggleRegistration();
-              }}
-            >
-              {t.cancel}
-            </Button>
-          </div>
-        ) : (
-          registrationRuns && (
-            <Button onClick={onToggleRegistration} className="group/cta">
+        <div className="flex flex-wrap items-center gap-3">
+          {registrationRuns && safeRegistrationUrl && (
+            <ButtonLink href={safeRegistrationUrl} external className="group/cta">
               {t.register}
               <Icon
-                name="arrow-right"
+                name="link"
                 size={16}
                 className="transition-transform duration-300 group-hover/cta:translate-x-1"
               />
-            </Button>
-          )
-        )}
+            </ButtonLink>
+          )}
+
+          {registered ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="flex items-center gap-2 text-sm font-semibold text-success-700">
+                <Icon name="check" size={16} />
+                {t.going}
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  if (window.confirm(t.confirmUnmark(event.title))) onToggleRegistration();
+                }}
+              >
+                {t.unmark}
+              </Button>
+            </div>
+          ) : (
+            registrationRuns && (
+              <Button variant="secondary" size="sm" onClick={onToggleRegistration}>
+                <Icon name="pin" size={14} />
+                {t.markGoing}
+              </Button>
+            )
+          )}
+        </div>
       </div>
 
       {event.description && (

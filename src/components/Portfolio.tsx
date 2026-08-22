@@ -8,7 +8,7 @@
  * ученик должен понимать, почему баллы не начислились.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import {
   LEVELS,
@@ -121,6 +121,117 @@ const PLACE_FILL: Record<ReturnType<typeof placeTone>, AchievementCardTone> = {
 /** Скан PDF нельзя положить фоном — только открыть ссылкой. */
 function isImageProof(url: string): boolean {
   return !/\.pdf(\?|#|$)/i.test(url);
+}
+
+/** Отсканированный диплом весит больше декоративной обложки — 8 МБ вместо 4. */
+const MAX_PROOF_BYTES = 8 * 1024 * 1024;
+
+/**
+ * Загрузка подтверждения — фото или PDF, с настоящим превью.
+ *
+ * Раньше здесь стоял голый `<input type="file">`: выбранный файл никак не
+ * подтверждался на экране, кроме системной подписи браузера. На это и была
+ * жалоба «изображение разместить негде» — поле было, а результат выбора
+ * не был виден.
+ *
+ * Общий ImageField не подходит без переделки: он принимает только
+ * jpeg/png/webp и не умеет предпросматривать PDF, а грамоту чаще всего
+ * сканируют именно в PDF — терять эту возможность нельзя.
+ */
+function ProofField({ file, onChange }: { file: File | null; onChange: (file: File | null) => void }) {
+  const [error, setError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const isPdf = file?.type === 'application/pdf';
+  const preview = useMemo(() => (file && !isPdf ? URL.createObjectURL(file) : null), [file, isPdf]);
+  useEffect(() => {
+    if (!preview) return;
+    return () => URL.revokeObjectURL(preview);
+  }, [preview]);
+
+  function pick(next: File | null) {
+    if (!next) {
+      setError(null);
+      onChange(null);
+      return;
+    }
+    const isAllowed = next.type.startsWith('image/') || next.type === 'application/pdf';
+    if (!isAllowed) {
+      setError('Подойдёт фото (JPG, PNG, WebP) или PDF.');
+      onChange(null);
+      return;
+    }
+    if (next.size > MAX_PROOF_BYTES) {
+      setError(`Файл больше ${Math.round(MAX_PROOF_BYTES / 1024 / 1024)} МБ. Пересканируйте с меньшим разрешением.`);
+      onChange(null);
+      return;
+    }
+    setError(null);
+    onChange(next);
+  }
+
+  return (
+    <div>
+      <span className="text-sm font-semibold text-ink-700">Диплом или грамота</span>
+
+      {file ? (
+        <div className="mt-2 overflow-hidden rounded-[var(--radius-control)] border border-ink-200">
+          {preview ? (
+            <div className="relative aspect-[16/10] bg-ink-100">
+              {/* eslint-disable-next-line @next/next/no-img-element -- blob-ссылка на локальный файл */}
+              <img src={preview} alt="" className="h-full w-full object-cover" />
+            </div>
+          ) : (
+            <div className="flex items-center gap-3 bg-ink-50 px-4 py-6">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-danger-600 shadow-[var(--shadow-rest)]">
+                <Icon name="folder" size={20} />
+              </span>
+              <span className="min-w-0 text-sm font-semibold text-ink-700">PDF-документ</span>
+            </div>
+          )}
+          <div className="flex items-center justify-between gap-3 bg-white px-3 py-2">
+            <span className="min-w-0 truncate text-xs text-ink-500">{file.name}</span>
+            <button
+              type="button"
+              onClick={() => {
+                pick(null);
+                if (inputRef.current) inputRef.current.value = '';
+              }}
+              className="shrink-0 text-xs font-semibold text-ink-400 underline-offset-2 hover:text-danger-600 hover:underline"
+            >
+              Убрать
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          className="mt-2 flex w-full flex-col items-center justify-center gap-2 rounded-[var(--radius-control)] border border-dashed border-ink-300 bg-ink-50/60 px-4 py-8 text-center transition-colors duration-150 hover:border-brand-400 hover:bg-brand-50/50 focus-visible:ring-2 focus-visible:ring-brand-500"
+        >
+          <span className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-brand-500 shadow-[var(--shadow-rest)]">
+            <Icon name="image" size={20} />
+          </span>
+          <span className="text-sm font-semibold text-ink-700">Загрузить диплом</span>
+          <span className="text-xs text-ink-400">Фото или PDF, до 8 МБ</span>
+        </button>
+      )}
+
+      {error ? (
+        <p className="mt-2 text-xs font-medium text-danger-600">{error}</p>
+      ) : (
+        <p className="mt-2 text-xs text-ink-400">Без подтверждения заявку скорее всего отклонят.</p>
+      )}
+
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*,application/pdf"
+        className="sr-only"
+        onChange={(event) => pick(event.target.files?.[0] ?? null)}
+      />
+    </div>
+  );
 }
 
 /**
@@ -361,21 +472,7 @@ export function AchievementForm({
         className={`${INPUT} h-auto py-3`}
       />
 
-      <div>
-        <label className="text-sm font-semibold text-ink-700" htmlFor="proof">
-          Диплом или грамота (фото либо PDF)
-        </label>
-        <input
-          id="proof"
-          type="file"
-          accept="image/*,application/pdf"
-          onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-          className="mt-2 block text-sm text-ink-600"
-        />
-        <p className="mt-1 text-xs text-ink-400">
-          Без подтверждения заявку скорее всего отклонят.
-        </p>
-      </div>
+      <ProofField file={file} onChange={setFile} />
 
       {status === 'error' && (
         <p className="text-sm font-semibold text-danger-600">

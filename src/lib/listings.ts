@@ -90,4 +90,6 @@ export interface Listing {
   verified: boolean;
   /** true — объявление создал пользователь и оно ждёт модерации. */
   pending?: boolean;
+  /** Готовая ссылка на обложку. Нет — карточка рисует цветную плашку. */
+  coverUrl?: string | null;
 }
