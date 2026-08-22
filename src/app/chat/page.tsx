@@ -347,7 +347,15 @@ export default function ChatPage() {
             rows={1}
             disabled={loading}
             placeholder={t.placeholder}
-            className="max-h-32 flex-1 resize-none bg-transparent px-3 py-2.5 text-white outline-none placeholder:text-white/40"
+            /*
+              Глобальный :focus-visible (globals.css) рисует прямоугольную
+              рамку поверх любого элемента и по порядку правил перебивает
+              класс outline-none — на скруглённой тёмной панели получался
+              квадратный контур поверх круглых углов. Гасим его точечно
+              через important-модификатор, не трогая общее правило: панель
+              уже показывает фокус сама, светлея через focus-within.
+            */
+            className="max-h-32 flex-1 resize-none bg-transparent px-3 py-2.5 text-white outline-none! placeholder:text-white/40"
           />
           <PressButton
             onClick={() => send(question)}
