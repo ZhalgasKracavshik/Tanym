@@ -144,7 +144,7 @@ const TIER_STYLE: Record<LevelTier, string> = {
 export default function LeaderboardPage() {
   const [visibleCount, setVisibleCount] = useState(10);
   const { state, hydrated, setLeaderboardAnonymous } = useStore();
-  const { profile: schoolProfile } = useSchoolAuth();
+  const { profile: schoolProfile, refresh } = useSchoolAuth();
   const realEntries = useSchoolLeaderboard(schoolProfile?.id ?? null);
   const myAchievements = usePortfolio(schoolProfile?.id ?? null);
   const myAchievementPoints = portfolioPoints(myAchievements);
@@ -168,6 +168,24 @@ export default function LeaderboardPage() {
     баллы за достижения уже лежали в базе.
   */
   const profile = state.profile;
+  /**
+   * Сохраняет анонимность в профиль, а не только на устройстве.
+   *
+   * Локальная копия остаётся: на ней держится подпись под таблицей, пока
+   * ответ сервера не пришёл. Но источник правды теперь база — иначе на
+   * втором устройстве настройка сбрасывалась бы, а одноклассники всё равно
+   * видели бы настоящее имя.
+   */
+  async function saveAnonymity(anonymous: boolean) {
+    setLeaderboardAnonymous(anonymous);
+    await fetch('/api/profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ leaderboardAnonymous: anonymous }),
+    }).catch(() => {});
+    await refresh();
+  }
+
   const isStudent = schoolProfile?.role === 'student';
   const summary = summarize(state);
 
@@ -186,7 +204,6 @@ export default function LeaderboardPage() {
           // поэтому оформление аватара нужно перенести явно — иначе у всех
           // символ на месте, а у себя почему-то буква.
           avatarColor: schoolProfile.avatar_color,
-          avatarEmoji: schoolProfile.avatar_emoji,
           avatarPhoto: avatarPhotoUrl(schoolProfile.avatar_photo_path),
           // Свои баллы складываются из тех же трёх источников, что и у
           // остальных строк (задания + подтверждённые достижения + бонусы
@@ -196,7 +213,7 @@ export default function LeaderboardPage() {
           topicsMastered: summary.topicsMastered,
           streak: state.streak.current,
           isCurrentUser: true,
-          anonymous: state.leaderboardAnonymous,
+          anonymous: schoolProfile.leaderboard_anonymous,
         }
       : null;
 
@@ -308,7 +325,6 @@ export default function LeaderboardPage() {
                 <Avatar
                   name={visibleName(entry)}
                   colorId={entry.anonymous ? 'slate' : entry.avatarColor}
-                  emoji={entry.anonymous ? null : entry.avatarEmoji}
                   photoUrl={entry.anonymous ? null : entry.avatarPhoto}
                   size={isWinner ? 64 : 52}
                   className={isWinner ? 'ring-2 ring-accent-400 ring-offset-2' : ''}
@@ -405,7 +421,6 @@ export default function LeaderboardPage() {
                       <Avatar
                         name={visibleName(entry)}
                         colorId={entry.anonymous ? 'slate' : entry.avatarColor}
-                        emoji={entry.anonymous ? null : entry.avatarEmoji}
                         photoUrl={entry.anonymous ? null : entry.avatarPhoto}
                         size={36}
                       />
@@ -483,8 +498,8 @@ export default function LeaderboardPage() {
           <label className="mt-4 flex cursor-pointer items-start gap-3">
             <input
               type="checkbox"
-              checked={state.leaderboardAnonymous}
-              onChange={(event) => setLeaderboardAnonymous(event.target.checked)}
+              checked={schoolProfile?.leaderboard_anonymous ?? false}
+              onChange={(event) => saveAnonymity(event.target.checked)}
               className="mt-0.5 h-5 w-5 shrink-0 rounded border-ink-300 accent-brand-500"
             />
             <span>

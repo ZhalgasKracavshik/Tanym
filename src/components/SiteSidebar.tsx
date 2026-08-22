@@ -217,7 +217,6 @@ export function SiteSidebar() {
         <Avatar
           name={displayName}
           colorId={schoolProfile?.avatar_color}
-          emoji={schoolProfile?.avatar_emoji}
           photoUrl={avatarPhotoUrl(schoolProfile?.avatar_photo_path)}
           size={32}
         />
@@ -264,7 +263,6 @@ export function SiteSidebar() {
             <Avatar
           name={displayName}
           colorId={schoolProfile?.avatar_color}
-          emoji={schoolProfile?.avatar_emoji}
           photoUrl={avatarPhotoUrl(schoolProfile?.avatar_photo_path)}
           size={32}
         />

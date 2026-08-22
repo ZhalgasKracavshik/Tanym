@@ -47,7 +47,7 @@ function UsersPanel() {
   */
   const users = useRows(
     'profiles',
-    'id, name, role, grade, avatar_color, avatar_emoji, avatar_photo_path, classes(name)',
+    'id, name, role, grade, avatar_color, avatar_photo_path, classes(name)',
     refreshKey,
   );
 
@@ -117,7 +117,6 @@ function UsersPanel() {
                   <Avatar
                     name={String(row.name ?? '')}
                     colorId={row.avatar_color as string | null}
-                    emoji={row.avatar_emoji as string | null}
                     photoUrl={avatarPhotoUrl(row.avatar_photo_path as string | null)}
                     size={36}
                   />

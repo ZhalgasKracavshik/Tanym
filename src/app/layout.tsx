@@ -47,7 +47,7 @@ export default async function RootLayout({ children }: LayoutProps<'/'>) {
     сервер отдаёт меню гостя, браузер его рисует, и гидратация подменяет
     список пунктов на глазах у пользователя.
   */
-  const { profile, email, schoolClass } = await getServerProfile();
+  const { profile, email, emailConfirmed, schoolClass } = await getServerProfile();
 
   return (
     <html lang="ru" className={`${inter.variable} ${playfair.variable} h-full`}>
@@ -58,6 +58,7 @@ export default async function RootLayout({ children }: LayoutProps<'/'>) {
           <SchoolAuthProvider
             initialProfile={profile}
             initialEmail={email}
+            initialEmailConfirmed={emailConfirmed}
             initialSchoolClass={schoolClass}
           >
             <ProgressSync />

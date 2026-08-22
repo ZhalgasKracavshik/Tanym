@@ -13,8 +13,14 @@
 
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { AVATAR_EMOJI } from '@/lib/avatar';
 import { parseSocialLinks } from '@/lib/social';
+import {
+  INTERESTS,
+  KNOWLEDGE_LEVELS,
+  REMINDER_LEADS,
+  STUDY_TIMES,
+  normalizePhone,
+} from '@/lib/profileFields';
 import { getServerProfile } from '@/lib/supabase/serverProfile';
 
 function randomClassCode(): string {
@@ -28,8 +34,8 @@ function randomClassCode(): string {
 export async function GET() {
   // Та же функция, что вызывает layout при серверном рендере — иначе две
   // копии логики разошлись бы при первом же изменении схемы профиля.
-  const { profile, email, schoolClass } = await getServerProfile();
-  return NextResponse.json({ profile, email, class: schoolClass });
+  const { profile, email, emailConfirmed, schoolClass } = await getServerProfile();
+  return NextResponse.json({ profile, email, emailConfirmed, class: schoolClass });
 }
 
 /**
@@ -59,34 +65,75 @@ export async function PATCH(request: Request) {
   if (typeof body.targetDate === 'string' || body.targetDate === null) patch.target_date = body.targetDate;
   if (typeof body.avatarColor === 'string') patch.avatar_color = body.avatarColor;
   /*
-    Символ принимаем только из набора AVATAR_EMOJI, а не любую строку.
-    Колонка text приняла бы что угодно — включая абзац текста или
-    невидимые управляющие символы, которые растянули бы кружок аватара
-    во всех списках сразу. Пустая строка — это «убрать символ».
-  */
-  /*
-    Путь к фотографии, а не готовая ссылка: ссылку клиент мог бы прислать
-    любую, включая чужой домен, и она бы отрисовалась в ленте у всех.
-    Путь же осмысленен только внутри нашего бакета.
-  */
-  if (body.avatarPhotoPath === null || body.avatarPhotoPath === '') {
-    patch.avatar_photo_path = null;
-  } else if (typeof body.avatarPhotoPath === 'string' && !body.avatarPhotoPath.includes('..')) {
-    patch.avatar_photo_path = body.avatarPhotoPath;
-  }
-
-  if (body.avatarEmoji === null || body.avatarEmoji === '') {
-    patch.avatar_emoji = null;
-  } else if (typeof body.avatarEmoji === 'string' && AVATAR_EMOJI.includes(body.avatarEmoji)) {
-    patch.avatar_emoji = body.avatarEmoji;
-  }
-  /*
     Ссылки чистим на сервере повторно, а не доверяем клиенту.
     Форма уже проверяет адрес, но PATCH — обычный HTTP-запрос: его можно
     отправить в обход интерфейса и положить в профиль javascript:-ссылку,
     которая сработает у того, кто откроет этот профиль.
   */
   if (Array.isArray(body.socialLinks)) patch.social_links = parseSocialLinks(body.socialLinks);
+
+  /*
+    Дальше — поля, добавленные вместе с контактами и приватностью.
+
+    Каждое проверяется по своему справочнику, а не принимается как есть.
+    PATCH — обычный HTTP-запрос, и «выбор из списка» существует только в
+    форме: в обход неё сюда можно прислать любую строку, любой массив и
+    любое число, и всё это осталось бы в базе и разъехалось по интерфейсу.
+  */
+  if (typeof body.phone === 'string' || body.phone === null) {
+    const phone = body.phone === null ? null : normalizePhone(body.phone);
+    // Пустая строка — это «стереть номер», а мусор — повод отказать целиком,
+    // иначе человек увидит «сохранено» там, где ничего не сохранилось.
+    if (body.phone !== null && body.phone.trim() !== '' && phone === null) {
+      return NextResponse.json({ error: 'invalid_phone' }, { status: 400 });
+    }
+    patch.phone = phone;
+  }
+
+  if (body.knowledgeLevel === null) patch.knowledge_level = null;
+  else if (
+    typeof body.knowledgeLevel === 'string' &&
+    KNOWLEDGE_LEVELS.some((item) => item.id === body.knowledgeLevel)
+  ) {
+    patch.knowledge_level = body.knowledgeLevel;
+  }
+
+  if (Array.isArray(body.interests)) {
+    // Лишнее отбрасываем молча, но дубли убираем: массив уходит в базу как есть.
+    patch.interests = [...new Set(body.interests)].filter((id) =>
+      INTERESTS.some((item) => item.id === id),
+    );
+  }
+
+  if (typeof body.bio === 'string') patch.bio = body.bio.trim().slice(0, 800) || null;
+  if (typeof body.availability === 'string') patch.availability = body.availability.trim().slice(0, 400) || null;
+
+  for (const [key, column] of [
+    ['leaderboardAnonymous', 'leaderboard_anonymous'],
+    ['profileVisible', 'profile_visible'],
+    ['progressVisible', 'progress_visible'],
+    ['notifyLearning', 'notify_learning'],
+    ['notifyOrg', 'notify_org'],
+    ['notifyMarketing', 'notify_marketing'],
+  ] as const) {
+    if (typeof body[key] === 'boolean') patch[column] = body[key];
+  }
+
+  if (Array.isArray(body.studyDays)) {
+    patch.study_days = [...new Set(body.studyDays)].filter(
+      (day) => typeof day === 'number' && Number.isInteger(day) && day >= 0 && day <= 6,
+    );
+  }
+
+  if (body.studyTime === null) patch.study_time = null;
+  else if (typeof body.studyTime === 'string' && STUDY_TIMES.some((item) => item.id === body.studyTime)) {
+    patch.study_time = body.studyTime;
+  }
+
+  if (body.reminderLead === null) patch.reminder_lead_minutes = null;
+  else if (typeof body.reminderLead === 'number' && REMINDER_LEADS.includes(body.reminderLead as 15)) {
+    patch.reminder_lead_minutes = body.reminderLead;
+  }
 
   if (Object.keys(patch).length === 0) {
     return NextResponse.json({ error: 'nothing_to_update' }, { status: 400 });

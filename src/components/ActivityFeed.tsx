@@ -34,7 +34,6 @@ interface FeedRow {
 interface FeedItem extends FeedRow {
   actorName: string;
   actorColor: string | null;
-  actorEmoji: string | null;
   actorPhoto: string | null;
 }
 
@@ -102,7 +101,7 @@ export function useActivityFeed(limit = 20, refreshKey = 0) {
       const ids = [...new Set(rows.map((row) => row.actor_id))];
       const { data: profiles } = await supabase
         .from('profiles')
-        .select('id, name, avatar_color, avatar_emoji, avatar_photo_path')
+        .select('id, name, avatar_color, avatar_photo_path')
         .in('id', ids);
 
       if (cancelled) return;
@@ -113,7 +112,6 @@ export function useActivityFeed(limit = 20, refreshKey = 0) {
           ...row,
           actorName: byId[row.actor_id]?.name ?? 'Ученик',
           actorColor: byId[row.actor_id]?.avatar_color ?? null,
-          actorEmoji: byId[row.actor_id]?.avatar_emoji ?? null,
           actorPhoto: avatarPhotoUrl(byId[row.actor_id]?.avatar_photo_path as string | null),
         })),
       );
@@ -175,7 +173,6 @@ export function ActivityFeed({ limit = 20, refreshKey = 0 }: { limit?: number; r
                   <Avatar
                     name={item.actorName}
                     colorId={item.actorColor}
-                    emoji={item.actorEmoji}
                     photoUrl={item.actorPhoto}
                     size={40}
                   />

@@ -37,8 +37,22 @@ export interface SchoolProfile {
   grade: number | null;
   class_id: string | null;
   avatar_color: string | null;
-  avatar_emoji: string | null;
   avatar_photo_path: string | null;
+  phone: string | null;
+  knowledge_level: string | null;
+  interests: string[];
+  bio: string | null;
+  availability: string | null;
+  leaderboard_anonymous: boolean;
+  profile_visible: boolean;
+  progress_visible: boolean;
+  notify_learning: boolean;
+  notify_org: boolean;
+  notify_marketing: boolean;
+  study_days: number[];
+  study_time: string | null;
+  reminder_lead_minutes: number | null;
+
   social_links: unknown;
   subject_ids: string[] | null;
   goal: string | null;
@@ -55,6 +69,7 @@ export type OAuthProvider = 'google' | 'apple';
 interface SchoolAuthValue {
   loading: boolean;
   email: string | null;
+  emailConfirmed: boolean;
   profile: SchoolProfile | null;
   schoolClass: SchoolClass | null;
   isSignedIn: boolean;
@@ -83,11 +98,13 @@ export function SchoolAuthProvider({
   children,
   initialProfile = null,
   initialEmail = null,
+  initialEmailConfirmed = false,
   initialSchoolClass = null,
 }: {
   children: ReactNode;
   initialProfile?: SchoolProfile | null;
   initialEmail?: string | null;
+  initialEmailConfirmed?: boolean;
   initialSchoolClass?: SchoolClass | null;
 }) {
   /*
@@ -97,6 +114,7 @@ export function SchoolAuthProvider({
   */
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState<string | null>(initialEmail);
+  const [emailConfirmed, setEmailConfirmed] = useState(initialEmailConfirmed ?? false);
   const [profile, setProfile] = useState<SchoolProfile | null>(initialProfile);
   const [schoolClass, setSchoolClass] = useState<SchoolClass | null>(initialSchoolClass);
 
@@ -123,6 +141,7 @@ export function SchoolAuthProvider({
       const res = await fetch('/api/profile');
       const data = await res.json();
       setEmail(data.email ?? null);
+      setEmailConfirmed(Boolean(data.emailConfirmed));
       setProfile(data.profile ?? null);
       setSchoolClass(data.class ?? null);
       knownUserId.current = data.profile?.id ?? null;
@@ -258,6 +277,7 @@ export function SchoolAuthProvider({
     return {
       loading,
       email,
+      emailConfirmed,
       profile,
       schoolClass,
       isSignedIn: email !== null,
@@ -271,7 +291,7 @@ export function SchoolAuthProvider({
       signOut,
       chooseRole,
     };
-  }, [loading, email, profile, schoolClass, refresh]);
+  }, [loading, email, emailConfirmed, profile, schoolClass, refresh]);
 
   return <SchoolAuthContext.Provider value={value}>{children}</SchoolAuthContext.Provider>;
 }

@@ -14,7 +14,8 @@
     "test:leaderboard": "node scripts/test-leaderboard.mjs",
     "test:portfolio": "node scripts/test-portfolio.mjs",
     "test:level": "node scripts/test-level.mjs",
-    "test": "npm run validate && npm run test:answers && npm run test:leaderboard && npm run test:portfolio && npm run test:level"
+    "test:profile": "node scripts/test-profile-fields.mjs",
+    "test": "npm run validate && npm run test:answers && npm run test:leaderboard && npm run test:portfolio && npm run test:level && npm run test:profile"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",

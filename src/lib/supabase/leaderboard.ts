@@ -87,7 +87,7 @@ export function useSchoolLeaderboard(excludeStudentId: string | null) {
 
       const { data: profiles } = await supabase
         .from('profiles')
-        .select('id, name, grade, avatar_color, avatar_emoji, avatar_photo_path')
+        .select('id, name, grade, avatar_color, avatar_photo_path, leaderboard_anonymous')
         .in('id', ids);
       if (cancelled) return;
 
@@ -110,8 +110,16 @@ export function useSchoolLeaderboard(excludeStudentId: string | null) {
               topicsMastered: p?.topics_mastered ?? 0,
               streak: p?.streak_current ?? 0,
               avatarColor: profile.avatar_color,
-              avatarEmoji: profile.avatar_emoji,
               avatarPhoto: avatarPhotoUrl(profile.avatar_photo_path),
+              /*
+                Анонимность читается из базы, а не из локального состояния.
+
+                Раньше признак проставлялся только на строке самого ученика,
+                а всем остальным имена приходили из базы как есть — то есть
+                переключатель прятал имя от владельца и ни от кого больше,
+                хотя подпись обещала обратное одноклассникам.
+              */
+              anonymous: profile.leaderboard_anonymous ?? false,
             };
           })
           // Ученик без единого балла в списке не нужен: он попал бы туда

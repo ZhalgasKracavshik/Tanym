@@ -22,8 +22,22 @@ export interface ServerProfile {
   grade: number | null;
   class_id: string | null;
   avatar_color: string | null;
-  avatar_emoji: string | null;
   avatar_photo_path: string | null;
+  phone: string | null;
+  knowledge_level: string | null;
+  interests: string[];
+  bio: string | null;
+  availability: string | null;
+  leaderboard_anonymous: boolean;
+  profile_visible: boolean;
+  progress_visible: boolean;
+  notify_learning: boolean;
+  notify_org: boolean;
+  notify_marketing: boolean;
+  study_days: number[];
+  study_time: string | null;
+  reminder_lead_minutes: number | null;
+
   social_links: unknown;
   subject_ids: string[] | null;
   goal: string | null;
@@ -38,6 +52,8 @@ export interface ServerSchoolClass {
 export interface ServerProfileResult {
   profile: ServerProfile | null;
   email: string | null;
+  /** Подтверждена ли почта — показывается в настройках. */
+  emailConfirmed: boolean;
   schoolClass: ServerSchoolClass | null;
 }
 
@@ -55,7 +71,7 @@ export async function getServerProfile(): Promise<ServerProfileResult> {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) return { profile: null, email: null, schoolClass: null };
+  if (!user) return { profile: null, email: null, emailConfirmed: false, schoolClass: null };
 
   const { data: profile } = await supabase
     .from('profiles')
@@ -76,6 +92,7 @@ export async function getServerProfile(): Promise<ServerProfileResult> {
   return {
     profile: (profile as ServerProfile | null) ?? null,
     email: user.email ?? null,
+    emailConfirmed: user.email_confirmed_at !== null && user.email_confirmed_at !== undefined,
     schoolClass,
   };
 }

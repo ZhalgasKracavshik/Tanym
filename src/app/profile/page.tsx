@@ -29,6 +29,7 @@ import { Reveal } from '@/components/motion';
 import { TIER_LABEL, levelFromPoints, pointsWord } from '@/lib/level';
 import { ButtonLink, Kicker, Skeleton } from '@/components/ui';
 import { avatarPhotoUrl } from '@/lib/supabase/avatarPhoto';
+import { INTERESTS, KNOWLEDGE_LEVELS } from '@/lib/profileFields';
 
 /** Показатель в шапке профиля. */
 function Stat({ icon, value, label }: { icon: IconName; value: number | string; label: string }) {
@@ -77,6 +78,11 @@ export default function ProfilePage() {
   }
 
   const socialLinks = socialDraft ?? parseSocialLinks(schoolProfile?.social_links);
+
+  // Справочники разворачиваются в подписи здесь, а не в разметке: в JSX
+  // это были бы два find() внутри map() и лишний шум в вёрстке.
+  const knowledgeLevel = KNOWLEDGE_LEVELS.find((item) => item.id === schoolProfile?.knowledge_level);
+  const interests = INTERESTS.filter((item) => (schoolProfile?.interests ?? []).includes(item.id));
 
   function saveSocialLinks(next: SocialLink[]) {
     setSocialDraft(next);
@@ -135,7 +141,6 @@ export default function ProfilePage() {
             <Avatar
               name={name}
               colorId={schoolProfile?.avatar_color}
-              emoji={schoolProfile?.avatar_emoji}
               photoUrl={avatarPhotoUrl(schoolProfile?.avatar_photo_path)}
               size={80}
             />
@@ -221,6 +226,77 @@ export default function ProfilePage() {
       <div className="mt-6">
         <SocialLinks links={socialLinks} editable onChange={saveSocialLinks} />
       </div>
+
+      {/*
+        Учебный трек: уровень и интересы.
+
+        Стоит между контактами и портфолио намеренно. Портфолио отвечает
+        «что человек уже сделал», а это — «куда он идёт», и одно без другого
+        читается неполно: одни грамоты выглядят как отчёт, одни намерения —
+        как пустое обещание. Пустые блоки не показываем: незаполненный
+        раздел с призывом «добавьте» превращает профиль в список долгов.
+      */}
+      {isStudent && (knowledgeLevel || interests.length > 0) && (
+        <div className="mt-8 grid gap-4 sm:grid-cols-2">
+          {knowledgeLevel && (
+            <div className="rounded-[var(--radius-card)] border border-ink-200 bg-white p-5">
+              <p className="text-xs font-medium uppercase tracking-wide text-ink-400">
+                Уровень подготовки
+              </p>
+              <p className="mt-2 font-bold text-ink-900">{knowledgeLevel.title}</p>
+              <p className="mt-1 text-sm text-ink-500">{knowledgeLevel.hint}</p>
+            </div>
+          )}
+
+          {interests.length > 0 && (
+            <div className="rounded-[var(--radius-card)] border border-ink-200 bg-white p-5">
+              <p className="text-xs font-medium uppercase tracking-wide text-ink-400">Интересы</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {interests.map((interest) => (
+                  <span
+                    key={interest.id}
+                    className="rounded-[var(--radius-pill)] bg-brand-50 px-3 py-1.5 text-xs font-semibold text-brand-700"
+                  >
+                    {interest.title}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/*
+        Учитель рассказывает о себе словами, а не значками.
+
+        Ученику важно, к кому он идёт с вопросом, а рейтинг и баллы для
+        роли учителя не считаются вовсе — значит на его странице должно
+        быть то, чего нет у ученика: опыт и время, когда он доступен.
+      */}
+      {schoolProfile?.role === 'teacher' && (schoolProfile.bio || schoolProfile.availability) && (
+        <div className="mt-8 space-y-4">
+          {schoolProfile.bio && (
+            <div className="rounded-[var(--radius-card)] border border-ink-200 bg-white p-6">
+              <p className="text-xs font-medium uppercase tracking-wide text-ink-400">Опыт</p>
+              <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-ink-700">
+                {schoolProfile.bio}
+              </p>
+            </div>
+          )}
+
+          {schoolProfile.availability && (
+            <div className="rounded-[var(--radius-card)] border border-ink-200 bg-white p-6">
+              <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-ink-400">
+                <Icon name="calendar" size={14} />
+                Когда доступен
+              </p>
+              <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-ink-700">
+                {schoolProfile.availability}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Портфолио — главное на странице */}
       {isStudent ? (

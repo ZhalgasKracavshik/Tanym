@@ -21,13 +21,22 @@ import { SUBJECTS } from '@/data';
 import { useStore } from '@/components/StoreProvider';
 import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
 import { Avatar } from '@/components/Avatar';
-import { AVATAR_COLORS, AVATAR_EMOJI } from '@/lib/avatar';
+
 import { Icon } from '@/components/Icon';
 import { PasswordField, SubmitButton } from '@/components/auth-ui';
 import { Alert, Button, ButtonLink, Card, Kicker, Skeleton } from '@/components/ui';
 import { COVER_TYPES, coverError } from '@/components/ImageField';
 import { avatarPhotoUrl } from '@/lib/supabase/avatarPhoto';
 import { createClient } from '@/lib/supabase/client';
+import {
+  INTERESTS,
+  KNOWLEDGE_LEVELS,
+  REMINDER_LEADS,
+  STUDY_TIMES,
+  WEEKDAYS,
+  normalizePhone,
+  reminderLabel,
+} from '@/lib/profileFields';
 
 /** Языки интерфейса — те же три, что и в переключателе меню. */
 const LANGUAGE_OPTIONS: { id: 'ru' | 'kk' | 'en'; title: string }[] = [
@@ -40,12 +49,24 @@ const OPTION =
   'flex items-center gap-3 rounded-[var(--radius-control)] border-2 p-3 text-left transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500';
 
 export default function SettingsPage() {
-  const { state, hydrated, updateProfile, resetAll, setLanguage, setLeaderboardAnonymous } = useStore();
-  const { profile: schoolProfile, schoolClass, email, signOut, updatePassword, refresh } = useSchoolAuth();
+  const { state, hydrated, updateProfile, resetAll, setLanguage } = useStore();
+  const {
+    profile: schoolProfile,
+    schoolClass,
+    email,
+    emailConfirmed,
+    signOut,
+    updatePassword,
+    refresh,
+  } = useSchoolAuth();
 
   const [saved, setSaved] = useState(false);
   const [photoStatus, setPhotoStatus] = useState<'idle' | 'uploading'>('idle');
   const [photoError, setPhotoError] = useState<string | null>(null);
+  const [phoneDraft, setPhoneDraft] = useState<string | null>(null);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [bioDraft, setBioDraft] = useState<string | null>(null);
+  const [availabilityDraft, setAvailabilityDraft] = useState<string | null>(null);
   /*
     null означает «поле не трогали» — тогда показываем текущее имя.
     Синхронизировать состояние с профилем через эффект было бы хуже:
@@ -121,6 +142,24 @@ export default function SettingsPage() {
     save({}, { avatarPhotoPath: path });
   }
 
+  /**
+   * Сохраняет телефон, проверив его до отправки.
+   *
+   * Проверка здесь и на сервере одна и та же по смыслу, но нужна в обоих
+   * местах: тут — чтобы человек увидел ошибку сразу, там — потому что
+   * PATCH можно отправить в обход формы.
+   */
+  function savePhone() {
+    const raw = phoneDraft ?? '';
+    if (raw.trim() !== '' && normalizePhone(raw) === null) {
+      setPhoneError('Проверьте номер: нужно от 10 до 15 цифр.');
+      return;
+    }
+    setPhoneError(null);
+    save({}, { phone: raw.trim() === '' ? null : raw });
+    setPhoneDraft(null);
+  }
+
   function toggleSubject(id: string) {
     const current = state.profile?.subjectIds ?? [];
     const updated = current.includes(id) ? current.filter((item) => item !== id) : [...current, id];
@@ -168,7 +207,6 @@ export default function SettingsPage() {
           <Avatar
             name={displayName}
             colorId={schoolProfile?.avatar_color}
-            emoji={schoolProfile?.avatar_emoji}
             photoUrl={avatarPhotoUrl(schoolProfile?.avatar_photo_path)}
             size={64}
           />
@@ -217,12 +255,10 @@ export default function SettingsPage() {
         </div>
 
         {/*
-          Фотография — первый из двух способов, но не обязательный.
-
-          Требовать снимок ребёнка школьная платформа не вправе: у кого-то
-          дома это не разрешают, кому-то просто не хочется. Поэтому рядом
-          лежит выбор символа, и оба варианта равноправны — разница только
-          в том, что фотография при наличии побеждает.
+          Фотография необязательна. Требовать снимок ребёнка школьная
+          платформа не вправе: у кого-то дома это не разрешают, кому-то
+          просто не хочется. Без неё аватар — буква имени на цветной
+          подложке, и это законченный вид, а не заглушка.
         */}
         <p className="mt-8 text-sm font-semibold text-ink-800">Фотография</p>
         <div className="mt-3 flex flex-wrap items-center gap-3">
@@ -253,73 +289,6 @@ export default function SettingsPage() {
         </div>
         {photoError && <p className="mt-2 text-xs font-medium text-danger-600">{photoError}</p>}
 
-        {/*
-          Символ идёт первым, а цвет вторым: выбор картинки ощущается как
-          «поставить себе аватарку», ради чего сюда и заходят, а фон —
-          доводка. Обратный порядок делал бы главным менее важное.
-        */}
-        <div className="mt-8 flex items-baseline justify-between gap-3">
-          <p className="text-sm font-semibold text-ink-800">Или символ</p>
-          {schoolProfile?.avatar_emoji && (
-            <button
-              onClick={() => save({}, { avatarEmoji: null })}
-              className="text-xs font-semibold text-ink-400 underline-offset-2 hover:text-ink-600 hover:underline"
-            >
-              Вернуть букву
-            </button>
-          )}
-        </div>
-        {/*
-          Шесть колонок на телефоне, а не восемь: кнопка должна попадать под
-          палец, а не быть точкой в 30 пикселей. Ширина задаётся ячейкой
-          (w-full + aspect-square), иначе фиксированные 40px вылезают за
-          колонку и соседние кнопки наезжают друг на друга.
-        */}
-        <div className="mt-3 grid grid-cols-6 gap-2 sm:grid-cols-8 md:grid-cols-11">
-          {AVATAR_EMOJI.map((emoji) => {
-            const active = schoolProfile?.avatar_emoji === emoji;
-            return (
-              <button
-                key={emoji}
-                aria-label={`Символ ${emoji}`}
-                aria-pressed={active}
-                onClick={() => save({}, { avatarEmoji: emoji })}
-                className={`flex aspect-square w-full items-center justify-center rounded-[var(--radius-control)] text-xl leading-none transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
-                  active
-                    ? 'bg-brand-50 ring-2 ring-brand-500'
-                    : 'bg-ink-50 hover:scale-105 hover:bg-ink-100'
-                }`}
-              >
-                {emoji}
-              </button>
-            );
-          })}
-        </div>
-
-        <p className="mt-6 text-sm font-semibold text-ink-800">Цвет фона</p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {AVATAR_COLORS.map((color) => (
-            <button
-              key={color.id}
-              title={color.title}
-              aria-label={color.title}
-              aria-pressed={schoolProfile?.avatar_color === color.id}
-              onClick={() => save({}, { avatarColor: color.id })}
-              className={`flex h-11 w-11 items-center justify-center rounded-full transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
-                schoolProfile?.avatar_color === color.id
-                  ? 'ring-2 ring-brand-500 ring-offset-2'
-                  : 'hover:scale-105'
-              }`}
-              style={{ background: color.value }}
-            >
-              {/* Символ виден прямо на образце — иначе выбор фона
-                  приходится проверять, глядя на аватар выше. */}
-              <span aria-hidden className="text-lg leading-none">
-                {schoolProfile?.avatar_emoji ?? ''}
-              </span>
-            </button>
-          ))}
-        </div>
       </Card>
 
       {/* Учебные параметры */}
@@ -475,28 +444,341 @@ export default function SettingsPage() {
         </div>
 
         {isStudent && (
-          <div className="border-t border-ink-100 pt-6">
+          <div className="space-y-4 border-t border-ink-100 pt-6">
             <h2 className="font-bold text-ink-900">Приватность</h2>
-            <label className="mt-3 flex cursor-pointer items-start gap-3">
-              <input
-                type="checkbox"
-                checked={state.leaderboardAnonymous}
-                onChange={(event) => setLeaderboardAnonymous(event.target.checked)}
-                className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--color-brand-500)]"
-              />
-              <span>
-                <span className="block text-sm font-semibold text-ink-800">
-                  Скрыть моё имя в рейтинге
-                </span>
-                <span className="mt-1 block text-xs text-ink-500">
-                  Одноклассники увидят псевдоним. Баллы продолжают начисляться, место
-                  сохраняется, из рейтинга вы не выпадаете.
-                </span>
-              </span>
-            </label>
+
+            <Toggle
+              checked={schoolProfile?.leaderboard_anonymous ?? false}
+              onChange={(value) => save({}, { leaderboardAnonymous: value })}
+              title="Скрыть моё имя в рейтинге"
+              hint="Одноклассники увидят псевдоним. Баллы продолжают начисляться, место сохраняется, из рейтинга вы не выпадаете."
+            />
+
+            <Toggle
+              checked={schoolProfile?.profile_visible ?? true}
+              onChange={(value) => save({}, { profileVisible: value })}
+              title="Показывать профиль другим ученикам"
+              hint="Выключите, если не хотите, чтобы одноклассники открывали вашу страницу с портфолио."
+            />
+
+            <Toggle
+              checked={schoolProfile?.progress_visible ?? false}
+              onChange={(value) => save({}, { progressVisible: value })}
+              title="Показывать оценки и домашние работы"
+              hint="Классный руководитель видит их всегда — это его работа. Речь только об одноклассниках."
+            />
           </div>
         )}
       </Card>
+
+      {/* Контакты */}
+      <Card className="mt-6 space-y-6">
+        <div>
+          <h2 className="font-bold text-ink-900">Контакты</h2>
+          <p className="mt-1 text-sm text-ink-500">
+            По ним с вами связывается классный руководитель.
+          </p>
+        </div>
+
+        <div>
+          <span className="text-sm font-semibold text-ink-800">Почта</span>
+          <div className="mt-2 flex flex-wrap items-center gap-3">
+            <span className="rounded-[var(--radius-control)] border border-ink-200 bg-ink-50 px-4 py-2.5 text-sm text-ink-600">
+              {email ?? 'без аккаунта'}
+            </span>
+            {emailConfirmed ? (
+              <span className="flex items-center gap-1.5 text-sm font-semibold text-success-700">
+                <Icon name="check" size={16} />
+                подтверждена
+              </span>
+            ) : (
+              <span className="text-sm font-semibold text-accent-600">не подтверждена</span>
+            )}
+          </div>
+          {/* Почта меняется только вместе с аккаунтом: по ней пускают
+              в систему и по её домену проверяют, что человек из школы. */}
+          <p className="mt-2 text-xs text-ink-400">
+            Почта привязана к аккаунту и меняется вместе с ним.
+          </p>
+        </div>
+
+        <div>
+          <label className="text-sm font-semibold text-ink-800" htmlFor="phone">
+            Телефон
+          </label>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <input
+              id="phone"
+              type="tel"
+              inputMode="tel"
+              value={phoneDraft ?? schoolProfile?.phone ?? ''}
+              onChange={(event) => setPhoneDraft(event.target.value)}
+              placeholder="+7 700 000 00 00"
+              className="min-w-[14rem] flex-1 rounded-[var(--radius-control)] border border-ink-200 px-4 py-2.5 text-sm outline-none transition-colors duration-150 focus:border-brand-400 focus-visible:ring-2 focus-visible:ring-brand-500"
+            />
+            <Button variant="secondary" disabled={phoneDraft === null} onClick={savePhone}>
+              Сохранить
+            </Button>
+          </div>
+          {phoneError ? (
+            <p className="mt-2 text-xs font-medium text-danger-600">{phoneError}</p>
+          ) : (
+            <p className="mt-2 text-xs text-ink-400">
+              Необязательно. Можно указать номер родителя.
+            </p>
+          )}
+        </div>
+
+        <div>
+          <span className="text-sm font-semibold text-ink-800">Мессенджер и ссылки</span>
+          <p className="mt-1 text-xs text-ink-400">
+            Telegram, WhatsApp и остальные ссылки добавляются в профиле.
+          </p>
+          <div className="mt-3">
+            <ButtonLink href="/profile" size="sm" variant="secondary">
+              Открыть профиль
+            </ButtonLink>
+          </div>
+        </div>
+      </Card>
+
+      {/* Учебный трек */}
+      {isStudent && (
+        <Card className="mt-6 space-y-6">
+          <div>
+            <h2 className="font-bold text-ink-900">Учебный трек</h2>
+            <p className="mt-1 text-sm text-ink-500">
+              По этому подбираются задания, кружки и события. Всё необязательно.
+            </p>
+          </div>
+
+          <div>
+            <span className="text-sm font-semibold text-ink-800">Уровень подготовки</span>
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              {KNOWLEDGE_LEVELS.map((level) => {
+                const active = schoolProfile?.knowledge_level === level.id;
+                return (
+                  <button
+                    key={level.id}
+                    aria-pressed={active}
+                    onClick={() => save({}, { knowledgeLevel: active ? null : level.id })}
+                    className={`rounded-[var(--radius-control)] border px-4 py-3 text-left transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
+                      active
+                        ? 'border-brand-300 bg-brand-50'
+                        : 'border-ink-200 bg-white hover:border-brand-200'
+                    }`}
+                  >
+                    <span
+                      className={`block text-sm font-semibold ${
+                        active ? 'text-brand-700' : 'text-ink-800'
+                      }`}
+                    >
+                      {level.title}
+                    </span>
+                    <span className="mt-0.5 block text-xs text-ink-400">{level.hint}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <span className="text-sm font-semibold text-ink-800">Интересы</span>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {INTERESTS.map((interest) => {
+                const current = schoolProfile?.interests ?? [];
+                const active = current.includes(interest.id);
+                return (
+                  <button
+                    key={interest.id}
+                    aria-pressed={active}
+                    onClick={() =>
+                      save(
+                        {},
+                        {
+                          interests: active
+                            ? current.filter((id) => id !== interest.id)
+                            : [...current, interest.id],
+                        },
+                      )
+                    }
+                    className={`rounded-[var(--radius-pill)] border px-3.5 py-2 text-sm font-semibold transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
+                      active
+                        ? 'border-brand-300 bg-brand-50 text-brand-700'
+                        : 'border-ink-200 bg-white text-ink-500 hover:border-brand-200 hover:text-brand-600'
+                    }`}
+                  >
+                    {interest.title}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Для учителя */}
+      {schoolProfile?.role === 'teacher' && (
+        <Card className="mt-6 space-y-6">
+          <div>
+            <h2 className="font-bold text-ink-900">О себе</h2>
+            <p className="mt-1 text-sm text-ink-500">Видно ученикам на вашей странице.</p>
+          </div>
+
+          <DraftArea
+            id="bio"
+            label="Опыт и специализация"
+            placeholder="Что преподаёте, сколько лет, к чему готовите"
+            stored={schoolProfile?.bio ?? ''}
+            draft={bioDraft}
+            onChange={setBioDraft}
+            onSave={() => {
+              save({}, { bio: bioDraft ?? '' });
+              setBioDraft(null);
+            }}
+          />
+
+          <DraftArea
+            id="availability"
+            label="Когда доступны"
+            placeholder="Например: консультации по вторникам и четвергам после 15:00"
+            stored={schoolProfile?.availability ?? ''}
+            draft={availabilityDraft}
+            onChange={setAvailabilityDraft}
+            onSave={() => {
+              save({}, { availability: availabilityDraft ?? '' });
+              setAvailabilityDraft(null);
+            }}
+          />
+        </Card>
+      )}
+
+      {/* Уведомления */}
+      <Card className="mt-6 space-y-4">
+        <div>
+          <h2 className="font-bold text-ink-900">Уведомления</h2>
+          <p className="mt-1 text-sm text-ink-500">О чём напоминать.</p>
+        </div>
+
+        <Toggle
+          checked={schoolProfile?.notify_learning ?? true}
+          onChange={(value) => save({}, { notifyLearning: value })}
+          title="Учебные"
+          hint="Начало вебинара, проверенная работа, ответ на вопрос."
+        />
+        <Toggle
+          checked={schoolProfile?.notify_org ?? true}
+          onChange={(value) => save({}, { notifyOrg: value })}
+          title="Организационные"
+          hint="Дедлайны, изменения в расписании, сбои."
+        />
+        {/*
+          Маркетинг стоит последним и выключен по умолчанию: это дети, и
+          согласие на рекламу должно быть отдельным осознанным действием,
+          а не флажком, который забыли снять.
+        */}
+        <Toggle
+          checked={schoolProfile?.notify_marketing ?? false}
+          onChange={(value) => save({}, { notifyMarketing: value })}
+          title="Новости платформы"
+          hint="Новые курсы и подборки. По умолчанию выключено."
+        />
+      </Card>
+
+      {/* Расписание */}
+      {isStudent && (
+        <Card className="mt-6 space-y-6">
+          <div>
+            <h2 className="font-bold text-ink-900">Когда удобно заниматься</h2>
+            <p className="mt-1 text-sm text-ink-500">
+              По этому раскладывается план и подбирается время напоминаний.
+            </p>
+          </div>
+
+          <div>
+            <span className="text-sm font-semibold text-ink-800">Дни</span>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {WEEKDAYS.map((day) => {
+                const current = schoolProfile?.study_days ?? [];
+                const active = current.includes(day.id);
+                return (
+                  <button
+                    key={day.id}
+                    aria-pressed={active}
+                    onClick={() =>
+                      save(
+                        {},
+                        {
+                          studyDays: active
+                            ? current.filter((id) => id !== day.id)
+                            : [...current, day.id],
+                        },
+                      )
+                    }
+                    className={`h-11 w-12 rounded-[var(--radius-control)] border text-sm font-semibold transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
+                      active
+                        ? 'border-brand-300 bg-brand-50 text-brand-700'
+                        : 'border-ink-200 bg-white text-ink-500 hover:border-brand-200'
+                    }`}
+                  >
+                    {day.short}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <span className="text-sm font-semibold text-ink-800">Время</span>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {STUDY_TIMES.map((time) => {
+                const active = schoolProfile?.study_time === time.id;
+                return (
+                  <button
+                    key={time.id}
+                    aria-pressed={active}
+                    onClick={() => save({}, { studyTime: active ? null : time.id })}
+                    className={`rounded-[var(--radius-control)] border px-4 py-2.5 text-sm font-semibold transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
+                      active
+                        ? 'border-brand-300 bg-brand-50 text-brand-700'
+                        : 'border-ink-200 bg-white text-ink-500 hover:border-brand-200'
+                    }`}
+                  >
+                    {time.title}
+                    <span className="ml-1.5 font-medium text-ink-400">{time.hint}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <span className="text-sm font-semibold text-ink-800">Напоминать</span>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {REMINDER_LEADS.map((minutes) => {
+                const active = schoolProfile?.reminder_lead_minutes === minutes;
+                return (
+                  <button
+                    key={minutes}
+                    aria-pressed={active}
+                    onClick={() => save({}, { reminderLead: active ? null : minutes })}
+                    className={`rounded-[var(--radius-pill)] border px-3.5 py-2 text-sm font-semibold transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
+                      active
+                        ? 'border-brand-300 bg-brand-50 text-brand-700'
+                        : 'border-ink-200 bg-white text-ink-500 hover:border-brand-200'
+                    }`}
+                  >
+                    {reminderLabel(minutes)}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-2 text-xs text-ink-400">
+              Нажмите ещё раз по выбранному, чтобы не напоминать.
+            </p>
+          </div>
+        </Card>
+      )}
 
       {/* Выход и сброс */}
       <Card className="mt-6">
@@ -528,6 +810,89 @@ export default function SettingsPage() {
           К профилю
         </ButtonLink>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Переключатель настройки.
+ *
+ * Флажок с подписью и пояснением. Пояснение обязательно: почти каждая
+ * настройка приватности здесь меняет то, что видят другие люди, и без
+ * объяснения «что именно» человек либо не тронет её вовсе, либо включит
+ * не то, что имел в виду.
+ */
+function Toggle({
+  checked,
+  onChange,
+  title,
+  hint,
+}: {
+  checked: boolean;
+  onChange: (value: boolean) => void;
+  title: string;
+  hint: string;
+}) {
+  return (
+    <label className="flex cursor-pointer items-start gap-3">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(event) => onChange(event.target.checked)}
+        className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--color-brand-500)]"
+      />
+      <span>
+        <span className="block text-sm font-semibold text-ink-800">{title}</span>
+        <span className="mt-1 block text-xs leading-relaxed text-ink-500">{hint}</span>
+      </span>
+    </label>
+  );
+}
+
+/**
+ * Многострочное поле с отдельной кнопкой сохранения.
+ *
+ * Не сохраняет по каждому нажатию клавиши: это текст, который пишут
+ * абзацами, и запрос на букву означал бы десятки запросов и мигающее
+ * «сохранено». Кнопка появляется, только когда текст изменили.
+ */
+function DraftArea({
+  id,
+  label,
+  placeholder,
+  stored,
+  draft,
+  onChange,
+  onSave,
+}: {
+  id: string;
+  label: string;
+  placeholder: string;
+  stored: string;
+  draft: string | null;
+  onChange: (value: string) => void;
+  onSave: () => void;
+}) {
+  return (
+    <div>
+      <label className="text-sm font-semibold text-ink-800" htmlFor={id}>
+        {label}
+      </label>
+      <textarea
+        id={id}
+        rows={3}
+        value={draft ?? stored}
+        placeholder={placeholder}
+        onChange={(event) => onChange(event.target.value)}
+        className="mt-2 w-full rounded-[var(--radius-control)] border border-ink-200 px-4 py-2.5 text-sm outline-none transition-colors duration-150 focus:border-brand-400 focus-visible:ring-2 focus-visible:ring-brand-500"
+      />
+      {draft !== null && draft !== stored && (
+        <div className="mt-2">
+          <Button size="sm" variant="secondary" onClick={onSave}>
+            Сохранить
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
