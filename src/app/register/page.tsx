@@ -78,12 +78,21 @@ export default function RegisterPage() {
       return;
     }
 
-    // Подтверждение почты включено — сессии ещё нет, профиль создать нельзя.
-    // Честно говорим об этом вместо того, чтобы молча выкинуть на дашборд.
-    // (Правка строки ниже — принудительная инвалидация билд-кэша Vercel:
-    // прошлый деплой почему-то отдавал старую скомпилированную версию этого
-    // файла без этой проверки вовсе, хотя источник на GitHub был правильным.)
-    if (signUp.needsConfirmation === true) {
+    /*
+      Подтверждение почты в этом проекте Supabase включено на уровне
+      настроек Auth (Dashboard → Authentication → Providers → Email →
+      Confirm email) — так и оставалось всё это время, что бы ни говорил
+      комментарий в другом коммите. Проверено напрямую в базе: свежие
+      email/password-регистрации остаются в auth.users с email_confirmed_at
+      = null и session = null, пока человек не перейдёт по ссылке из письма.
+
+      Без этой проверки chooseRole вызывался сразу после signUp() и падал
+      с сырым not_authenticated — POST /api/profile корректно требует
+      сессию, а её ещё не было. Если конфирм действительно не нужен на
+      MVP — это отключается в дашборде Supabase (описанным выше тумблером),
+      а не в этом коде: код должен одинаково верно работать в обоих случаях.
+    */
+    if (signUp.needsConfirmation) {
       setStatus('idle');
       setNotice(
         'Мы отправили письмо для подтверждения. Откройте ссылку из него, затем войдите — и мы спросим роль.',
@@ -99,10 +108,11 @@ export default function RegisterPage() {
     }
 
     setStatus('success');
-    // Тот же приём, что и в login/page.tsx: replace вместо push, плюс
-    // refresh() — без него можно на мгновение получить кэшированное
-    // серверное дерево, собранное ещё до появления сессии.
-    router.replace(role === 'teacher' ? '/teacher' : '/dashboard');
+    // ИСПРАВЛЕНИЕ: Редирект на /onboarding вместо /dashboard
+    // Ученик должен сначала заполнить профиль (класс, цели)
+    // Учитель может сразу идти в /teacher
+    const redirectPath = role === 'teacher' ? '/teacher' : '/onboarding';
+    router.replace(redirectPath);
     router.refresh();
   }
 
@@ -185,8 +195,8 @@ export default function RegisterPage() {
       <div className="mt-7">
         <ProviderButtons
           dividerLabel="или"
-          onGoogle={() => signInWithProvider('google', '/dashboard')}
-          onApple={() => signInWithProvider('apple', '/dashboard')}
+          onGoogle={() => signInWithProvider('google', '/onboarding')}
+          onApple={() => signInWithProvider('apple', '/onboarding')}
         />
       </div>
     </AuthShell>
