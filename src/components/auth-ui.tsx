@@ -85,7 +85,7 @@ export function Field({
       <input
         {...props}
         placeholder=" "
-        className="peer block w-full appearance-none border-0 border-b-2 border-gray-400/60 bg-transparent py-2.5 px-0 text-sm text-white outline-none transition-colors focus:border-blue-400 focus:ring-0"
+        className="auth-field peer block w-full appearance-none border-0 border-b-2 border-gray-400/60 bg-transparent py-2.5 px-0 text-sm text-white outline-none transition-colors focus:border-blue-400 focus:ring-0"
       />
       <label className="absolute top-3 -z-10 origin-[0] transform text-sm text-gray-300 duration-300 peer-placeholder-shown:translate-y-0 peer-placeholder-shown:scale-100 peer-focus:-translate-y-6 peer-focus:scale-75 peer-focus:text-blue-400 peer-[:not(:placeholder-shown)]:-translate-y-6 peer-[:not(:placeholder-shown)]:scale-75">
         {label}
@@ -111,7 +111,7 @@ export function PasswordField({
         {...props}
         type={visible ? 'text' : 'password'}
         placeholder=" "
-        className="peer block w-full appearance-none border-0 border-b-2 border-gray-400/60 bg-transparent py-2.5 px-0 pr-8 text-sm text-white outline-none transition-colors focus:border-blue-400 focus:ring-0"
+        className="auth-field peer block w-full appearance-none border-0 border-b-2 border-gray-400/60 bg-transparent py-2.5 px-0 pr-8 text-sm text-white outline-none transition-colors focus:border-blue-400 focus:ring-0"
       />
       <label className="absolute top-3 -z-10 origin-[0] transform text-sm text-gray-300 duration-300 peer-placeholder-shown:translate-y-0 peer-placeholder-shown:scale-100 peer-focus:-translate-y-6 peer-focus:scale-75 peer-focus:text-blue-400 peer-[:not(:placeholder-shown)]:-translate-y-6 peer-[:not(:placeholder-shown)]:scale-75">
         {label}
