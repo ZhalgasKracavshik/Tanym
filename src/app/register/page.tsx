@@ -78,16 +78,9 @@ export default function RegisterPage() {
       return;
     }
 
-    // Подтверждение почты включено — сессии ещё нет, профиль создать нельзя.
-    // Честно говорим об этом вместо того, чтобы молча выкинуть на дашборд.
-    if (signUp.needsConfirmation) {
-      setStatus('idle');
-      setNotice(
-        'Мы отправили письмо для подтверждения. Откройте ссылку из него, затем войдите — и мы спросим роль.',
-      );
-      return;
-    }
-
+    // ИСПРАВЛЕНИЕ: Email подтверждение отключено на MVP
+    // На бесплатном плане Supabase это не работает по умолчанию
+    // Сразу переходим к выбору роли и профиля
     const profile = await chooseRole(role, classCode.trim());
     if (!profile.ok) {
       setStatus('idle');
@@ -96,10 +89,11 @@ export default function RegisterPage() {
     }
 
     setStatus('success');
-    // Тот же приём, что и в login/page.tsx: replace вместо push, плюс
-    // refresh() — без него можно на мгновение получить кэшированное
-    // серверное дерево, собранное ещё до появления сессии.
-    router.replace(role === 'teacher' ? '/teacher' : '/dashboard');
+    // ИСПРАВЛЕНИЕ: Редирект на /onboarding вместо /dashboard
+    // Ученик должен сначала заполнить профиль (класс, цели)
+    // Учитель может сразу идти в /teacher
+    const redirectPath = role === 'teacher' ? '/teacher' : '/onboarding';
+    router.replace(redirectPath);
     router.refresh();
   }
 
@@ -182,8 +176,8 @@ export default function RegisterPage() {
       <div className="mt-7">
         <ProviderButtons
           dividerLabel="или"
-          onGoogle={() => signInWithProvider('google', '/dashboard')}
-          onApple={() => signInWithProvider('apple', '/dashboard')}
+          onGoogle={() => signInWithProvider('google', '/onboarding')}
+          onApple={() => signInWithProvider('apple', '/onboarding')}
         />
       </div>
     </AuthShell>
