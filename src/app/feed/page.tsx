@@ -84,21 +84,23 @@ export default function FeedPage() {
                   item={item}
                   footer={
                     <div className="flex items-center gap-2 border-t border-ink-100 px-2 py-2">
+                      {/*
+                        Простой лайк, а не кнопка с подписью «Поддержать»:
+                        сердце — общепринятый знак сам по себе, и объяснять
+                        его словом рядом незачем. Закрашивается только у
+                        нажатой: заполненный контур — универсальный признак
+                        «уже отметил», такой же понятный без подписи.
+                      */}
                       <button
                         onClick={() => toggle(item.id, item.kind)}
                         aria-pressed={liked}
-                        aria-label={liked ? 'Убрать реакцию' : 'Поддержать'}
-                        className={`inline-flex items-center gap-2 rounded-[var(--radius-control)] px-3 py-2 text-sm font-semibold transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
-                          liked ? 'text-brand-600' : 'text-ink-500 hover:bg-ink-50'
+                        aria-label={liked ? 'Убрать лайк' : 'Нравится'}
+                        className={`inline-flex items-center gap-1.5 rounded-[var(--radius-control)] px-3 py-2 text-sm font-semibold tabular-nums transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
+                          liked ? 'text-brand-600' : 'text-ink-400 hover:bg-ink-50 hover:text-ink-600'
                         }`}
                       >
-                        {/*
-                          Значок ладоней аплодисментов, а не эмодзи «👏».
-                          Проект рисует все значки одним контуром через Icon,
-                          и эмодзи здесь выглядел бы вставкой из другого шрифта.
-                        */}
-                        <Icon name="sparkles" size={16} />
-                        {count > 0 ? count : 'Поддержать'}
+                        <Icon name="heart" size={17} fill={liked ? 'currentColor' : 'none'} />
+                        {count > 0 && count}
                       </button>
                     </div>
                   }
