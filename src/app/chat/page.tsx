@@ -363,14 +363,13 @@ export default function ChatPage() {
             disabled={loading}
             placeholder={t.placeholder}
             /*
-              Глобальный :focus-visible (globals.css) рисует прямоугольную
-              рамку поверх любого элемента и по порядку правил перебивает
-              класс outline-none — на скруглённой тёмной панели получался
-              квадратный контур поверх круглых углов. Гасим его точечно
-              через important-модификатор, не трогая общее правило: панель
-              уже показывает фокус сама, светлея через focus-within.
+              outline-none — обычный класс, без !important. Раньше глобальный
+              :focus-visible в globals.css перебивал его из-за равной
+              специфичности и более позднего места в файле; теперь то
+              правило обёрнуто в :where() и специфичности не имеет вовсе,
+              так что здесь достаточно обычного класса, как и должно быть.
             */
-            className="max-h-32 flex-1 resize-none bg-transparent px-3 py-2.5 text-white outline-none! placeholder:text-white/40"
+            className="max-h-32 flex-1 resize-none bg-transparent px-3 py-2.5 text-white outline-none placeholder:text-white/40"
           />
           <PressButton
             onClick={() => send(question)}

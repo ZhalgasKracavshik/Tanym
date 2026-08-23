@@ -96,7 +96,11 @@ export default function RegisterPage() {
     }
 
     setStatus('success');
-    router.push(role === 'teacher' ? '/teacher' : '/dashboard');
+    // Тот же приём, что и в login/page.tsx: replace вместо push, плюс
+    // refresh() — без него можно на мгновение получить кэшированное
+    // серверное дерево, собранное ещё до появления сессии.
+    router.replace(role === 'teacher' ? '/teacher' : '/dashboard');
+    router.refresh();
   }
 
   return (
