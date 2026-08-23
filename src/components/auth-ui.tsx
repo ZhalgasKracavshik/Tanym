@@ -87,7 +87,17 @@ export function Field({
         placeholder=" "
         className="auth-field peer block w-full appearance-none border-0 border-b-2 border-gray-400/60 bg-transparent py-2.5 px-0 text-sm text-white outline-none transition-colors focus:border-blue-400 focus:ring-0"
       />
-      <label className="absolute top-3 -z-10 origin-[0] transform text-sm text-gray-300 duration-300 peer-placeholder-shown:translate-y-0 peer-placeholder-shown:scale-100 peer-focus:-translate-y-6 peer-focus:scale-75 peer-focus:text-blue-400 peer-[:not(:placeholder-shown)]:-translate-y-6 peer-[:not(:placeholder-shown)]:scale-75">
+      {/*
+        peer-autofill добавлен отдельно от peer-[:not(:placeholder-shown)] —
+        не косметика, а обход реального расхождения. У автозаполненного
+        браузером поля value меняется не так, как при наборе текста рукой,
+        и Chrome не всегда пересчитывает :placeholder-shown у него вовремя.
+        Подпись оставалась в «пустой» крупной позиции и печаталась прямо
+        поверх значения — то раздвоение текста, что видно на скриншоте.
+        :autofill матчится у браузера безошибочно, поэтому подпись сворачивается
+        и в этом случае тоже.
+      */}
+      <label className="absolute top-3 -z-10 origin-[0] transform text-sm text-gray-300 duration-300 peer-placeholder-shown:translate-y-0 peer-placeholder-shown:scale-100 peer-focus:-translate-y-6 peer-focus:scale-75 peer-focus:text-blue-400 peer-[:not(:placeholder-shown)]:-translate-y-6 peer-[:not(:placeholder-shown)]:scale-75 peer-autofill:-translate-y-6 peer-autofill:scale-75">
         {label}
       </label>
       {hint && <span className="mt-1 block text-xs text-gray-400">{hint}</span>}
@@ -113,7 +123,9 @@ export function PasswordField({
         placeholder=" "
         className="auth-field peer block w-full appearance-none border-0 border-b-2 border-gray-400/60 bg-transparent py-2.5 px-0 pr-8 text-sm text-white outline-none transition-colors focus:border-blue-400 focus:ring-0"
       />
-      <label className="absolute top-3 -z-10 origin-[0] transform text-sm text-gray-300 duration-300 peer-placeholder-shown:translate-y-0 peer-placeholder-shown:scale-100 peer-focus:-translate-y-6 peer-focus:scale-75 peer-focus:text-blue-400 peer-[:not(:placeholder-shown)]:-translate-y-6 peer-[:not(:placeholder-shown)]:scale-75">
+      {/* peer-autofill — см. комментарий в Field выше: тот же обход для
+          сохранённого браузером пароля. */}
+      <label className="absolute top-3 -z-10 origin-[0] transform text-sm text-gray-300 duration-300 peer-placeholder-shown:translate-y-0 peer-placeholder-shown:scale-100 peer-focus:-translate-y-6 peer-focus:scale-75 peer-focus:text-blue-400 peer-[:not(:placeholder-shown)]:-translate-y-6 peer-[:not(:placeholder-shown)]:scale-75 peer-autofill:-translate-y-6 peer-autofill:scale-75">
         {label}
       </label>
       <button
