@@ -24,6 +24,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
+import { useRouter } from 'next/navigation';
 import { createClient } from './client';
 
 export interface SchoolProfile {
@@ -117,6 +118,7 @@ export function SchoolAuthProvider({
   const [emailConfirmed, setEmailConfirmed] = useState(initialEmailConfirmed ?? false);
   const [profile, setProfile] = useState<SchoolProfile | null>(initialProfile);
   const [schoolClass, setSchoolClass] = useState<SchoolClass | null>(initialSchoolClass);
+  const router = useRouter();
 
   /*
     id пользователя, под которым собран текущий профиль.
@@ -260,7 +262,10 @@ export function SchoolAuthProvider({
       setProfile(null);
       setEmail(null);
       setSchoolClass(null);
-      await refresh();
+      // ИСПРАВЛЕНИЕ: Сразу редирект на лендинг вместо ожидания пересчёта контекста
+      // Без этого страница остаётся на профиле со всеми меню открытыми
+      router.replace('/');
+      router.refresh();
     }
 
     async function chooseRole(role: 'student' | 'teacher', classCode?: string) {
@@ -291,7 +296,7 @@ export function SchoolAuthProvider({
       signOut,
       chooseRole,
     };
-  }, [loading, email, emailConfirmed, profile, schoolClass, refresh]);
+  }, [loading, email, emailConfirmed, profile, schoolClass, refresh, router]);
 
   return <SchoolAuthContext.Provider value={value}>{children}</SchoolAuthContext.Provider>;
 }
