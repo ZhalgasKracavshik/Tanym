@@ -13,28 +13,24 @@ import { SiteHeader } from './SiteHeader';
 import { SiteSidebar } from './SiteSidebar';
 
 /**
- * Экраны входа живут без навигации вообще.
+ * Экраны без навигации приложения вообще.
  *
- * Боковое меню на странице входа предлагает уйти в разделы, которые всё
- * равно потребуют аккаунта, а шапка лендинга уводит обратно на продажу
- * продукта. И то и другое мешает единственному действию на экране.
+ * Экраны входа: боковое меню предлагает уйти в разделы, которые всё равно
+ * потребуют аккаунта, а шапка лендинга уводит обратно на продажу продукта —
+ * и то и другое мешает единственному действию на экране.
+ *
+ * B2B-лендинги для школ и центров (/for-schools, /for-centers): та же
+ * логика, и вдобавок у них уже есть собственная мини-шапка внутри
+ * PartnerPage, так что шапка продукта здесь была бы третьей подряд.
  */
-const AUTH_ROUTES = ['/login', '/register', '/forgot-password', '/reset-password'];
-
-/*
-  B2B-лендинги для школ и центров: публичные страницы-предложения, а не
-  разделы кабинета. Боковое меню здесь ведёт в разделы, требующие входа,
-  и только отвлекает от единственного CTA «Обсудить сотрудничество» —
-  та же логика, что уже увела шапку лендинга от бокового меню.
-*/
-const LANDING_ROUTES = ['/', '/for-schools', '/for-centers'];
+const SHELLESS_ROUTES = ['/login', '/register', '/forgot-password', '/reset-password', '/for-schools', '/for-centers'];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isLanding = LANDING_ROUTES.includes(pathname);
-  const isAuth = AUTH_ROUTES.includes(pathname);
+  const isLanding = pathname === '/';
+  const isShellless = SHELLESS_ROUTES.includes(pathname);
 
-  if (isAuth) {
+  if (isShellless) {
     return <main className="flex-1">{children}</main>;
   }
 
