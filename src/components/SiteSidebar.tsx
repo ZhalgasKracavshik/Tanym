@@ -217,7 +217,7 @@ export function SiteSidebar() {
         <Avatar
           name={displayName}
           colorId={schoolProfile?.avatar_color}
-          photoUrl={avatarPhotoUrl(schoolProfile?.avatar_photo_path)}
+          photoUrl={state.profile?.avatarPhotoUrl || avatarPhotoUrl(schoolProfile?.avatar_photo_path)}
           size={32}
         />
         <span className="truncate text-sm font-semibold text-ink-700">
@@ -226,7 +226,7 @@ export function SiteSidebar() {
       </Link>
 
       <Link
-        href="/settings"
+        href="/profile?tab=settings"
         title={t.settings}
         aria-label={t.settings}
         className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-control)] border border-ink-200 text-ink-400 outline-none transition-all duration-150 hover:border-brand-300 hover:text-brand-600 focus-visible:ring-2 focus-visible:ring-brand-500"
@@ -262,7 +262,7 @@ export function SiteSidebar() {
             <Avatar
           name={displayName}
           colorId={schoolProfile?.avatar_color}
-          photoUrl={avatarPhotoUrl(schoolProfile?.avatar_photo_path)}
+          photoUrl={state.profile?.avatarPhotoUrl || avatarPhotoUrl(schoolProfile?.avatar_photo_path)}
           size={32}
         />
           </Link>

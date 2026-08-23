@@ -3,14 +3,15 @@
 /**
  * Профиль пользователя Tanym.
  *
- * Полный личный кабинет с четырьмя структурированными вкладками:
- * 1. Личные данные и «О себе» (биография, телефон, соцсети, интересы).
+ * Полный личный кабинет со структурированными вкладками:
+ * 1. Личные данные и «О себе» (биография, телефон, соцсети, уровень, интересы).
  * 2. Учёба и класс (класс 7-12, предметы, цели, дата экзамена, карточка класса с кодом).
  * 3. Активность и портфолио (достижения, олимпиады, освоенные темы, баллы).
  * 4. Настройки и безопасность (пароль, язык, приватность, уведомления, выход).
  */
 
-import { useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useStore } from '@/components/StoreProvider';
 import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
 import { useOwnStreakPoints, useSchoolLeaderboard } from '@/lib/supabase/leaderboard';
@@ -22,9 +23,9 @@ import { SocialLinks } from '@/components/SocialLinks';
 import { parseSocialLinks } from '@/lib/social';
 import type { SocialLink } from '@/lib/social';
 import { Icon, type IconName } from '@/components/Icon';
-import { Reveal, PressButton } from '@/components/motion';
+import { Reveal } from '@/components/motion';
 import { TIER_LABEL, levelFromPoints, pointsWord } from '@/lib/level';
-import { Alert, Button, ButtonLink, Card, Kicker, Skeleton } from '@/components/ui';
+import { Alert, Button, Card, Kicker, Skeleton } from '@/components/ui';
 import { PasswordField, SubmitButton } from '@/components/auth-ui';
 import { COVER_TYPES, coverError } from '@/components/ImageField';
 import { avatarPhotoUrl } from '@/lib/supabase/avatarPhoto';
@@ -35,11 +36,9 @@ import { SUBJECTS } from '@/data';
 import {
   INTERESTS,
   KNOWLEDGE_LEVELS,
-  REMINDER_LEADS,
   STUDY_TIMES,
   WEEKDAYS,
   normalizePhone,
-  reminderLabel,
 } from '@/lib/profileFields';
 
 /** Языки интерфейса */
@@ -103,7 +102,10 @@ function Toggle({
   );
 }
 
-export default function ProfilePage() {
+function ProfileContent() {
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get('tab') as ProfileTab | null;
+
   const { state, hydrated, updateProfile, resetAll, setLanguage } = useStore();
   const {
     profile: schoolProfile,
@@ -116,7 +118,18 @@ export default function ProfilePage() {
     refresh,
   } = useSchoolAuth();
 
-  const [activeTab, setActiveTab] = useState<ProfileTab>('personal');
+  const [activeTab, setActiveTab] = useState<ProfileTab>(
+    tabParam && ['personal', 'study', 'activity', 'settings'].includes(tabParam)
+      ? tabParam
+      : 'personal',
+  );
+
+  useEffect(() => {
+    if (tabParam && ['personal', 'study', 'activity', 'settings'].includes(tabParam)) {
+      setActiveTab(tabParam);
+    }
+  }, [tabParam]);
+
   const [refreshKey, setRefreshKey] = useState(0);
   const [savedAlert, setSavedAlert] = useState(false);
 
@@ -167,9 +180,15 @@ export default function ProfilePage() {
 
   const socialLinks = socialDraft ?? parseSocialLinks(schoolProfile?.social_links);
   const currentGrade = (schoolProfile?.grade ?? state.profile?.grade ?? 10) as Grade;
-  const currentSubjects = (schoolProfile?.subject_ids ?? state.profile?.subjectIds ?? ['math']);
+  const currentSubjects = schoolProfile?.subject_ids ?? state.profile?.subjectIds ?? ['math'];
   const currentGoal = (schoolProfile?.goal ?? state.profile?.goal ?? 'ent') as LearningGoal;
   const currentTargetDate = schoolProfile?.target_date ?? state.profile?.targetDate ?? '';
+
+  // Текущая фотография (локальная Data URL или URL из Supabase)
+  const currentPhotoUrl =
+    state.profile?.avatarPhotoUrl ||
+    avatarPhotoUrl(schoolProfile?.avatar_photo_path) ||
+    null;
 
   const myRank =
     isStudent && others
@@ -205,8 +224,12 @@ export default function ProfilePage() {
       .catch(() => {});
   }
 
-  async function uploadPhoto(file: File) {
-    if (!schoolProfile) return;
+  /**
+   * Загрузка фотографии:
+   * 1. Считываем Data URL для мгновенного локального превью в любом режиме.
+   * 2. Если пользователь авторизован, отправляем файл в бакет Supabase и сохраняем путь.
+   */
+  function handlePhotoSelect(file: File) {
     const problem = coverError(file);
     if (problem) {
       setPhotoError(problem);
@@ -215,19 +238,55 @@ export default function ProfilePage() {
     setPhotoError(null);
     setPhotoStatus('uploading');
 
-    const supabase = createClient();
-    const extension = file.name.split('.').pop()?.toLowerCase() ?? 'jpg';
-    const path = `${schoolProfile.id}/${Date.now()}.${extension}`;
+    // Локальное чтение (мгновенное отображение)
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const dataUrl = event.target?.result as string;
+      if (dataUrl) {
+        updateProfile({ avatarPhotoUrl: dataUrl });
+      }
 
-    const { error } = await supabase.storage.from('avatars').upload(path, file);
-    if (error) {
+      // Если есть профиль Supabase — загружаем в хранилище
+      if (schoolProfile) {
+        try {
+          const supabase = createClient();
+          const extension = file.name.split('.').pop()?.toLowerCase() ?? 'jpg';
+          const path = `${schoolProfile.id}/${Date.now()}.${extension}`;
+
+          const { error: uploadError } = await supabase.storage
+            .from('avatars')
+            .upload(path, file, { upsert: true });
+
+          if (!uploadError) {
+            const publicUrl = supabase.storage.from('avatars').getPublicUrl(path).data.publicUrl;
+            save(
+              { avatarPhotoPath: path, avatarPhotoUrl: publicUrl || dataUrl },
+              { avatarPhotoPath: path },
+            );
+          } else {
+            // Даже если облачное хранилище не ответило, локально фото уже сохранено
+            save({ avatarPhotoUrl: dataUrl }, {});
+          }
+        } catch {
+          save({ avatarPhotoUrl: dataUrl }, {});
+        }
+      } else {
+        triggerSaveFeedback();
+      }
       setPhotoStatus('idle');
-      setPhotoError('Не удалось загрузить фотографию. Попробуйте ещё раз.');
-      return;
-    }
+    };
 
-    setPhotoStatus('idle');
-    save({}, { avatarPhotoPath: path });
+    reader.onerror = () => {
+      setPhotoStatus('idle');
+      setPhotoError('Не удалось прочитать файл изображения.');
+    };
+
+    reader.readAsDataURL(file);
+  }
+
+  function handleRemovePhoto() {
+    updateProfile({ avatarPhotoUrl: null, avatarPhotoPath: null });
+    save({ avatarPhotoUrl: null, avatarPhotoPath: null }, { avatarPhotoPath: null });
   }
 
   function saveName() {
@@ -310,12 +369,12 @@ export default function ProfilePage() {
           />
 
           <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center">
-            {/* Аватар с быстрыми действиями */}
+            {/* Аватар с возможностью мгновенной загрузки */}
             <div className="group relative flex shrink-0 items-center justify-center">
               <Avatar
                 name={displayName}
                 colorId={schoolProfile?.avatar_color}
-                photoUrl={avatarPhotoUrl(schoolProfile?.avatar_photo_path)}
+                photoUrl={currentPhotoUrl}
                 size={84}
                 className="border-2 border-white/20 shadow-md"
               />
@@ -323,7 +382,7 @@ export default function ProfilePage() {
                 title="Загрузить фото"
                 className="absolute inset-0 flex cursor-pointer items-center justify-center rounded-full bg-black/40 text-xs font-semibold text-white opacity-0 backdrop-blur-xs transition-opacity group-hover:opacity-100"
               >
-                <Icon name="image" size={18} />
+                <Icon name="image" size={20} />
                 <input
                   type="file"
                   accept={COVER_TYPES.join(',')}
@@ -332,7 +391,7 @@ export default function ProfilePage() {
                   onChange={(e) => {
                     const file = e.target.files?.[0];
                     e.target.value = '';
-                    if (file) uploadPhoto(file);
+                    if (file) handlePhotoSelect(file);
                   }}
                 />
               </label>
@@ -406,15 +465,15 @@ export default function ProfilePage() {
                     onChange={(e) => {
                       const file = e.target.files?.[0];
                       e.target.value = '';
-                      if (file) uploadPhoto(file);
+                      if (file) handlePhotoSelect(file);
                     }}
                   />
                 </label>
-                {schoolProfile?.avatar_photo_path && (
+                {currentPhotoUrl && (
                   <>
                     <span>·</span>
                     <button
-                      onClick={() => save({}, { avatarPhotoPath: null })}
+                      onClick={handleRemovePhoto}
                       className="text-white/50 transition-colors hover:text-danger-300 hover:underline"
                     >
                       Удалить фото
@@ -1040,5 +1099,21 @@ export default function ProfilePage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function ProfilePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="mx-auto max-w-4xl space-y-4 px-4 py-10 sm:px-6">
+          <Skeleton className="h-48 w-full rounded-[var(--radius-card)]" />
+          <Skeleton className="h-12 w-full rounded-xl" />
+          <Skeleton className="h-72 w-full rounded-[var(--radius-card)]" />
+        </div>
+      }
+    >
+      <ProfileContent />
+    </Suspense>
   );
 }

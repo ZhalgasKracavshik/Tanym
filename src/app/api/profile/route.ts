@@ -64,6 +64,8 @@ export async function PATCH(request: Request) {
   if (typeof body.goal === 'string') patch.goal = body.goal;
   if (typeof body.targetDate === 'string' || body.targetDate === null) patch.target_date = body.targetDate;
   if (typeof body.avatarColor === 'string') patch.avatar_color = body.avatarColor;
+  if (typeof body.avatarPhotoPath === 'string' || body.avatarPhotoPath === null) patch.avatar_photo_path = body.avatarPhotoPath;
+  if (typeof body.avatar_photo_path === 'string' || body.avatar_photo_path === null) patch.avatar_photo_path = body.avatar_photo_path;
   /*
     Ссылки чистим на сервере повторно, а не доверяем клиенту.
     Форма уже проверяет адрес, но PATCH — обычный HTTP-запрос: его можно

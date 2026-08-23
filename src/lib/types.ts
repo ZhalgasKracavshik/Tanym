@@ -192,6 +192,8 @@ export interface Profile {
   createdAt: string;
   /** Только для роли teacher: класс, который он ведёт. */
   className?: string;
+  avatarPhotoPath?: string | null;
+  avatarPhotoUrl?: string | null;
 }
 
 export interface DiagnosticAnswer {

@@ -67,7 +67,7 @@ export function SiteHeader() {
             <Avatar
               name={displayName}
               colorId={schoolProfile?.avatar_color}
-              photoUrl={avatarPhotoUrl(schoolProfile?.avatar_photo_path)}
+              photoUrl={state.profile?.avatarPhotoUrl || avatarPhotoUrl(schoolProfile?.avatar_photo_path)}
               size={38}
               className="ring-2 ring-transparent transition-all group-hover:ring-brand-400 shadow-sm"
             />
