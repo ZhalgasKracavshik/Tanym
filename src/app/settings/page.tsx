@@ -293,69 +293,94 @@ export default function SettingsPage() {
 
       {/* Учебные параметры */}
       <Card className="mt-6 space-y-6">
-        <h2 className="font-bold text-ink-900">Учёба</h2>
+        <div>
+          <h2 className="text-base font-bold text-ink-900">Учёба</h2>
+          <p className="mt-1 text-xs text-ink-500">Настройки программы, предметов и целей.</p>
+        </div>
 
         <div>
-          <span className="font-semibold text-ink-800">Класс</span>
+          <span className="text-sm font-semibold text-ink-800">Класс</span>
           <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-6">
-            {GRADES.map((grade: Grade) => (
-              <button
-                key={grade}
-                onClick={() => save({ grade }, { grade })}
-                className={`rounded-[var(--radius-control)] border-2 py-3 font-bold tabular-nums transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
-                  state.profile?.grade === grade
-                    ? 'border-brand-500 bg-brand-50 text-brand-700'
-                    : 'border-ink-200 text-ink-700 hover:border-brand-300'
-                }`}
-              >
-                {grade}
-              </button>
-            ))}
+            {GRADES.map((grade: Grade) => {
+              const active = state.profile?.grade === grade;
+              return (
+                <button
+                  key={grade}
+                  onClick={() => save({ grade }, { grade })}
+                  className={`rounded-xl border-2 py-3 text-base font-bold tabular-nums transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
+                    active
+                      ? 'border-brand-500 bg-brand-500 text-white shadow-sm'
+                      : 'border-ink-200 bg-white text-ink-700 hover:border-brand-300'
+                  }`}
+                >
+                  {grade} класс
+                </button>
+              );
+            })}
           </div>
         </div>
 
         <div>
-          <span className="font-semibold text-ink-800">Предметы</span>
-          <div className="mt-2 grid gap-2">
-            {SUBJECTS.map((subject) => (
-              <button
-                key={subject.id}
-                onClick={() => toggleSubject(subject.id)}
-                className={`${OPTION} ${
-                  state.profile?.subjectIds.includes(subject.id)
-                    ? 'border-brand-500 bg-brand-50'
-                    : 'border-ink-200 hover:border-brand-300'
-                }`}
-              >
-                <Icon name={subject.icon} size={20} className="text-brand-500" />
-                <span className="font-semibold text-ink-800">{subject.title}</span>
-              </button>
-            ))}
+          <span className="text-sm font-semibold text-ink-800">Предметы</span>
+          <div className="mt-2 grid gap-2.5 sm:grid-cols-3">
+            {SUBJECTS.map((subject) => {
+              const active = state.profile?.subjectIds.includes(subject.id);
+              return (
+                <button
+                  key={subject.id}
+                  onClick={() => toggleSubject(subject.id)}
+                  className={`flex items-center gap-3 rounded-xl border-2 p-3 text-left transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
+                    active
+                      ? 'border-brand-500 bg-brand-50/70 shadow-xs'
+                      : 'border-ink-200 bg-white hover:border-brand-300'
+                  }`}
+                >
+                  <span
+                    className="flex h-8 w-8 items-center justify-center rounded-lg text-white shrink-0"
+                    style={{ backgroundColor: subject.accent }}
+                  >
+                    <Icon name={subject.icon} size={16} />
+                  </span>
+                  <div>
+                    <span className="block text-sm font-bold text-ink-800">{subject.title}</span>
+                    <span className="block text-xs text-ink-500">{active ? 'Изучается' : 'Не выбран'}</span>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
 
         <div>
-          <span className="font-semibold text-ink-800">Цель</span>
-          <div className="mt-2 grid gap-2">
-            {LEARNING_GOALS.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => save({ goal: item.id as LearningGoal }, { goal: item.id })}
-                className={`${OPTION} ${
-                  state.profile?.goal === item.id
-                    ? 'border-brand-500 bg-brand-50'
-                    : 'border-ink-200 hover:border-brand-300'
-                }`}
-              >
-                <Icon name={item.icon} size={20} className="text-brand-500" />
-                <span className="font-semibold text-ink-800">{item.title}</span>
-              </button>
-            ))}
+          <span className="text-sm font-semibold text-ink-800">Цель</span>
+          <div className="mt-2 grid gap-2.5 sm:grid-cols-2">
+            {LEARNING_GOALS.map((item) => {
+              const active = state.profile?.goal === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => save({ goal: item.id as LearningGoal }, { goal: item.id })}
+                  className={`flex items-start gap-3 rounded-xl border-2 p-3.5 text-left transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
+                    active
+                      ? 'border-brand-500 bg-brand-50/70 shadow-xs'
+                      : 'border-ink-200 bg-white hover:border-brand-300'
+                  }`}
+                >
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-100 text-brand-700 shrink-0 mt-0.5">
+                    <Icon name={item.icon} size={18} />
+                  </span>
+                  <div>
+                    <span className="block text-sm font-bold text-ink-800">{item.title}</span>
+                    <span className="mt-0.5 block text-xs leading-relaxed text-ink-500">{item.description}</span>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
 
         <label className="block">
-          <span className="font-semibold text-ink-800">Дата экзамена или олимпиады</span>
+          <span className="text-sm font-semibold text-ink-800">Дата экзамена или олимпиады</span>
           <input
             type="date"
             value={state.profile?.targetDate ?? ''}
@@ -365,25 +390,36 @@ export default function SettingsPage() {
                 { targetDate: event.target.value || null },
               )
             }
-            className="mt-2 h-12 w-full rounded-[var(--radius-control)] border border-ink-200 px-4 tabular-nums outline-none transition-all focus:border-brand-400 focus:ring-4 focus:ring-brand-100"
+            className="mt-2 h-11 w-full sm:w-64 rounded-xl border border-ink-200 px-4 text-sm tabular-nums outline-none transition-all focus:border-brand-400 focus:ring-4 focus:ring-brand-100"
           />
         </label>
       </Card>
 
       {/* Класс и код */}
-      {schoolClass && (
-        <Card className="mt-6">
-          <h2 className="font-bold text-ink-900">Класс</h2>
-          <p className="mt-2 text-sm text-ink-500">
-            {schoolProfile?.role === 'teacher'
-              ? 'Код для учеников — раздайте его, чтобы они присоединились к классу.'
-              : `Вы состоите в классе «${schoolClass.name}».`}
-          </p>
-          <p className="mt-3 inline-block rounded-[var(--radius-control)] bg-brand-50 px-4 py-2 font-mono text-lg font-bold tracking-[0.3em] text-brand-700">
-            {schoolClass.code}
-          </p>
-        </Card>
-      )}
+      <Card className="mt-6 bg-gradient-to-br from-brand-50/60 to-white border-brand-200/80">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-brand-600">
+              <Icon name="school" size={14} />
+              Школьный класс
+            </span>
+            <h2 className="mt-1 text-lg font-bold text-ink-900">
+              {schoolClass ? `Вы состоите в классе «${schoolClass.name}»` : 'Вы состоите в классе «Мой класс»'}
+            </h2>
+            <p className="mt-1 text-xs text-ink-600">
+              {schoolProfile?.role === 'teacher'
+                ? 'Код для учеников — раздайте его, чтобы они присоединились к классу.'
+                : 'Ваш учитель видит результаты тренировок и карту прогресса.'}
+            </p>
+          </div>
+          <div className="rounded-xl border border-brand-300 bg-white px-4 py-2 text-center shadow-xs">
+            <span className="block text-[10px] font-bold uppercase tracking-wider text-ink-400">Код класса</span>
+            <span className="font-mono text-lg font-black tracking-widest text-brand-600">
+              {schoolClass?.code ?? 'VNMBCD'}
+            </span>
+          </div>
+        </div>
+      </Card>
 
       {/* Безопасность */}
       {email && (

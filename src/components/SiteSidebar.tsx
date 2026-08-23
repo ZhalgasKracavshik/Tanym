@@ -248,10 +248,7 @@ export function SiteSidebar() {
           <LogoMark size={26} className="text-accent-500 shrink-0" />
           {/* Тот же шрифт, регистр и разрядка, что и в Logo.tsx — иначе
               словесный знак на телефоне выглядит другим брендом. */}
-          <span
-            className="truncate text-sm text-accent-500"
-            style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontWeight: 700, letterSpacing: '0.14em' }}
-          >
+          <span className="truncate text-base font-black tracking-wider text-brand-600">
             TANÝM
           </span>
         </Link>

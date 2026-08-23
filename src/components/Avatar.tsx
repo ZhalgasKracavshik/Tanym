@@ -1,72 +1,71 @@
 'use client';
 
 /**
- * Аватар пользователя.
+ * Аватар пользователя в стиле WhatsApp / современных мессенджеров.
  *
- * Загруженная фотография, а без неё — первая буква имени на цветном фоне.
- *
- * Выбор символа и цвета отсюда убран: профиль опознают по лицу или по
- * имени, а набор смайликов превращал шапку в игрушку и занимал в
- * настройках больше места, чем контакты и учебные параметры вместе.
- * Цвет подложки остался, но выводится из имени — одинаковый у человека
- * всюду и не требует ещё одного решения от него.
+ * Если загружена фотография — отображает её.
+ * По умолчанию — аккуратное стоковое изображение (узнаваемый силуэт пользователя
+ * на нейтральном или выбранном фоне, как в WhatsApp).
  */
 
-import type { CSSProperties } from 'react';
-
-import { avatarBackground } from '@/lib/avatar';
+export function DefaultUserIcon({ className = 'text-white' }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 40 40"
+      fill="currentColor"
+      className={`w-full h-full ${className}`}
+      aria-hidden="true"
+    >
+      {/* Голова */}
+      <circle cx="20" cy="14" r="6.5" />
+      {/* Плечи / бюст */}
+      <path d="M7 36C7.5 26.5 13.5 23.5 20 23.5C26.5 23.5 32.5 26.5 33 36Z" />
+    </svg>
+  );
+}
 
 export function Avatar({
-  name,
+  name = '',
   colorId,
   photoUrl,
   size = 40,
   className = '',
 }: {
-  name: string;
+  name?: string;
   colorId?: string | null;
-  /** Готовая ссылка на фотографию. Без неё — буква имени. */
+  /** Готовая ссылка на фотографию. Без неё — стоковое изображение силуэта. */
   photoUrl?: string | null;
   size?: number;
   className?: string;
 }) {
-  const initial = name.trim().charAt(0).toUpperCase() || '?';
-
   if (photoUrl) {
     return (
-      // eslint-disable-next-line @next/next/no-img-element -- внешний бакет, домен для next/image не настроен
+      // eslint-disable-next-line @next/next/no-img-element -- внешний бакет
       <img
         src={photoUrl}
-        alt=""
+        alt={name || 'Аватар'}
         width={size}
         height={size}
         loading="lazy"
-        /*
-          object-cover обязателен: фотографии приходят любых пропорций, и без
-          него портрет расплющило бы по ширине круга. Серый фон виден, пока
-          картинка грузится, — иначе на её месте мигает дыра в вёрстке.
-        */
-        className={`shrink-0 rounded-full bg-ink-100 object-cover ${className}`}
+        className={`shrink-0 rounded-full bg-ink-100 object-cover border border-black/5 ${className}`}
         style={{ width: size, height: size }}
       />
     );
   }
 
-  const style: CSSProperties = {
-    width: size,
-    height: size,
-    background: avatarBackground(colorId ?? null, name),
-    fontSize: Math.round(size * 0.4),
-    lineHeight: 1,
-  };
-
   return (
     <span
       aria-hidden
-      className={`flex shrink-0 items-center justify-center rounded-full font-bold text-white ${className}`}
-      style={style}
+      className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-black/5 bg-[#cfd7df] text-white shadow-inner ${className}`}
+      style={{
+        width: size,
+        height: size,
+        background: colorId ? undefined : '#d0d7de',
+      }}
     >
-      {initial}
+      <span className="w-[82%] h-[82%] flex items-end justify-center translate-y-[8%] text-[#f0f3f6]">
+        <DefaultUserIcon />
+      </span>
     </span>
   );
 }

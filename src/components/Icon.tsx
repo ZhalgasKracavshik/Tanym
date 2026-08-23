@@ -80,7 +80,9 @@ export type IconName =
   | 'eyeOff'
   | 'lock'
   | 'mail'
-  | 'heart';
+  | 'heart'
+  | 'edit'
+  | 'copy';
 
 /**
  * Контуры иконок. Каждая нарисована в квадрате 24 на 24 без заливки,
@@ -429,6 +431,18 @@ const PATHS: Record<IconName, React.ReactNode> = {
   ),
   heart: (
     <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78Z" />
+  ),
+  edit: (
+    <>
+      <path d="M4 20h4L20 8l-4-4L4 16v4Z" />
+      <path d="m14.5 5.5 4 4" />
+    </>
+  ),
+  copy: (
+    <>
+      <rect x="9" y="9" width="13" height="13" rx="2" />
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+    </>
   ),
 };
 

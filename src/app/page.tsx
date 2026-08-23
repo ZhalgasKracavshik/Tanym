@@ -12,7 +12,6 @@ import Link from 'next/link';
 import { SUBJECTS } from '@/data';
 import { Icon, type IconName } from '@/components/Icon';
 import { useLang, type Dict } from '@/lib/i18n';
-import { LandingAuthBanner } from '@/components/LandingAuthBanner';
 import { LiftCard, PressLink, Reveal, StaggerGroup, StaggerItem, motion } from '@/components/motion';
 
 /** Подписи лендинга на трёх языках. Ключи одинаковые — за этим следит TypeScript. */
@@ -312,20 +311,7 @@ export default function HomePage() {
 
   return (
     <div className="overflow-x-hidden">
-      {/*
-        Вход для школьного аккаунта — сразу под шапкой, видно без прокрутки.
-        Раньше кнопка входа была спрятана внутри разделов архива и достижений.
-      */}
-      <LandingAuthBanner language={language} />
-
-      {/*
-        Первый экран.
-
-        Под заголовком лежит мягкое тёплое свечение, а не плоская заливка:
-        цвет уходит к краям, поэтому центр экрана кажется освещённым, и взгляд
-        сам приходит к заголовку. Пятно уводится в absolute с pointer-events-none,
-        чтобы оно не перехватывало клики по кнопкам под ним.
-      */}
+      {/* Первый экран */}
       <section className="relative isolate overflow-hidden border-b border-ink-200/70 bg-white">
         <div
           aria-hidden
@@ -338,23 +324,16 @@ export default function HomePage() {
 
         <div className="mx-auto max-w-6xl px-6 py-20 text-center sm:py-28">
           <Reveal immediate>
-            <span className="inline-flex items-center gap-2 rounded-[var(--radius-pill)] border border-brand-200 bg-brand-50/80 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-brand-700 backdrop-blur">
-              <Icon name="sparkles" size={14} />
-              {t.kicker}
-            </span>
-          </Reveal>
-
-          <Reveal immediate delay={0.06}>
-            <h1 className="mx-auto mt-7 max-w-4xl text-[2.6rem] font-semibold leading-[1.05] tracking-tight text-ink-900 sm:text-6xl">
+            <h1 className="mx-auto max-w-4xl text-[2.6rem] font-semibold leading-[1.05] tracking-tight text-ink-900 sm:text-6xl">
               {t.heroTitle}
             </h1>
           </Reveal>
 
-          <Reveal immediate delay={0.12}>
+          <Reveal immediate delay={0.08}>
             <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-ink-500">{t.heroText}</p>
           </Reveal>
 
-          <Reveal immediate delay={0.18}>
+          <Reveal immediate delay={0.16}>
             <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
               <PressLink
                 href="/onboarding"
@@ -371,35 +350,6 @@ export default function HomePage() {
               >
                 {t.ctaDiagnostics}
               </PressLink>
-            </div>
-          </Reveal>
-
-          {/*
-            В исходном образце здесь стояло «нас уже 80 000» с чужими аватарками.
-            Выдуманное число пользователей на публичной странице было бы обманом,
-            поэтому вместо него настоящий состав продукта: он проверяется за две
-            секунды переходом в каталог.
-          */}
-          <Reveal immediate delay={0.24}>
-            <div className="mt-12">
-              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-ink-300">{t.proofLabel}</p>
-              <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-                {SUBJECTS.map((subject) => (
-                  <span
-                    key={subject.id}
-                    className="inline-flex items-center gap-1.5 rounded-[var(--radius-pill)] border border-ink-200 bg-white px-4 py-2 text-xs font-semibold text-ink-600 shadow-[var(--shadow-rest)]"
-                  >
-                    <Icon name={subject.icon} size={14} className="text-brand-500" />
-                    {subject.title}
-                  </span>
-                ))}
-                <span
-                  className="rounded-[var(--radius-pill)] px-4 py-2 text-xs font-semibold tabular-nums text-white"
-                  style={{ background: 'var(--gradient-ink)' }}
-                >
-                  {t.counts(totalTopics, totalTasks)}
-                </span>
-              </div>
             </div>
           </Reveal>
 

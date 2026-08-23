@@ -1,87 +1,57 @@
 /**
- * Монограмма и словесный знак Tanym.
+ * Логотип и словесный знак Tanym в современном лаконичном стиле.
  *
- * Прежняя версия ломалась по конкретной причине: значок был набран шрифтом
- * `Georgia, 'Times New Roman', serif` — системным, не подключённым через
- * next/font, — а буквы под ним вручную сдвинуты числами, подобранными на
- * глаз под метрику именно Georgia. На машине, где Georgia не установлена
- * (а гарантий этого нет нигде, кроме Windows и части macOS), браузер молча
- * подставлял другой засечный шрифт с другими пропорциями — и подогнанные
- * координаты переставали совпадать: буквы «кривые» ровно на тех
- * устройствах, где нет Georgia.
- *
- * Здесь значок и словесный знак используют один и тот же шрифт —
- * Playfair Display, подключённый через next/font (см. `layout.tsx`) — то
- * есть один и тот же файл шрифта у каждого посетителя, без подстановок.
- * Смещения между T и M не подобраны на глаз, а посчитаны по настоящим
- * метрикам этого файла (unitsPerEm, контуры глифов): стержень T специально
- * поставлен точно на левую стойку M, а не рядом с ней «примерно».
+ * Использует основной гротеск сайта (Inter / font-sans) и современный
+ * геометричный знак с фирменным градиентом терракоты.
  */
 
 interface LogoProps {
   size?: number;
   className?: string;
+  showText?: boolean;
 }
-
-/** Единый шрифт значка и словесного знака — см. обоснование выше. */
-const LOGO_FONT = 'var(--font-playfair), Georgia, serif';
 
 export function LogoMark({ size = 32, className = '' }: LogoProps) {
   return (
     <svg
-      viewBox="0 0 44 44"
+      viewBox="0 0 36 36"
       width={size}
       height={size}
-      className={className}
+      className={`shrink-0 ${className}`}
       aria-hidden="true"
       focusable="false"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
     >
-      {/*
-        M — снизу, ниже базовой линии T на 2 пункта: в образце заказчика M
-        стоит на переднем плане, T — фоном за ней. Тот же приём, только на
-        осмысленных числах.
-      */}
-      <text x="9.97" y="35" fontFamily={LOGO_FONT} fontWeight="800" fontSize="25" fill="currentColor">
-        M
-      </text>
-      {/*
-        T поверх M. Число x=3 подобрано не на глаз: стержень T (центр между
-        x=254 и x=413 в собственных 1000 юнитах глифа при fontSize=30) при
-        этом x ложится ровно на левую стойку M (центр между x=110 и x=133
-        в 1000 юнитах M при fontSize=25) — они совпадают в одной точке на
-        экране, а не просто «рядом». y=33, а не 32: при 32 засечка верхней
-        перекладины T на пиксель заходила за верхний край viewBox.
-      */}
-      <text x="3" y="33" fontFamily={LOGO_FONT} fontWeight="800" fontSize="30" fill="currentColor">
-        T
-      </text>
-      {/* Точка на пересечении стержня T и стойки M — акцент из образца. */}
-      <circle cx="13" cy="21.3" r="1.6" fill="currentColor" />
+      <defs>
+        <linearGradient id="tanym-logo-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#e57545" />
+          <stop offset="55%" stopColor="#d85f2e" />
+          <stop offset="100%" stopColor="#b34a1f" />
+        </linearGradient>
+      </defs>
+      {/* Мягкий скругленный суперэллипс (squircle) */}
+      <rect width="36" height="36" rx="10" fill="url(#tanym-logo-grad)" />
+      {/* Современная стилизованная буква T со светящейся точкой познания */}
+      <path
+        d="M9 12C9 10.8954 9.89543 10 11 10H25C26.1046 10 27 10.8954 27 12C27 13.1046 26.1046 14 25 14H20V25C20 26.1046 19.1046 27 18 27C16.8954 27 16 26.1046 16 25V14H11C9.89543 14 9 13.1046 9 12Z"
+        fill="white"
+      />
+      {/* Акцентная точка */}
+      <circle cx="24.5" cy="18.5" r="2" fill="#ffd88e" />
     </svg>
   );
 }
 
-export function Logo({ size = 32, className = '' }: LogoProps) {
+export function Logo({ size = 32, className = '', showText = true }: LogoProps) {
   return (
-    <span className={`flex items-center gap-2.5 ${className}`}>
-      <LogoMark size={size} className="text-accent-500" />
-      {/*
-        Прописные с разрядкой, а не «Tanym» строчными: в образце заказчика
-        словесный знак набран капителью с широким трекингом — так читается
-        как знак, а не как обычное слово в тексте интерфейса. Ý — буква
-        казахского латинского алфавита, глиф для нее в файле Playfair
-        Display проверен (есть в обеих начертаниях, 700 и 800).
-      */}
-      <span
-        className="text-lg text-accent-500"
-        style={{
-          fontFamily: LOGO_FONT,
-          fontWeight: 700,
-          letterSpacing: '0.14em',
-        }}
-      >
-        TANÝM
-      </span>
+    <span className={`inline-flex items-center gap-2.5 ${className}`}>
+      <LogoMark size={size} />
+      {showText && (
+        <span className="flex items-baseline tracking-tight font-extrabold select-none">
+          <span className="text-xl tracking-wider text-brand-600 font-black">TANÝM</span>
+        </span>
+      )}
     </span>
   );
 }
