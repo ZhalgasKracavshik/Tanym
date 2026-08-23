@@ -11,6 +11,7 @@
 import { usePathname } from 'next/navigation';
 import { SiteHeader } from './SiteHeader';
 import { SiteSidebar } from './SiteSidebar';
+import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
 
 /**
  * Экраны без навигации приложения вообще.
@@ -27,7 +28,17 @@ const SHELLESS_ROUTES = ['/login', '/register', '/forgot-password', '/reset-pass
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { loading, isSignedIn, profile } = useSchoolAuth();
   const isLanding = pathname === '/';
+
+  /*
+    Вошёл (например, через Google), но роль ещё не выбрана — SchoolAuthGate/
+    LandingAuthBanner на самой странице просят «Вы ученик или учитель?».
+    Боковое меню в этот момент показывает десяток разделов, которые всё
+    равно упрутся в ту же самую форму выбора роли — сбивает с единственного
+    действия, которое нужно сделать прямо сейчас.
+  */
+  const pendingRoleChoice = !loading && isSignedIn && !profile;
   const isShellless = SHELLESS_ROUTES.includes(pathname);
 
   if (isShellless) {
@@ -41,6 +52,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <main className="flex-1">{children}</main>
       </>
     );
+  }
+
+  // Роль ещё не выбрана — тот же приём, что и на лендинге: без бокового
+  // меню, сама страница уже показывает форму выбора роли.
+  if (pendingRoleChoice) {
+    return <main className="flex-1">{children}</main>;
   }
 
   return (

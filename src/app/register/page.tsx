@@ -108,11 +108,13 @@ export default function RegisterPage() {
     }
 
     setStatus('success');
-    // ИСПРАВЛЕНИЕ: Редирект на /onboarding вместо /dashboard
-    // Ученик должен сначала заполнить профиль (класс, цели)
-    // Учитель может сразу идти в /teacher
-    const redirectPath = role === 'teacher' ? '/teacher' : '/onboarding';
-    router.replace(redirectPath);
+    /*
+      /onboarding убран из редиректа: chooseRole уже создал профиль с ролью
+      и классом (форма выше их и собрала), так что /onboarding был только
+      страницей-заглушкой со спиннером, которая тут же перекидывала дальше
+      сама — лишний прыжок без всякой пользы для человека.
+    */
+    router.replace(role === 'teacher' ? '/teacher' : '/dashboard');
     router.refresh();
   }
 
@@ -195,8 +197,8 @@ export default function RegisterPage() {
       <div className="mt-7">
         <ProviderButtons
           dividerLabel="или"
-          onGoogle={() => signInWithProvider('google', '/onboarding')}
-          onApple={() => signInWithProvider('apple', '/onboarding')}
+          onGoogle={() => signInWithProvider('google', '/dashboard')}
+          onApple={() => signInWithProvider('apple', '/dashboard')}
         />
       </div>
     </AuthShell>
