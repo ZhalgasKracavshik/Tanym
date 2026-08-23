@@ -539,10 +539,19 @@ const CATEGORY_PROFILE: Record<
 
 function playKeySound(category: SoundCategory, muted: boolean, panHint = 0) {
   if (typeof window === "undefined") return;
-  getThockEngine().then((engine) => {
+  getThockEngine().then(async (engine) => {
     if (!engine || !engine.buffer) return;
     const { ctx, dry, wet, supportsPanning, buffer } = engine;
-    if (ctx.state === "suspended") void ctx.resume();
+
+    // Браузер требует жест пользователя для запуска AudioContext.
+    // Дожидаемся разблокировки до запуска источника, иначе звук не выйдет.
+    if (ctx.state === "suspended") {
+      try {
+        await ctx.resume();
+      } catch {
+        return;
+      }
+    }
 
     const profile = CATEGORY_PROFILE[category];
     const now = ctx.currentTime;
@@ -1175,13 +1184,6 @@ export const VintageKeyboard = () => {
   useEffect(() => {
     const held = new Set<string>();
 
-    const isTypingTarget = (target: EventTarget | null) => {
-      const el = target as HTMLElement | null;
-      if (!el) return false;
-      const tag = el.tagName?.toLowerCase();
-      return tag === "input" || tag === "textarea" || el.isContentEditable;
-    };
-
     const releaseKey = (id: string) => {
       if (!held.has(id)) return;
       held.delete(id);
@@ -1209,12 +1211,16 @@ export const VintageKeyboard = () => {
     const handleKeyDown = (event: KeyboardEvent) => {
       reconcileModifiers(event);
 
+      // Разблокируем AudioContext при первом нажатии (браузер требует жест)
+      getThockEngine().then((engine) => {
+        if (engine?.ctx.state === "suspended") void engine.ctx.resume();
+      });
+
       if (event.code === "AltLeft" || event.code === "AltRight") {
         event.preventDefault();
       }
 
       if (event.repeat) return;
-      if (isTypingTarget(event.target)) return;
 
       const id = CODE_TO_KEY_ID[event.code];
       if (!id || held.has(id)) return;
