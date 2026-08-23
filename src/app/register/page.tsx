@@ -20,6 +20,7 @@ import {
   ClassCodeField,
   Field,
   FormMessage,
+  InfoBanner,
   PasswordField,
   ProviderButtons,
   Select,
@@ -144,9 +145,9 @@ export default function RegisterPage() {
         )}
 
         {role === 'teacher' && (
-          <p className="rounded-[var(--radius-control)] border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-brand-700">
+          <InfoBanner>
             После регистрации вы получите код класса — раздайте его ученикам.
-          </p>
+          </InfoBanner>
         )}
 
         <Field

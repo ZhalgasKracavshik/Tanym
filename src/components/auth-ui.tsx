@@ -3,10 +3,8 @@
 /**
  * Кирпичики экранов входа и регистрации.
  *
- * Вынесены отдельно, потому что четыре страницы (/login, /register,
- * /forgot-password, /reset-password) обязаны выглядеть как один экран
- * в разных состояниях, а не как четыре похожие формы. Общая оболочка
- * гарантирует это лучше, чем копирование разметки.
+ * Новый дизайн: glassmorphism форма поверх WebGL smokey-background.
+ * Логика и хуки не изменились — только визуальная оболочка.
  */
 
 import { useState } from 'react';
@@ -16,6 +14,7 @@ import { AnimatePresence } from 'framer-motion';
 import { Icon } from './Icon';
 import { Logo } from './Logo';
 import { EASE_OUT, PressButton, Reveal, SuccessCheck, Spinner, motion } from './motion';
+import { SmokeyBackground } from './ui/smokey-background';
 
 /* ------------------------------------------------------------------ */
 /*  Оболочка                                                           */
@@ -33,87 +32,41 @@ export function AuthShell({
   footer?: ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen">
-      {/* Левая половина: сама форма. На телефоне занимает весь экран. */}
-      <div className="flex w-full flex-col justify-center px-6 py-12 sm:px-12 lg:w-1/2 lg:px-16">
-        <Reveal immediate className="mx-auto w-full max-w-md">
-          <Link href="/" className="inline-block rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-brand-500">
-            <Logo size={28} />
-          </Link>
+    <div className="relative min-h-screen w-full overflow-hidden bg-gray-950 flex items-center justify-center p-4">
+      {/* WebGL smokey background */}
+      <SmokeyBackground color="#1E3A8A" />
 
-          <h1 className="mt-10 text-[2rem] font-semibold leading-tight tracking-tight text-ink-900">
-            {title}
-          </h1>
-          <p className="mt-2 text-[15px] leading-relaxed text-ink-500">{subtitle}</p>
+      {/* Дополнительный тёмно-синий оверлей поверх шейдера */}
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-950/60 via-gray-950/40 to-indigo-950/60" />
 
-          <div className="mt-8">{children}</div>
+      {/* Glassmorphism карточка */}
+      <Reveal immediate className="relative z-10 w-full max-w-sm">
+        <div className="rounded-2xl border border-white/20 bg-white/10 p-8 shadow-2xl backdrop-blur-xl">
+          {/* Лого */}
+          <div className="mb-6 flex justify-center">
+            <Link
+              href="/"
+              className="inline-block rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+            >
+              <Logo size={32} />
+            </Link>
+          </div>
 
-          {footer && <div className="mt-8 text-sm text-ink-500">{footer}</div>}
-        </Reveal>
-      </div>
+          {/* Заголовок */}
+          <div className="mb-7 text-center">
+            <h1 className="text-3xl font-bold text-white">{title}</h1>
+            <p className="mt-2 text-sm text-gray-300">{subtitle}</p>
+          </div>
 
-      {/*
-        Правая половина: цветное полотно с отзывом.
+          {/* Контент формы */}
+          {children}
 
-        Смысл не в украшении. Экран входа — единственное место, где человек
-        ничего не получает, только отдаёт данные, и пустое поле рядом с формой
-        усиливает это ощущение. Живая цветная поверхность и одна фраза от
-        учителя дают понять, куда он входит.
-
-        Картинки нет: полотно собрано из наложенных градиентов. Так оно
-        весит ноль байт, мгновенно рисуется и не зависит от внешнего хостинга.
-        На экранах уже ноутбука скрывается целиком — на телефоне форма важнее.
-      */}
-      <div className="relative hidden overflow-hidden lg:block lg:w-1/2">
-        <div
-          aria-hidden
-          className="absolute inset-0"
-          style={{
-            background:
-              'radial-gradient(90% 70% at 15% 20%, #f6c0a8 0%, transparent 55%),' +
-              'radial-gradient(80% 80% at 85% 15%, #6d4aa8 0%, transparent 60%),' +
-              'radial-gradient(70% 70% at 75% 85%, #d85f2e 0%, transparent 55%),' +
-              'linear-gradient(135deg, #24425c 0%, #4d1f10 100%)',
-          }}
-        />
-
-        {/* Мягкие полосы поверх: без них крупная заливка выглядит плоской */}
-        <div
-          aria-hidden
-          className="absolute inset-0 opacity-30 mix-blend-soft-light"
-          style={{
-            background:
-              'repeating-linear-gradient(115deg, rgb(255 255 255 / 0.35) 0px, transparent 60px, transparent 120px)',
-          }}
-        />
-
-        <div className="relative flex h-full items-end p-12">
-          <motion.blockquote
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ ...EASE_OUT, delay: 0.2 }}
-            className="max-w-md rounded-[var(--radius-card)] border border-white/20 bg-white/15 p-6 backdrop-blur-md"
-          >
-            <p className="text-lg leading-relaxed text-white">
-              «Раньше я узнавала о пробелах класса на контрольной. Теперь вижу их на неделю
-              раньше — и успеваю разобрать тему до неё.»
-            </p>
-            <footer className="mt-4 flex items-center gap-3">
-              <span
-                aria-hidden
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-white/25 text-sm font-bold text-white"
-              >
-                А
-              </span>
-              <span className="text-sm text-white/70">
-                Айгуль, учитель математики
-                <br />
-                школа-партнёр в Астане
-              </span>
-            </footer>
-          </motion.blockquote>
+          {/* Футер с ссылкой */}
+          {footer && (
+            <p className="mt-6 text-center text-xs text-gray-400">{footer}</p>
+          )}
         </div>
-      </div>
+      </Reveal>
     </div>
   );
 }
@@ -122,28 +75,28 @@ export function AuthShell({
 /*  Поля                                                               */
 /* ------------------------------------------------------------------ */
 
-const FIELD_CLASS =
-  'h-12 w-full rounded-[var(--radius-control)] border border-ink-200 bg-white px-4 text-[15px] text-ink-900 outline-none transition-all duration-150 placeholder:text-ink-300 focus:border-brand-400 focus:ring-4 focus:ring-brand-100 disabled:bg-ink-50';
-
 export function Field({
   label,
   hint,
   ...props
 }: InputHTMLAttributes<HTMLInputElement> & { label: string; hint?: string }) {
   return (
-    <label className="block">
-      <span className="mb-2 block text-sm font-semibold text-ink-800">{label}</span>
-      <input {...props} className={FIELD_CLASS} />
-      {hint && <span className="mt-1.5 block text-xs text-ink-400">{hint}</span>}
-    </label>
+    <div className="relative z-0">
+      <input
+        {...props}
+        placeholder=" "
+        className="peer block w-full appearance-none border-0 border-b-2 border-gray-400/60 bg-transparent py-2.5 px-0 text-sm text-white outline-none transition-colors focus:border-blue-400 focus:ring-0"
+      />
+      <label className="absolute top-3 -z-10 origin-[0] transform text-sm text-gray-300 duration-300 peer-placeholder-shown:translate-y-0 peer-placeholder-shown:scale-100 peer-focus:-translate-y-6 peer-focus:scale-75 peer-focus:text-blue-400 peer-[:not(:placeholder-shown)]:-translate-y-6 peer-[:not(:placeholder-shown)]:scale-75">
+        {label}
+      </label>
+      {hint && <span className="mt-1 block text-xs text-gray-400">{hint}</span>}
+    </div>
   );
 }
 
 /**
  * Пароль с переключателем видимости.
- *
- * Глаз нужен не для красоты: на телефоне пароль набирают вслепую и
- * ошибаются, а единственная альтернатива — вводить заново с нуля.
  */
 export function PasswordField({
   label,
@@ -153,21 +106,26 @@ export function PasswordField({
   const [visible, setVisible] = useState(false);
 
   return (
-    <label className="block">
-      <span className="mb-2 block text-sm font-semibold text-ink-800">{label}</span>
-      <span className="relative block">
-        <input {...props} type={visible ? 'text' : 'password'} className={`${FIELD_CLASS} pr-12`} />
-        <button
-          type="button"
-          onClick={() => setVisible((value) => !value)}
-          aria-label={visible ? 'Скрыть пароль' : 'Показать пароль'}
-          className="absolute right-1 top-1 flex h-10 w-10 items-center justify-center rounded-[12px] text-ink-400 transition-colors hover:text-ink-700"
-        >
-          <Icon name={visible ? 'eyeOff' : 'eye'} size={18} />
-        </button>
-      </span>
-      {hint && <span className="mt-1.5 block text-xs text-ink-400">{hint}</span>}
-    </label>
+    <div className="relative z-0">
+      <input
+        {...props}
+        type={visible ? 'text' : 'password'}
+        placeholder=" "
+        className="peer block w-full appearance-none border-0 border-b-2 border-gray-400/60 bg-transparent py-2.5 px-0 pr-8 text-sm text-white outline-none transition-colors focus:border-blue-400 focus:ring-0"
+      />
+      <label className="absolute top-3 -z-10 origin-[0] transform text-sm text-gray-300 duration-300 peer-placeholder-shown:translate-y-0 peer-placeholder-shown:scale-100 peer-focus:-translate-y-6 peer-focus:scale-75 peer-focus:text-blue-400 peer-[:not(:placeholder-shown)]:-translate-y-6 peer-[:not(:placeholder-shown)]:scale-75">
+        {label}
+      </label>
+      <button
+        type="button"
+        onClick={() => setVisible((v) => !v)}
+        aria-label={visible ? 'Скрыть пароль' : 'Показать пароль'}
+        className="absolute right-0 top-2 flex h-8 w-8 items-center justify-center text-gray-400 transition-colors hover:text-white"
+      >
+        <Icon name={visible ? 'eyeOff' : 'eye'} size={16} />
+      </button>
+      {hint && <span className="mt-1 block text-xs text-gray-400">{hint}</span>}
+    </div>
   );
 }
 
@@ -177,24 +135,22 @@ export function Select({
   ...props
 }: InputHTMLAttributes<HTMLSelectElement> & { label: string; children: ReactNode }) {
   return (
-    <label className="block">
-      <span className="mb-2 block text-sm font-semibold text-ink-800">{label}</span>
+    <div className="relative z-0">
       <select
         {...(props as React.SelectHTMLAttributes<HTMLSelectElement>)}
-        className={FIELD_CLASS}
+        className="peer block w-full appearance-none border-0 border-b-2 border-gray-400/60 bg-transparent py-2.5 px-0 text-sm text-white outline-none transition-colors focus:border-blue-400 focus:ring-0 [&>option]:bg-gray-900 [&>option]:text-white"
       >
         {children}
       </select>
-    </label>
+      <label className="absolute top-3 -z-10 origin-[0] -translate-y-6 scale-75 transform text-sm text-gray-300 duration-300">
+        {label}
+      </label>
+    </div>
   );
 }
 
 /**
  * Поле кода класса: моноширинный шрифт и разрядка.
- *
- * Код диктуют вслух или списывают с доски, и в обычном шрифте
- * легко перепутать похожие символы. Ввод сразу приводится к верхнему
- * регистру, чтобы «k7x9qf» и «K7X9QF» не считались разными кодами.
  */
 export function ClassCodeField({
   value,
@@ -208,19 +164,21 @@ export function ClassCodeField({
   hint?: string;
 }) {
   return (
-    <label className="block">
-      <span className="mb-2 block text-sm font-semibold text-ink-800">{label}</span>
+    <div className="relative z-0">
       <input
         value={value}
-        onChange={(event) => onValueChange(event.target.value.toUpperCase())}
+        onChange={(e) => onValueChange(e.target.value.toUpperCase())}
         maxLength={6}
-        placeholder="K7X9QF"
+        placeholder=" "
         autoCapitalize="characters"
         spellCheck={false}
-        className={`${FIELD_CLASS} text-center font-mono text-lg font-bold tracking-[0.3em]`}
+        className="peer block w-full appearance-none border-0 border-b-2 border-gray-400/60 bg-transparent py-2.5 px-0 text-center font-mono text-lg font-bold tracking-[0.3em] text-white outline-none transition-colors focus:border-blue-400 focus:ring-0"
       />
-      {hint && <span className="mt-1.5 block text-xs text-ink-400">{hint}</span>}
-    </label>
+      <label className="absolute top-3 -z-10 origin-[0] transform text-sm text-gray-300 duration-300 peer-placeholder-shown:translate-y-0 peer-placeholder-shown:scale-100 peer-focus:-translate-y-6 peer-focus:scale-75 peer-focus:text-blue-400 peer-[:not(:placeholder-shown)]:-translate-y-6 peer-[:not(:placeholder-shown)]:scale-75">
+        {label}
+      </label>
+      {hint && <span className="mt-1 block text-xs text-gray-400">{hint}</span>}
+    </div>
   );
 }
 
@@ -248,11 +206,8 @@ export function SubmitButton({
       type={type}
       onClick={onClick}
       disabled={disabled || loading || success}
-      className="flex h-13 w-full items-center justify-center gap-2 rounded-[var(--radius-control)] py-3.5 text-[15px] font-bold text-white shadow-[var(--shadow-glow)] transition-opacity duration-200 disabled:opacity-60 disabled:shadow-none"
-      style={{ background: success ? 'var(--color-success-500)' : 'var(--gradient-brand)' }}
+      className="group flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-blue-600 text-[15px] font-semibold text-white shadow-lg transition-all duration-300 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900 disabled:opacity-60"
     >
-      {/* mode="wait" обязателен: без него старое и новое содержимое
-          накладываются друг на друга и кнопка дёргается по ширине. */}
       <AnimatePresence mode="wait" initial={false}>
         {success ? (
           <motion.span
@@ -279,11 +234,20 @@ export function SubmitButton({
         ) : (
           <motion.span
             key="idle"
+            className="flex items-center gap-2"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
             {children}
+            <svg
+              className="h-5 w-5 transform transition-transform group-hover:translate-x-1"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
           </motion.span>
         )}
       </AnimatePresence>
@@ -291,16 +255,16 @@ export function SubmitButton({
   );
 }
 
-/** Сообщение об ошибке или успехе над кнопкой. */
+/** Сообщение об ошибке или успехе. */
 export function FormMessage({ tone, children }: { tone: 'error' | 'success'; children: ReactNode }) {
   return (
     <motion.p
       initial={{ opacity: 0, y: -6 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`rounded-[var(--radius-control)] border px-4 py-3 text-sm font-medium ${
+      className={`rounded-lg border px-4 py-3 text-sm font-medium backdrop-blur-sm ${
         tone === 'error'
-          ? 'border-danger-200 bg-danger-50 text-danger-700'
-          : 'border-success-200 bg-success-50 text-success-700'
+          ? 'border-red-400/30 bg-red-500/20 text-red-200'
+          : 'border-green-400/30 bg-green-500/20 text-green-200'
       }`}
     >
       {children}
@@ -312,30 +276,20 @@ export function FormMessage({ tone, children }: { tone: 'error' | 'success'; chi
 /*  Вход через провайдеров                                             */
 /* ------------------------------------------------------------------ */
 
-/** Логотип Google. Внутри цветные пути, поэтому не из общего набора иконок. */
 function GoogleMark() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden>
-      <path
-        fill="#4285F4"
-        d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5a5.6 5.6 0 0 1-2.4 3.7v3h3.9c2.3-2.1 3.5-5.2 3.5-8.9Z"
-      />
-      <path
-        fill="#34A853"
-        d="M12 24c3.2 0 5.9-1.1 7.9-2.9l-3.9-3c-1.1.7-2.4 1.2-4 1.2-3.1 0-5.7-2.1-6.6-4.9H1.4v3.1A12 12 0 0 0 12 24Z"
-      />
-      <path fill="#FBBC05" d="M5.4 14.4a7.2 7.2 0 0 1 0-4.6V6.7H1.4a12 12 0 0 0 0 10.8l4-3.1Z" />
-      <path
-        fill="#EA4335"
-        d="M12 4.8c1.8 0 3.3.6 4.6 1.8l3.4-3.4A12 12 0 0 0 1.4 6.7l4 3.1C6.3 6.9 8.9 4.8 12 4.8Z"
-      />
+    <svg className="h-5 w-5" viewBox="0 0 48 48" aria-hidden>
+      <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039L38.802 8.841C34.553 4.806 29.613 2.5 24 2.5C11.983 2.5 2.5 11.983 2.5 24s9.483 21.5 21.5 21.5S45.5 36.017 45.5 24c0-1.538-.135-3.022-.389-4.417z" />
+      <path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12.5 24 12.5c3.059 0 5.842 1.154 7.961 3.039l5.839-5.841C34.553 4.806 29.613 2.5 24 2.5C16.318 2.5 9.642 6.723 6.306 14.691z" />
+      <path fill="#4CAF50" d="M24 45.5c5.613 0 10.553-2.306 14.802-6.341l-5.839-5.841C30.842 35.846 27.059 38 24 38c-5.039 0-9.345-2.608-11.124-6.481l-6.571 4.819C9.642 41.277 16.318 45.5 24 45.5z" />
+      <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303c-.792 2.237-2.231 4.166-4.087 5.571l5.839 5.841C44.196 35.123 45.5 29.837 45.5 24c0-1.538-.135-3.022-.389-4.417z" />
     </svg>
   );
 }
 
 function AppleMark() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
       <path d="M17.05 12.54c.02-2.1 1.72-3.1 1.8-3.15-.98-1.44-2.5-1.63-3.05-1.65-1.3-.13-2.54.76-3.2.76-.66 0-1.68-.74-2.76-.72-1.42.02-2.73.82-3.46 2.09-1.47 2.56-.38 6.35 1.06 8.43.7 1.02 1.54 2.16 2.64 2.12 1.06-.04 1.46-.68 2.74-.68 1.28 0 1.64.68 2.76.66 1.14-.02 1.86-1.04 2.56-2.06.8-1.18 1.13-2.32 1.15-2.38-.03-.01-2.2-.85-2.24-3.36ZM14.96 5.4c.58-.71.97-1.7.86-2.68-.84.03-1.86.56-2.46 1.26-.53.63-1 1.63-.87 2.59.94.07 1.9-.47 2.47-1.17Z" />
     </svg>
   );
@@ -352,19 +306,20 @@ export function ProviderButtons({
 }) {
   return (
     <div>
-      <div className="flex items-center gap-3">
-        <span className="h-px flex-1 bg-ink-200" />
-        <span className="text-xs font-semibold uppercase tracking-wider text-ink-400">
+      {/* Разделитель */}
+      <div className="relative flex items-center py-2">
+        <div className="flex-grow border-t border-gray-400/30" />
+        <span className="mx-4 flex-shrink text-xs uppercase tracking-widest text-gray-400">
           {dividerLabel}
         </span>
-        <span className="h-px flex-1 bg-ink-200" />
+        <div className="flex-grow border-t border-gray-400/30" />
       </div>
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-2">
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <PressButton
           type="button"
           onClick={onGoogle}
-          className="flex h-12 items-center justify-center gap-2.5 rounded-[var(--radius-control)] border border-ink-200 bg-white text-sm font-semibold text-ink-700 shadow-[var(--shadow-rest)] transition-colors hover:border-ink-300"
+          className="flex h-11 items-center justify-center gap-2.5 rounded-lg bg-white/90 text-sm font-semibold text-gray-700 transition-all hover:bg-white"
         >
           <GoogleMark />
           Google
@@ -373,7 +328,7 @@ export function ProviderButtons({
         <PressButton
           type="button"
           onClick={onApple}
-          className="flex h-12 items-center justify-center gap-2.5 rounded-[var(--radius-control)] border border-ink-900 bg-ink-900 text-sm font-semibold text-white shadow-[var(--shadow-rest)] transition-colors hover:bg-ink-800"
+          className="flex h-11 items-center justify-center gap-2.5 rounded-lg bg-gray-900/80 text-sm font-semibold text-white ring-1 ring-white/20 transition-all hover:bg-gray-800"
         >
           <AppleMark />
           Apple
@@ -385,8 +340,17 @@ export function ProviderButtons({
 
 export function AuthLink({ href, children }: { href: string; children: ReactNode }) {
   return (
-    <Link href={href} className="font-semibold text-brand-600 transition-colors hover:text-brand-700">
+    <Link href={href} className="font-semibold text-blue-400 transition-colors hover:text-blue-300">
       {children}
     </Link>
+  );
+}
+
+/** Информационный баннер (для учителя) */
+export function InfoBanner({ children }: { children: ReactNode }) {
+  return (
+    <div className="rounded-lg border border-blue-400/30 bg-blue-500/15 px-4 py-3 text-sm text-blue-200">
+      {children}
+    </div>
   );
 }
