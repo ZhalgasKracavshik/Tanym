@@ -32,12 +32,12 @@ export function AuthShell({
   footer?: ReactNode;
 }) {
   return (
-    <div className="relative min-h-screen w-full overflow-hidden bg-gray-950 flex items-center justify-center p-4">
-      {/* WebGL smokey background */}
-      <SmokeyBackground color="#1E3A8A" />
+    <div className="relative min-h-screen w-full overflow-hidden bg-ink-900 flex items-center justify-center p-4">
+      {/* WebGL smokey background — тёплая терракота, в тон бренду */}
+      <SmokeyBackground color="#d85f2e" />
 
-      {/* Дополнительный тёмно-синий оверлей поверх шейдера */}
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-950/60 via-gray-950/40 to-indigo-950/60" />
+      {/* Затемняющий оверлей поверх шейдера, в той же тёплой тёмной гамме, что и --gradient-ink */}
+      <div className="absolute inset-0 bg-gradient-to-br from-ink-900/70 via-ink-800/50 to-brand-900/50" />
 
       {/* Glassmorphism карточка */}
       <Reveal immediate className="relative z-10 w-full max-w-sm">
@@ -46,7 +46,7 @@ export function AuthShell({
           <div className="mb-6 flex justify-center">
             <Link
               href="/"
-              className="inline-block rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+              className="inline-block rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-brand-400"
             >
               <Logo size={32} />
             </Link>
@@ -85,7 +85,7 @@ export function Field({
       <input
         {...props}
         placeholder=" "
-        className="auth-field peer block w-full appearance-none border-0 border-b-2 border-gray-400/60 bg-transparent py-2.5 px-0 text-sm text-white outline-none transition-colors focus:border-blue-400 focus:ring-0"
+        className="auth-field peer block w-full appearance-none border-0 border-b-2 border-gray-400/60 bg-transparent py-2.5 px-0 text-sm text-white outline-none transition-colors focus:border-brand-400 focus:ring-0"
       />
       {/*
         peer-autofill добавлен отдельно от peer-[:not(:placeholder-shown)] —
@@ -97,7 +97,7 @@ export function Field({
         :autofill матчится у браузера безошибочно, поэтому подпись сворачивается
         и в этом случае тоже.
       */}
-      <label className="absolute top-3 -z-10 origin-[0] transform text-sm text-gray-300 duration-300 peer-placeholder-shown:translate-y-0 peer-placeholder-shown:scale-100 peer-focus:-translate-y-6 peer-focus:scale-75 peer-focus:text-blue-400 peer-[:not(:placeholder-shown)]:-translate-y-6 peer-[:not(:placeholder-shown)]:scale-75 peer-autofill:-translate-y-6 peer-autofill:scale-75">
+      <label className="absolute top-3 -z-10 origin-[0] transform text-sm text-gray-300 duration-300 peer-placeholder-shown:translate-y-0 peer-placeholder-shown:scale-100 peer-focus:-translate-y-6 peer-focus:scale-75 peer-focus:text-brand-400 peer-[:not(:placeholder-shown)]:-translate-y-6 peer-[:not(:placeholder-shown)]:scale-75 peer-autofill:-translate-y-6 peer-autofill:scale-75">
         {label}
       </label>
       {hint && <span className="mt-1 block text-xs text-gray-400">{hint}</span>}
@@ -121,11 +121,11 @@ export function PasswordField({
         {...props}
         type={visible ? 'text' : 'password'}
         placeholder=" "
-        className="auth-field peer block w-full appearance-none border-0 border-b-2 border-gray-400/60 bg-transparent py-2.5 px-0 pr-8 text-sm text-white outline-none transition-colors focus:border-blue-400 focus:ring-0"
+        className="auth-field peer block w-full appearance-none border-0 border-b-2 border-gray-400/60 bg-transparent py-2.5 px-0 pr-8 text-sm text-white outline-none transition-colors focus:border-brand-400 focus:ring-0"
       />
       {/* peer-autofill — см. комментарий в Field выше: тот же обход для
           сохранённого браузером пароля. */}
-      <label className="absolute top-3 -z-10 origin-[0] transform text-sm text-gray-300 duration-300 peer-placeholder-shown:translate-y-0 peer-placeholder-shown:scale-100 peer-focus:-translate-y-6 peer-focus:scale-75 peer-focus:text-blue-400 peer-[:not(:placeholder-shown)]:-translate-y-6 peer-[:not(:placeholder-shown)]:scale-75 peer-autofill:-translate-y-6 peer-autofill:scale-75">
+      <label className="absolute top-3 -z-10 origin-[0] transform text-sm text-gray-300 duration-300 peer-placeholder-shown:translate-y-0 peer-placeholder-shown:scale-100 peer-focus:-translate-y-6 peer-focus:scale-75 peer-focus:text-brand-400 peer-[:not(:placeholder-shown)]:-translate-y-6 peer-[:not(:placeholder-shown)]:scale-75 peer-autofill:-translate-y-6 peer-autofill:scale-75">
         {label}
       </label>
       <button
@@ -150,7 +150,7 @@ export function Select({
     <div className="relative z-0">
       <select
         {...(props as React.SelectHTMLAttributes<HTMLSelectElement>)}
-        className="peer block w-full appearance-none border-0 border-b-2 border-gray-400/60 bg-transparent py-2.5 px-0 text-sm text-white outline-none transition-colors focus:border-blue-400 focus:ring-0 [&>option]:bg-gray-900 [&>option]:text-white"
+        className="peer block w-full appearance-none border-0 border-b-2 border-gray-400/60 bg-transparent py-2.5 px-0 text-sm text-white outline-none transition-colors focus:border-brand-400 focus:ring-0 [&>option]:bg-ink-800 [&>option]:text-white"
       >
         {children}
       </select>
@@ -184,9 +184,9 @@ export function ClassCodeField({
         placeholder=" "
         autoCapitalize="characters"
         spellCheck={false}
-        className="peer block w-full appearance-none border-0 border-b-2 border-gray-400/60 bg-transparent py-2.5 px-0 text-center font-mono text-lg font-bold tracking-[0.3em] text-white outline-none transition-colors focus:border-blue-400 focus:ring-0"
+        className="peer block w-full appearance-none border-0 border-b-2 border-gray-400/60 bg-transparent py-2.5 px-0 text-center font-mono text-lg font-bold tracking-[0.3em] text-white outline-none transition-colors focus:border-brand-400 focus:ring-0"
       />
-      <label className="absolute top-3 -z-10 origin-[0] transform text-sm text-gray-300 duration-300 peer-placeholder-shown:translate-y-0 peer-placeholder-shown:scale-100 peer-focus:-translate-y-6 peer-focus:scale-75 peer-focus:text-blue-400 peer-[:not(:placeholder-shown)]:-translate-y-6 peer-[:not(:placeholder-shown)]:scale-75">
+      <label className="absolute top-3 -z-10 origin-[0] transform text-sm text-gray-300 duration-300 peer-placeholder-shown:translate-y-0 peer-placeholder-shown:scale-100 peer-focus:-translate-y-6 peer-focus:scale-75 peer-focus:text-brand-400 peer-[:not(:placeholder-shown)]:-translate-y-6 peer-[:not(:placeholder-shown)]:scale-75">
         {label}
       </label>
       {hint && <span className="mt-1 block text-xs text-gray-400">{hint}</span>}
@@ -218,7 +218,8 @@ export function SubmitButton({
       type={type}
       onClick={onClick}
       disabled={disabled || loading || success}
-      className="group flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-blue-600 text-[15px] font-semibold text-white shadow-lg transition-all duration-300 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900 disabled:opacity-60"
+      className="group flex h-12 w-full items-center justify-center gap-2 rounded-lg text-[15px] font-semibold text-white shadow-lg transition-all duration-300 hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:ring-offset-2 focus:ring-offset-ink-900 disabled:opacity-60"
+      style={{ background: 'var(--gradient-brand)' }}
     >
       <AnimatePresence mode="wait" initial={false}>
         {success ? (
@@ -275,8 +276,8 @@ export function FormMessage({ tone, children }: { tone: 'error' | 'success'; chi
       animate={{ opacity: 1, y: 0 }}
       className={`rounded-lg border px-4 py-3 text-sm font-medium backdrop-blur-sm ${
         tone === 'error'
-          ? 'border-red-400/30 bg-red-500/20 text-red-200'
-          : 'border-green-400/30 bg-green-500/20 text-green-200'
+          ? 'border-danger-500/30 bg-danger-500/20 text-danger-200'
+          : 'border-success-500/30 bg-success-500/20 text-success-200'
       }`}
     >
       {children}
@@ -352,7 +353,7 @@ export function ProviderButtons({
 
 export function AuthLink({ href, children }: { href: string; children: ReactNode }) {
   return (
-    <Link href={href} className="font-semibold text-blue-400 transition-colors hover:text-blue-300">
+    <Link href={href} className="font-semibold text-brand-400 transition-colors hover:text-brand-300">
       {children}
     </Link>
   );
@@ -361,7 +362,7 @@ export function AuthLink({ href, children }: { href: string; children: ReactNode
 /** Информационный баннер (для учителя) */
 export function InfoBanner({ children }: { children: ReactNode }) {
   return (
-    <div className="rounded-lg border border-blue-400/30 bg-blue-500/15 px-4 py-3 text-sm text-blue-200">
+    <div className="rounded-lg border border-accent-400/30 bg-accent-500/15 px-4 py-3 text-sm text-accent-200">
       {children}
     </div>
   );
