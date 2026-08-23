@@ -25,6 +25,7 @@ import { AiBadge } from '@/components/AiBadge';
 import { Icon } from '@/components/Icon';
 import { PressButton } from '@/components/motion';
 import { Button, ButtonLink, Card, EmptyState, Kicker, Skeleton } from '@/components/ui';
+import { VintageKeyboard } from '@/components/ui/vintage-keyboard';
 
 /** Подписи страницы на трёх языках. Ключи одинаковые — за этим следит TypeScript. */
 const TEXT: Dict<{
@@ -113,6 +114,7 @@ export default function ChatPage() {
   const t = TEXT[state.language];
   const [question, setQuestion] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showKeyboard, setShowKeyboard] = useState(false);
 
   /*
     Переливаем серверную историю в локальное состояние ровно один раз
@@ -265,20 +267,33 @@ export default function ChatPage() {
           <Kicker>{t.subtitle}</Kicker>
           <h1 className="mt-2 text-3xl font-semibold text-ink-900 sm:text-4xl">{t.title}</h1>
         </div>
-        {state.chat.length > 0 && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              if (window.confirm(t.confirmClear)) {
-                clearChat();
-                clearHistory();
-              }
-            }}
-          >
-            {t.clearHistory}
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          <div className="hidden md:block">
+            <Button
+              variant={showKeyboard ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => setShowKeyboard((prev) => !prev)}
+              className="flex items-center gap-1.5"
+            >
+              <Icon name="keyboard" size={16} />
+              <span>{showKeyboard ? 'Скрыть клавиатуру' : 'Ретро-клавиатура'}</span>
+            </Button>
+          </div>
+          {state.chat.length > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                if (window.confirm(t.confirmClear)) {
+                  clearChat();
+                  clearHistory();
+                }
+              }}
+            >
+              {t.clearHistory}
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="mt-6 space-y-3">
@@ -368,6 +383,28 @@ export default function ChatPage() {
           </PressButton>
         </div>
       </div>
+
+      {/* Винтажная ретро-клавиатура — только для ПК/десктопа */}
+      {showKeyboard && (
+        <div className="hidden md:block mt-4 mb-2 animate-in fade-in slide-in-from-bottom-3 duration-300">
+          <div className="relative overflow-hidden rounded-2xl border border-amber-900/20 bg-[#fbf8f3] p-3 shadow-lg">
+            <div className="mb-2 flex items-center justify-between px-2 text-xs">
+              <span className="font-bold flex items-center gap-1.5 text-amber-950">
+                <Icon name="keyboard" size={16} className="text-amber-800" />
+                Тактильная ретро-клавиатура со звуком (нажимайте клавиши на компьютере или кликайте)
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowKeyboard(false)}
+                className="rounded px-2 py-0.5 text-ink-500 hover:bg-black/5 hover:text-ink-800 transition-colors font-semibold"
+              >
+                ✕ Скрыть
+              </button>
+            </div>
+            <VintageKeyboard />
+          </div>
+        </div>
+      )}
       </div>
     </div>
   );
