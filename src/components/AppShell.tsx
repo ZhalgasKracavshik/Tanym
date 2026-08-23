@@ -21,9 +21,17 @@ import { SiteSidebar } from './SiteSidebar';
  */
 const AUTH_ROUTES = ['/login', '/register', '/forgot-password', '/reset-password'];
 
+/*
+  B2B-лендинги для школ и центров: публичные страницы-предложения, а не
+  разделы кабинета. Боковое меню здесь ведёт в разделы, требующие входа,
+  и только отвлекает от единственного CTA «Обсудить сотрудничество» —
+  та же логика, что уже увела шапку лендинга от бокового меню.
+*/
+const LANDING_ROUTES = ['/', '/for-schools', '/for-centers'];
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isLanding = pathname === '/';
+  const isLanding = LANDING_ROUTES.includes(pathname);
   const isAuth = AUTH_ROUTES.includes(pathname);
 
   if (isAuth) {
