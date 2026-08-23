@@ -11,6 +11,7 @@
  */
 
 import { Suspense, useState } from 'react';
+import Link from 'next/link';
 import { useStore } from '@/components/StoreProvider';
 import { SchoolAuthGate } from '@/components/SchoolAuthGate';
 import { createClient } from '@/lib/supabase/client';
@@ -36,6 +37,13 @@ const TEXT = {
   willGive: (points: number) => `+${points} баллов`,
   pendingListings: 'Объявления на модерации',
   noPending: 'Заявок на модерации нет.',
+  /*
+    Открывает саму заявку — карточку достижения или страницу объявления
+    целиком, — а не только скан или строку с названием. Решение о баллах
+    или галочке «проверено школой» принимается там, глядя на заявку так,
+    как её увидят все, а не по одной строке в этой очереди.
+  */
+  open: 'Открыть',
 } as const;
 
 function ModerationPanel({ language }: { language: Language }) {
@@ -111,6 +119,14 @@ function ModerationPanel({ language }: { language: Language }) {
                   achievementPoints(level, place),
                 )}`}
               >
+                <Link
+                  href={`/achievements/${row.id}`}
+                  className="flex items-center gap-1 text-xs font-semibold text-ink-600 hover:underline"
+                >
+                  {TEXT.open}
+                  <Icon name="arrow-right" size={12} />
+                </Link>
+
                 {proofUrl ? (
                   <a
                     href={proofUrl}
@@ -153,6 +169,14 @@ function ModerationPanel({ language }: { language: Language }) {
               title={String(row.title)}
               meta={`${String(row.author_name ?? '')} · ${String(row.category ?? '')}`}
             >
+              <Link
+                href={`/marketplace/${row.id}`}
+                className="flex items-center gap-1 text-xs font-semibold text-ink-600 hover:underline"
+              >
+                {TEXT.open}
+                <Icon name="arrow-right" size={12} />
+              </Link>
+
               <Button size="sm" onClick={() => approveListing(row.id)}>
                 <Icon name="check" size={14} />
                 {ADMIN_TEXT.approve}
