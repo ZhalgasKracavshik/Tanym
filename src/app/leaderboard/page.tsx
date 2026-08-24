@@ -495,7 +495,7 @@ export default function LeaderboardPage() {
           <EmptyState
             title={t.noProfileTitle}
             description={t.noProfileText}
-            action={<ButtonLink href="/onboarding">{t.createProfile}</ButtonLink>}
+            action={<ButtonLink href="/profile">{t.createProfile}</ButtonLink>}
           />
         </div>
       )}

@@ -1,12 +1,12 @@
 'use client';
 
 /**
- * Онбординг — первая страница после входа новых учеников.
- * 
- * Выбор класса, предметов и цели обучения. Если профиль уже заполнен,
- * редирект на /dashboard автоматически.
- * 
- * Для учителей эта страница переправляет сразу на /teacher.
+ * Устаревший адрес онбординга.
+ *
+ * Класс, предметы и цель обучения теперь заполняются на /profile — там же,
+ * где их потом и правят. Все действующие ссылки в приложении уже ведут
+ * туда напрямую; этот маршрут остаётся только ради старых закладок и
+ * ссылок, отправленных до переноса, и просто передаёт человека дальше.
  */
 
 import { useEffect } from 'react';
@@ -16,26 +16,12 @@ import { Reveal, Spinner } from '@/components/motion';
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const { profile, isSignedIn, loading } = useSchoolAuth();
+  const { isSignedIn, loading } = useSchoolAuth();
 
   useEffect(() => {
-    // Если профиль загружен и роль выбрана, переходим на нужную страницу
-    if (!loading && profile) {
-      // Учителя отправляем в /teacher
-      if (profile.role === 'teacher') {
-        router.replace('/teacher');
-        return;
-      }
-      // Учеников отправляем в /dashboard (полный профиль уже заполнен)
-      router.replace('/dashboard');
-      return;
-    }
-
-    // Если не авторизован, отправляем на логин
-    if (!loading && !isSignedIn) {
-      router.replace('/login');
-    }
-  }, [profile, loading, isSignedIn, router]);
+    if (loading) return;
+    router.replace(isSignedIn ? '/profile' : '/login');
+  }, [isSignedIn, loading, router]);
 
   if (loading) {
     return (
