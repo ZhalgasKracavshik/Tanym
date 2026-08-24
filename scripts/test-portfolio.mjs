@@ -1,13 +1,4 @@
-/**
- * Проверка шкалы баллов за достижения.
- *
- * Запуск:  npm run test:portfolio
- *
- * Шкала — это договорённость с заказчиком, а не деталь реализации:
- * «первое место на городской олимпиаде = 10 баллов» было названо прямо.
- * Такие числа обязаны быть закреплены тестом, иначе их однажды поправят
- * при рефакторинге и никто не заметит, что рейтинг школы поехал.
- */
+// Проверка шкалы баллов за достижения.
 
 import { pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
@@ -23,14 +14,9 @@ const check = (condition, message) => {
   if (!condition) problems.push(message);
 };
 
-/* --- 1. Опорная точка из требований --- */
+/* 1. Опорная точка из требований*/
 
-/*
-  Три числа названы заказчиком прямо и держат всю шкалу. Они проверяются
-  поимённо: именно из-за них формулу «база × доля» пришлось заменить
-  таблицей — одна доля за второе место не может дать одновременно
-  город/2 = 7 и республика/3 = 40.
-*/
+
 check(
   achievementPoints('city', 'first') === 10,
   `городская олимпиада, 1 место должна давать 10 баллов, получили ${achievementPoints('city', 'first')}`,
@@ -44,7 +30,6 @@ check(
   `республика, 3 место должна давать 40 баллов, получили ${achievementPoints('national', 'third')}`,
 );
 
-/* --- 2. Уровень весит больше при том же месте --- */
 
 for (let i = 1; i < LEVELS.length; i += 1) {
   const lower = achievementPoints(LEVELS[i - 1], 'first');
@@ -55,7 +40,7 @@ for (let i = 1; i < LEVELS.length; i += 1) {
   );
 }
 
-/* --- 3. Место весит больше при том же уровне --- */
+
 
 for (let i = 1; i < PLACES.length; i += 1) {
   const better = achievementPoints('national', PLACES[i - 1]);
@@ -66,20 +51,19 @@ for (let i = 1; i < PLACES.length; i += 1) {
   );
 }
 
-/* --- 4. Ничто не стоит ноль --- */
+/* Ничто не стоит ноль */
 
 for (const level of LEVELS) {
   for (const place of PLACES) {
     const points = achievementPoints(level, place);
     check(
       points > 0,
-      `${level}/${place} даёт ${points} баллов — участие тоже должно чего-то стоить, иначе его незачем заявлять`,
+      `${level}/${place} даёт ${points} баллов - участие тоже должно чего-то стоить, иначе его незачем заявлять`,
     );
     check(Number.isInteger(points), `${level}/${place} даёт дробное число баллов: ${points}`);
   }
 }
 
-/* --- Итог --- */
 
 console.log(
   `Городская/1 место: ${achievementPoints('city', 'first')}. ` +
