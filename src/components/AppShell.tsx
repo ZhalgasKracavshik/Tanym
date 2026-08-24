@@ -12,6 +12,8 @@ import { usePathname } from 'next/navigation';
 import { SiteHeader } from './SiteHeader';
 import { SiteSidebar } from './SiteSidebar';
 import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
+import { useStore } from './StoreProvider';
+import { LandingAuthBanner } from './LandingAuthBanner';
 
 /**
  * Экраны без навигации приложения вообще.
@@ -29,11 +31,11 @@ const SHELLESS_ROUTES = ['/login', '/register', '/forgot-password', '/reset-pass
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { loading, isSignedIn, profile } = useSchoolAuth();
+  const { state } = useStore();
   const isLanding = pathname === '/';
 
   /*
-    Вошёл (например, через Google), но роль ещё не выбрана — SchoolAuthGate/
-    LandingAuthBanner на самой странице просят «Вы ученик или учитель?».
+    Вошёл (например, через Google), но роль ещё не выбрана.
     Боковое меню в этот момент показывает десяток разделов, которые всё
     равно упрутся в ту же самую форму выбора роли — сбивает с единственного
     действия, которое нужно сделать прямо сейчас.
@@ -54,10 +56,25 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Роль ещё не выбрана — тот же приём, что и на лендинге: без бокового
-  // меню, сама страница уже показывает форму выбора роли.
+  /*
+    Роль ещё не выбрана: без бокового меню, а вместо того, что просила
+    показать конкретная страница, — форма выбора роли.
+
+    Раньше здесь рендерились просто children — предполагалось, что нужную
+    форму покажет сама страница через SchoolAuthGate. На деле так устроены
+    только несколько разделов (учителю, админка, публикация объявления);
+    остальные страницы понятия не имеют о выборе роли и рендерили что-то
+    своё — человек утыкался в пустой экран без бокового меню и без единого
+    действия, которое можно было бы сделать. LandingAuthBanner — тот же
+    компонент, что решает эту задачу на лендинге, и он написан так, чтобы
+    работать сам по себе, без обвязки конкретной страницы.
+  */
   if (pendingRoleChoice) {
-    return <main className="flex-1">{children}</main>;
+    return (
+      <main className="flex-1">
+        <LandingAuthBanner language={state.language} />
+      </main>
+    );
   }
 
   return (
