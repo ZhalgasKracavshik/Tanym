@@ -76,7 +76,7 @@ AI-модуль персонализации | "/plan" + "src/lib/personalizatio
 
 ## Архитектура
 
-
+```
 src/
 ├── app/
 │   ├── page.tsx                    Лендинг
@@ -102,13 +102,14 @@ src/
 ├── data/
 │   ├── index.ts                    Реестр контента и функции поиска
 │   ├── subjects/                   Математика, физика, история Казахстана
- │   └── demo-class.ts               Детерминированный класс для панели учителя
+│   └── demo-class.ts               Детерминированный класс для панели учителя
 └── components/
     ├── StoreProvider.tsx           Состояние ученика на React Context
-   ├── SiteHeader.tsx              Навигация
+    ├── SiteHeader.tsx              Навигация
     ├── AiBadge.tsx                 Метка «Ответ AI» / «Разбор без AI»
     └── ui/index.tsx                UI-кит
 
+```
 Ученик отвечает
     POST /api/ai/feedback { taskId, answer, ... }
     сервер находит задание в реестре и САМ проверяет ответ
