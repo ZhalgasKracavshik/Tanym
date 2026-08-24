@@ -4,7 +4,7 @@
  * Вход в аккаунт: почта с паролем, Google или Apple.
  *
  * Три способа рядом, а не только один: школьная почта на Google есть не
- * у каждой школы, а требовать пароль от того, у кого она есть, — лишний шаг.
+ * у каждой школы, а требовать пароль от того, у кого она есть
  */
 
 import { Suspense, useState } from 'react';
@@ -19,11 +19,9 @@ import {
   SubmitButton,
 } from '@/components/auth-ui';
 import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
-
-/** Сообщения Supabase приходят по-английски — переводим частые. */
 function translateError(message: string): string {
   if (/invalid login credentials/i.test(message)) return 'Неверная почта или пароль.';
-  if (/email not confirmed/i.test(message)) return 'Почта не подтверждена — проверьте письмо.';
+  if (/email not confirmed/i.test(message)) return 'Почта не подтверждена - проверьте письмо.';
   if (/rate limit|too many/i.test(message)) return 'Слишком много попыток. Подождите минуту.';
   return message;
 }
@@ -46,14 +44,6 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const { signInWithPassword, signInWithProvider } = useSchoolAuth();
 
-  /*
-    Куда вернуть после входа. Middleware, отправляя гостя сюда с закрытой
-    страницы, кладёт её адрес в next — без этого человек, который шёл в
-    рейтинг, после входа оказывался бы в кабинете и искал бы дорогу заново.
-
-    Принимаем только внутренние пути: со значением вида https://чужой-сайт
-    параметр next превратился бы в открытый редирект.
-  */
   const nextParam = searchParams.get('next');
   const nextPath = nextParam && nextParam.startsWith('/') && !nextParam.startsWith('//')
     ? nextParam
