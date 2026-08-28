@@ -10,7 +10,7 @@
  * 4. Настройки и безопасность (пароль, язык, приватность, уведомления, выход).
  */
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useStore } from '@/components/StoreProvider';
 import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
@@ -24,8 +24,9 @@ import { parseSocialLinks } from '@/lib/social';
 import type { SocialLink } from '@/lib/social';
 import { Icon, type IconName } from '@/components/Icon';
 import { Reveal } from '@/components/motion';
+import { SuccessCheckMark } from '@/components/SuccessCheckMark';
 import { TIER_LABEL, levelFromPoints, pointsWord } from '@/lib/level';
-import { Alert, Button, Card, Kicker, Skeleton } from '@/components/ui';
+import { Button, Card, Kicker, Skeleton } from '@/components/ui';
 import { PasswordField, SubmitButton } from '@/components/auth-ui';
 import { COVER_TYPES, coverError } from '@/components/ImageField';
 import { avatarPhotoUrl } from '@/lib/supabase/avatarPhoto';
@@ -132,6 +133,7 @@ function ProfileContent() {
 
   const [refreshKey, setRefreshKey] = useState(0);
   const [savedAlert, setSavedAlert] = useState(false);
+  const [savedTick, setSavedTick] = useState(0);
 
   // Редактирование имени
   const [editingName, setEditingName] = useState(false);
@@ -154,6 +156,25 @@ function ProfileContent() {
 
   // Копирование кода класса
   const [copiedCode, setCopiedCode] = useState(false);
+
+  /*
+    Подпись к сроку правится черновиком: поле текстовое, и сохранять его
+    нужно по уходу с фокуса, а не на каждое нажатие клавиши.
+  */
+  const [targetLabelDraft, setTargetLabelDraft] = useState<string>('');
+  const loadedLabelFor = useRef<string | null>(null);
+
+  /*
+    Подтягиваем сохранённое значение ровно один раз на пользователя.
+    Синхронизировать черновик с профилем на каждый рендер нельзя: ответ
+    PATCH возвращается позже нажатий, и текст прыгал бы под курсором.
+  */
+  useEffect(() => {
+    if (!schoolProfile) return;
+    if (loadedLabelFor.current === schoolProfile.id) return;
+    loadedLabelFor.current = schoolProfile.id;
+    setTargetLabelDraft(schoolProfile.target_label ?? '');
+  }, [schoolProfile]);
 
   const achievements = usePortfolio(schoolProfile?.id ?? null, refreshKey);
   const streakPoints = useOwnStreakPoints(schoolProfile?.id ?? null);
@@ -208,6 +229,9 @@ function ProfileContent() {
 
   function triggerSaveFeedback() {
     setSavedAlert(true);
+    // Счётчик меняет key у галочки — иначе при втором сохранении подряд
+    // она просто останется висеть, не проигравшись заново.
+    setSavedTick((tick) => tick + 1);
     setTimeout(() => setSavedAlert(false), 3000);
   }
 
@@ -349,10 +373,24 @@ function ProfileContent() {
     setTimeout(() => setCopiedCode(false), 2000);
   }
 
-  // Расчет оставшихся дней до экзамена
-  const daysUntilExam = currentTargetDate
+  // Сколько дней осталось до срока, который ученик поставил себе сам.
+  const daysUntilTarget = currentTargetDate
     ? Math.max(0, Math.ceil((new Date(currentTargetDate).getTime() - new Date().setHours(0, 0, 0, 0)) / (1000 * 60 * 60 * 24)))
     : null;
+
+  /*
+    Склонение «день/дня/дней»: «Осталось 2 дней» в интерфейсе, который
+    читают школьники, выглядит как недоделка. Правило стандартное —
+    11–14 всегда «дней», дальше по последней цифре.
+  */
+  function daysWord(count: number): string {
+    const lastTwo = count % 100;
+    if (lastTwo >= 11 && lastTwo <= 14) return 'дней';
+    const last = count % 10;
+    if (last === 1) return 'день';
+    if (last >= 2 && last <= 4) return 'дня';
+    return 'дней';
+  }
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
@@ -525,8 +563,18 @@ function ProfileContent() {
 
       {/* Уведомление об успешном сохранении */}
       {savedAlert && (
-        <div className="mt-4">
-          <Alert tone="success">Изменения успешно сохранены</Alert>
+        <div className="mt-4 flex items-center gap-3 rounded-[var(--radius-control)] border border-success-200 bg-success-50 px-4 py-3">
+          {/*
+            key по счётчику: без него React переиспользует тот же узел при
+            повторном сохранении, состояние остаётся "in", и анимация
+            проигрывается ровно один раз за всю жизнь страницы.
+          */}
+          <span className="shrink-0 text-success-600">
+            <SuccessCheckMark key={savedTick} size={22} />
+          </span>
+          <span className="text-sm font-semibold text-success-700">
+            Изменения успешно сохранены
+          </span>
         </div>
       )}
 
@@ -792,31 +840,89 @@ function ProfileContent() {
               </div>
             </Card>
 
-            {/* Дата экзамена или олимпиады */}
+            {/*
+              Свой срок под свою цель.
+
+              Раньше здесь стояла «Дата экзамена или олимпиады» — одна дата
+              без подписи. Но цель у каждого своя: подтянуть тему к четверти,
+              сдать пробник, дойти до районного этапа. Дата без названия не
+              отвечает, срок чего это, а подставлять всем «экзамен» — значит
+              решать за человека, к чему он готовится.
+            */}
             <Card>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <h2 className="text-base font-bold text-ink-900">Дата экзамена или олимпиады</h2>
-                  <p className="mt-1 text-xs text-ink-500">Система рассчитает ежедневную норму заданий до этой даты.</p>
+                  <h2 className="text-base font-bold text-ink-900">Мой дедлайн</h2>
+                  <p className="mt-1 text-xs text-ink-500">
+                    Напишите, к чему готовитесь, и поставьте срок — система рассчитает
+                    ежедневную норму заданий до этой даты.
+                  </p>
                 </div>
-                {daysUntilExam !== null && (
+                {daysUntilTarget !== null && (
                   <span className="rounded-full bg-brand-100 px-3 py-1 text-xs font-bold text-brand-700">
-                    Осталось {daysUntilExam} дней
+                    Осталось {daysUntilTarget} {daysWord(daysUntilTarget)}
                   </span>
                 )}
               </div>
-              <div className="mt-3">
-                <input
-                  type="date"
-                  value={currentTargetDate}
-                  onChange={(event) =>
-                    save(
-                      { targetDate: event.target.value || undefined },
-                      { targetDate: event.target.value || null },
-                    )
-                  }
-                  className="h-11 w-full sm:w-64 rounded-xl border border-ink-200 px-4 text-sm tabular-nums outline-none transition-colors focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
-                />
+
+              <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_auto]">
+                <div>
+                  <label
+                    htmlFor="target-label"
+                    className="block text-xs font-semibold text-ink-500"
+                  >
+                    К чему готовитесь
+                  </label>
+                  <input
+                    id="target-label"
+                    type="text"
+                    maxLength={120}
+                    value={targetLabelDraft}
+                    onChange={(event) => setTargetLabelDraft(event.target.value)}
+                    /*
+                      Сохраняем по уходу с поля, а не на каждую букву: иначе
+                      PATCH улетал бы на каждое нажатие, а плашка «Сохранено»
+                      мигала бы всю дорогу, пока человек печатает.
+
+                      Значение читаем из самого поля, а не из состояния:
+                      состояние приходит из замыкания того рендера, в котором
+                      повесили обработчик, и если ввод и уход с поля попали в
+                      один тик (автозаполнение, вставка с последующим кликом),
+                      в замыкании осталась бы прошлая, пустая строка — и
+                      сохранение молча не произошло бы.
+                    */
+                    onBlur={(event) => {
+                      const value = event.target.value.trim();
+                      if (value === (schoolProfile?.target_label ?? '')) return;
+                      save({}, { targetLabel: value || null });
+                    }}
+                    // Enter — привычный способ подтвердить строку; без него
+                    // приходится угадывать, что нужно щёлкнуть мимо поля.
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') event.currentTarget.blur();
+                    }}
+                    placeholder="Например: сдать ЕНТ на 120+"
+                    className="mt-1.5 h-11 w-full rounded-xl border border-ink-200 px-4 text-sm outline-none transition-colors focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="target-date" className="block text-xs font-semibold text-ink-500">
+                    Срок
+                  </label>
+                  <input
+                    id="target-date"
+                    type="date"
+                    value={currentTargetDate}
+                    onChange={(event) =>
+                      save(
+                        { targetDate: event.target.value || undefined },
+                        { targetDate: event.target.value || null },
+                      )
+                    }
+                    className="mt-1.5 h-11 w-full sm:w-52 rounded-xl border border-ink-200 px-4 text-sm tabular-nums outline-none transition-colors focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
+                  />
+                </div>
               </div>
             </Card>
 

@@ -10,6 +10,7 @@
 
 import { useState } from 'react';
 import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
+import { describeRoleError } from '@/lib/supabase/roleErrors';
 import type { Language } from '@/lib/types';
 import { Button, ButtonLink } from './ui';
 
@@ -117,11 +118,21 @@ export function LandingAuthBanner({ language }: { language: Language }) {
   if (!profile) {
     async function submit(role: 'student' | 'teacher') {
       setError(null);
-      if (role === 'student' && classCode.trim() === '') return;
+      /*
+        Пустой код класса раньше приводил к молчаливому return: кнопка
+        «Присоединиться» нажималась и не делала ровно ничего — ни запроса,
+        ни сообщения. Со стороны это выглядит как сломанная кнопка.
+      */
+      if (role === 'student' && classCode.trim() === '') {
+        setError(describeRoleError('class_code_required'));
+        return;
+      }
       setSubmitting(true);
       const result = await chooseRole(role, classCode);
       setSubmitting(false);
-      if (!result.ok) setError(result.error ?? 'error');
+      // Раньше сюда попадал сырой код ответа («class_not_found») и печатался
+      // на экране как есть — теперь тот же разбор, что и на регистрации.
+      if (!result.ok) setError(describeRoleError(result.error, result.domains));
     }
 
     if (pendingRole === 'student') {

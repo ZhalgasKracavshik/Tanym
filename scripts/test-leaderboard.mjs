@@ -1,4 +1,4 @@
-/** Проверка лидерборда npm run test:leaderboard 
+/** Проверка лидерборда: npm run test:leaderboard */
 
 import { pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';

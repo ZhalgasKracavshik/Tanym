@@ -42,6 +42,7 @@ export interface ServerProfile {
   subject_ids: string[] | null;
   goal: string | null;
   target_date: string | null;
+  target_label: string | null;
 }
 
 export interface ServerSchoolClass {

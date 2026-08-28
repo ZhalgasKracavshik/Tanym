@@ -336,7 +336,7 @@ export default function HomePage() {
           <Reveal immediate delay={0.16}>
             <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
               <PressLink
-                href="/profile"
+                href="/register"
                 className="inline-flex h-14 items-center gap-2 rounded-[var(--radius-control)] px-8 text-base font-bold text-white shadow-[var(--shadow-glow)] transition-shadow duration-200 hover:shadow-[0_12px_32px_-8px_rgb(216_95_46_/_0.65)]"
                 style={{ background: 'var(--gradient-brand)' }}
               >
@@ -345,7 +345,7 @@ export default function HomePage() {
               </PressLink>
 
               <PressLink
-                href="/profile"
+                href="/register"
                 className="inline-flex h-14 items-center gap-2 rounded-[var(--radius-control)] border border-ink-200 bg-white px-8 text-base font-bold text-ink-700 shadow-[var(--shadow-rest)] transition-colors duration-200 hover:border-brand-300 hover:text-brand-700"
               >
                 {t.ctaDiagnostics}
@@ -469,7 +469,7 @@ export default function HomePage() {
 
               return (
                 <StaggerItem key={subject.id}>
-                  <Link href="/profile" className="block h-full">
+                  <Link href="/register" className="block h-full">
                     <LiftCard className="group h-full rounded-[var(--radius-card)] border border-ink-200/80 bg-white p-7 shadow-[var(--shadow-rest)]">
                       <span
                         className="flex h-12 w-12 items-center justify-center rounded-[var(--radius-control)] text-white"
@@ -593,7 +593,7 @@ export default function HomePage() {
             <p className="mt-4 text-lg text-ink-500">{t.finalText}</p>
             <div className="mt-9 flex justify-center">
               <PressLink
-                href="/profile"
+                href="/register"
                 className="inline-flex h-14 items-center gap-2 rounded-[var(--radius-control)] px-9 text-base font-bold text-white shadow-[var(--shadow-glow)]"
                 style={{ background: 'var(--gradient-brand)' }}
               >

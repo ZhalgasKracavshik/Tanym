@@ -284,7 +284,7 @@ export default function PlanPage() {
         <EmptyState
           title={t.noProfileTitle}
           description={t.noProfileText}
-          action={<ButtonLink href="/profile">{t.createProfile}</ButtonLink>}
+          action={<ButtonLink href="/onboarding">{t.createProfile}</ButtonLink>}
         />
       </div>
     );

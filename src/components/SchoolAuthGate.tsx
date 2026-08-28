@@ -15,6 +15,7 @@ import { useSearchParams } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
 import type { SchoolProfile } from '@/lib/supabase/useSchoolAuth';
+import { describeRoleError } from '@/lib/supabase/roleErrors';
 import { Button, ButtonLink } from './ui';
 
 const AUTH_ERROR_TEXT: Record<string, Record<'ru' | 'kk' | 'en', string>> = {
@@ -120,6 +121,7 @@ export function SchoolAuthGate({ requireRole, language, children }: SchoolAuthGa
   const [pendingRole, setPendingRole] = useState<'student' | 'teacher' | null>(null);
   const [classCode, setClassCode] = useState('');
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitDomains, setSubmitDomains] = useState<string[] | undefined>(undefined);
   const [submitting, setSubmitting] = useState(false);
 
   if (loading) return null;
@@ -156,7 +158,10 @@ export function SchoolAuthGate({ requireRole, language, children }: SchoolAuthGa
       setSubmitting(true);
       const result = await chooseRole(role, classCode);
       setSubmitting(false);
-      if (!result.ok) setSubmitError(result.error ?? 'class_not_found');
+      if (!result.ok) {
+        setSubmitDomains(result.domains);
+        setSubmitError(result.error ?? 'class_not_found');
+      }
     }
 
     if (pendingRole === 'student') {
@@ -172,8 +177,17 @@ export function SchoolAuthGate({ requireRole, language, children }: SchoolAuthGa
             placeholder={t.classCodePlaceholder}
             className="mt-2 w-full rounded-xl border border-ink-200 p-3 text-sm uppercase tracking-widest outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
           />
-          {submitError && SUBMIT_ERROR_TEXT[submitError] && (
-            <p className="mt-2 text-sm font-semibold text-danger-600">{SUBMIT_ERROR_TEXT[submitError][language]}</p>
+          {/*
+            Условие раньше требовало, чтобы код ошибки нашёлся в словаре, —
+            и любая незнакомая ошибка (отказ по домену почты, ответ базы
+            текстом) не показывала вообще ничего: кнопка нажималась, а на
+            экране не менялось ни строчки. Незнакомый код теперь разбирает
+            describeRoleError, так что сообщение есть всегда.
+          */}
+          {submitError && (
+            <p className="mt-2 text-sm font-semibold text-danger-600">
+              {SUBMIT_ERROR_TEXT[submitError]?.[language] ?? describeRoleError(submitError, submitDomains)}
+            </p>
           )}
           <div className="mt-3 flex gap-2">
             <Button onClick={() => submit('student')} disabled={submitting}>

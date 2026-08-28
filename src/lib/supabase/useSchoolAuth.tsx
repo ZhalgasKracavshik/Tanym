@@ -58,6 +58,7 @@ export interface SchoolProfile {
   subject_ids: string[] | null;
   goal: string | null;
   target_date: string | null;
+  target_label: string | null;
 }
 
 export interface SchoolClass {
@@ -90,7 +91,7 @@ interface SchoolAuthValue {
   chooseRole: (
     role: 'student' | 'teacher',
     classCode?: string,
-  ) => Promise<{ ok: boolean; error?: string }>;
+  ) => Promise<{ ok: boolean; error?: string; domains?: string[] }>;
 }
 
 const SchoolAuthContext = createContext<SchoolAuthValue | null>(null);
@@ -276,7 +277,14 @@ export function SchoolAuthProvider({
       });
       const data = await res.json().catch(() => null);
       if (res.ok) await refresh();
-      return { ok: res.ok, error: data?.error as string | undefined };
+      return {
+        ok: res.ok,
+        error: data?.error as string | undefined,
+        // Список разрешённых доменов приходит вместе с отказом по домену —
+        // чтобы сообщение могло назвать подходящие адреса, а не отправлять
+        // человека угадывать.
+        domains: data?.domains as string[] | undefined,
+      };
     }
 
     return {

@@ -27,6 +27,11 @@ import {
   SubmitButton,
 } from '@/components/auth-ui';
 import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
+import {
+  domainRejectionMessage,
+  fetchAllowedDomains,
+  isEmailDomainAllowed,
+} from '@/lib/supabase/allowedDomains';
 
 function translateError(message: string): string {
   if (/already registered|already exists/i.test(message)) {
@@ -37,6 +42,13 @@ function translateError(message: string): string {
   }
   if (/invalid email/i.test(message)) return 'Проверьте адрес почты.';
   if (/rate limit|too many/i.test(message)) return 'Слишком много попыток. Подождите минуту.';
+  /*
+    Текст RLS наружу не пускаем ни при каких обстоятельствах: он всё равно
+    ничего не объясняет человеку, а выглядит как поломка сайта.
+  */
+  if (/row-level security|violates/i.test(message)) {
+    return 'С этой почтой зарегистрироваться нельзя — домен не разрешён администратором.';
+  }
   return message;
 }
 
@@ -70,6 +82,24 @@ export default function RegisterPage() {
     }
 
     setStatus('loading');
+
+    /*
+      Домен проверяем до signUp, а не после.
+
+      Ограничение живёт в RLS на profiles, то есть срабатывает на втором
+      шаге регистрации — когда учётная запись в Supabase уже создана.
+      Раньше человек с неподходящим адресом получал аккаунт без профиля:
+      войти может, пользоваться ничем не может, а повторная регистрация
+      отвечает ему «почта уже зарегистрирована». Выбраться из этого
+      состояния самостоятельно нельзя — в базе такой пользователь уже есть.
+    */
+    const allowedDomains = await fetchAllowedDomains();
+    if (!isEmailDomainAllowed(email, allowedDomains)) {
+      setStatus('idle');
+      setError(domainRejectionMessage(allowedDomains));
+      return;
+    }
+
     const signUp = await signUpWithPassword(email.trim(), password, name.trim());
 
     if (!signUp.ok) {
@@ -103,18 +133,26 @@ export default function RegisterPage() {
     const profile = await chooseRole(role, classCode.trim());
     if (!profile.ok) {
       setStatus('idle');
-      setError(CLASS_CODE_ERRORS[profile.error ?? ''] ?? profile.error ?? 'Не удалось создать профиль.');
+      if (profile.error === 'domain_not_allowed') {
+        setError(domainRejectionMessage(profile.domains ?? allowedDomains));
+        return;
+      }
+      setError(
+        CLASS_CODE_ERRORS[profile.error ?? ''] ??
+          translateError(profile.error ?? 'Не удалось создать профиль.'),
+      );
       return;
     }
 
     setStatus('success');
     /*
-      /onboarding убран из редиректа: chooseRole уже создал профиль с ролью
-      и классом (форма выше их и собрала), так что /onboarding был только
-      страницей-заглушкой со спиннером, которая тут же перекидывала дальше
-      сама — лишний прыжок без всякой пользы для человека.
+      Ученика ведём в онбординг, учителя — сразу в панель.
+      chooseRole создал профиль с ролью и классом, но не с классом обучения,
+      предметами и целью: без них кабинет и план показывают «Профиль ещё не
+      создан». Раньше редирект шёл прямо в кабинет, и первым, что видел
+      новый ученик, была именно эта заглушка. Учителю те же поля не нужны.
     */
-    router.replace(role === 'teacher' ? '/teacher' : '/dashboard');
+    router.replace(role === 'teacher' ? '/teacher' : '/onboarding');
     router.refresh();
   }
 

@@ -31,6 +31,35 @@ function randomClassCode(): string {
   return code;
 }
 
+/**
+ * Ошибка вставки профиля → устойчивый код вместо текста Postgres.
+ *
+ * RLS на profiles разрешает создать профиль только с почтой из
+ * allowed_school_domains. Пока это правило срабатывало, наружу улетал
+ * дословный текст базы — «new row violates row-level security policy for
+ * table "profiles"» — и человек видел его прямо на экране регистрации.
+ * Догадаться по нему, что дело в домене почты, а не в поломке сайта,
+ * невозможно: в проде на этом уже застрял живой пользователь с адресом
+ * школьного домена, которого нет в списке.
+ *
+ * Возвращаем код и сам список доменов: интерфейсу нужно назвать человеку
+ * подходящие адреса, а держать этот список второй копией в клиенте —
+ * значит гарантированно разойтись с базой при первом же изменении.
+ */
+async function describeInsertError(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  error: { code?: string; message: string },
+): Promise<{ error: string; domains?: string[] }> {
+  // 42501 — insufficient_privilege, то есть отказ именно политики RLS.
+  if (error.code !== '42501') return { error: error.message };
+
+  const { data } = await supabase.from('allowed_school_domains').select('domain');
+  return {
+    error: 'domain_not_allowed',
+    domains: (data ?? []).map((row) => row.domain as string),
+  };
+}
+
 export async function GET() {
   // Та же функция, что вызывает layout при серверном рендере — иначе две
   // копии логики разошлись бы при первом же изменении схемы профиля.
@@ -63,6 +92,15 @@ export async function PATCH(request: Request) {
   if (Array.isArray(body.subjectIds)) patch.subject_ids = body.subjectIds;
   if (typeof body.goal === 'string') patch.goal = body.goal;
   if (typeof body.targetDate === 'string' || body.targetDate === null) patch.target_date = body.targetDate;
+  /*
+    Подпись к сроку пишет сам ученик, поэтому обрезаем длину и превращаем
+    пустую строку в null: «срок без названия» — это отсутствие подписи, а
+    не подпись из пробелов.
+  */
+  if (typeof body.targetLabel === 'string' || body.targetLabel === null) {
+    patch.target_label =
+      typeof body.targetLabel === 'string' ? body.targetLabel.trim().slice(0, 120) || null : null;
+  }
   if (typeof body.avatarColor === 'string') patch.avatar_color = body.avatarColor;
   if (typeof body.avatarPhotoPath === 'string' || body.avatarPhotoPath === null) patch.avatar_photo_path = body.avatarPhotoPath;
   if (typeof body.avatar_photo_path === 'string' || body.avatar_photo_path === null) patch.avatar_photo_path = body.avatar_photo_path;
@@ -172,7 +210,9 @@ export async function POST(request: Request) {
     // Профиль сначала без класса: политика на INSERT в classes проверяет,
     // что у auth.uid() уже есть строка profiles с role='teacher'.
     const { error: profileError } = await supabase.from('profiles').insert({ id: user.id, role, name });
-    if (profileError) return NextResponse.json({ error: profileError.message }, { status: 403 });
+    if (profileError) {
+      return NextResponse.json(await describeInsertError(supabase, profileError), { status: 403 });
+    }
 
     let classRow = null;
     for (let attempt = 0; attempt < 5 && !classRow; attempt++) {
@@ -211,6 +251,6 @@ export async function POST(request: Request) {
     .select()
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 403 });
+  if (error) return NextResponse.json(await describeInsertError(supabase, error), { status: 403 });
   return NextResponse.json({ profile: data, class: { name: cls.name, code: cls.code } });
 }

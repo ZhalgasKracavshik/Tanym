@@ -137,7 +137,7 @@ export function DiagnosticsClient({ subjectId }: { subjectId: string }) {
            
             title={t.notFoundTitle}
             description={t.notFoundText}
-            action={<ButtonLink href="/profile">{t.toSubjects}</ButtonLink>}
+            action={<ButtonLink href="/onboarding">{t.toSubjects}</ButtonLink>}
           />
         </div>
       </div>
