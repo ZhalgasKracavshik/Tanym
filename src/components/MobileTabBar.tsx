@@ -19,6 +19,7 @@ import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
 import { useStore } from './StoreProvider';
 import type { Dict } from '@/lib/i18n';
 import { Icon } from './Icon';
+import { useSlidingPill } from './useSlidingPill';
 import type { IconName } from './Icon';
 
 const TEXT: Dict<{
@@ -72,6 +73,7 @@ export function MobileTabBar({ onMore }: { onMore: () => void }) {
   const { state } = useStore();
   const { profile } = useSchoolAuth();
   const t = TEXT[state.language];
+  const { containerRef, pillRef } = useSlidingPill<HTMLUListElement>(pathname);
 
   /*
     Набор вкладок зависит от роли: у учителя нет кабинета ученика и
@@ -120,8 +122,20 @@ export function MobileTabBar({ onMore }: { onMore: () => void }) {
       className="fixed inset-x-0 bottom-0 z-40 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:hidden"
     >
       <ul
-        className="mx-auto flex max-w-md items-stretch rounded-[var(--radius-pill)] border border-ink-200/70 bg-white/90 p-1.5 shadow-[var(--shadow-float)] backdrop-blur-xl"
+        ref={containerRef}
+        className="t-tabs mx-auto flex max-w-md items-stretch rounded-[var(--radius-pill)] border border-ink-200/70 bg-white/90 p-1.5 shadow-[var(--shadow-float)] backdrop-blur-xl"
       >
+        {/*
+          Пилюля переезжает между вкладками вместо того, чтобы гаснуть на
+          одной и загораться на другой: на нижней панели переходы частые, и
+          движение подсказывает, куда именно ушёл выбор.
+        */}
+        <span
+          ref={pillRef}
+          aria-hidden
+          className="t-tabs-pill rounded-[var(--radius-pill)] shadow-[var(--shadow-glow)]"
+          style={{ background: 'var(--gradient-brand)' }}
+        />
         {tabs.map((tab) => {
           const active = pathname === tab.href || pathname.startsWith(`${tab.href}/`);
           return (
@@ -131,11 +145,16 @@ export function MobileTabBar({ onMore }: { onMore: () => void }) {
                 aria-current={active ? 'page' : undefined}
                 className="flex flex-col items-center gap-1 rounded-[var(--radius-pill)] px-1 py-2 outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
               >
+                {/*
+                  Метку для пилюли ставим на сам значок, а не на всю
+                  колонку: фон должен обнимать иконку, а подпись под ним
+                  остаётся на светлом и читается.
+                */}
                 <span
-                  className={`flex h-9 w-full max-w-[3.5rem] items-center justify-center rounded-[var(--radius-pill)] transition-all duration-200 ${
-                    active ? 'text-white shadow-[var(--shadow-glow)]' : 'text-ink-400'
+                  data-pill-active={active ? 'true' : undefined}
+                  className={`flex h-9 w-full max-w-[3.5rem] items-center justify-center rounded-[var(--radius-pill)] transition-colors duration-200 ${
+                    active ? 'text-white' : 'text-ink-400'
                   }`}
-                  style={active ? { background: 'var(--gradient-brand)' } : undefined}
                 >
                   <Icon name={tab.icon} size={19} />
                 </span>

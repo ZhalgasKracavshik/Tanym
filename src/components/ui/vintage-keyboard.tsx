@@ -448,7 +448,34 @@ function buildCaseImpulse(ctx: AudioContext): AudioBuffer {
 }
 
 /**
- * Звук клавиши синтезируется, а не берётся из файла.
+ * Готовый сэмпл нажатия.
+ *
+ * Лежит отдельным файлом в public, а не строкой base64 в бандле: 13 КБ
+ * звука незачем тащить в JS, который парсится на каждой загрузке, — как
+ * файл он ещё и кэшируется браузером отдельно от кода.
+ *
+ * Исходник был секундным стерео (176 КБ), из которых звучали первые 60 мс,
+ * а остальное — тишина. Обрезан до 150 мс и сведён в моно: панорама по
+ * клавишам всё равно ставится ниже своим узлом, и готовое стерео ей только
+ * мешало бы.
+ *
+ * null вместо исключения: любая осечка (файла нет, сеть, кодек) должна
+ * приводить к запасному синтезу, а не к тишине.
+ */
+async function loadKeySample(ctx: AudioContext): Promise<AudioBuffer | null> {
+  try {
+    const response = await fetch('/sounds/keypress.wav');
+    if (!response.ok) return null;
+    const bytes = await response.arrayBuffer();
+    if (bytes.byteLength === 0) return null;
+    return await ctx.decodeAudioData(bytes);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Запасной звук клавиши — синтез на случай, если сэмпл не доехал.
  *
  * Раньше здесь лежал ogg-сэмпл в base64, и он был битым: разбирались
  * только два заголовочных пакета Vorbis, дальше по смещению 3997 шёл
@@ -552,7 +579,9 @@ function getThockEngine(): Promise<ThockEngine | null> {
     wet.connect(convolver);
     convolver.connect(compressor);
 
-    const buffer = renderThockSample(ctx);
+    // Сэмпл — основной звук, синтез остаётся страховкой. Прошлый раз
+    // тишина случилась именно потому, что запасного пути не было вовсе.
+    const buffer = (await loadKeySample(ctx)) ?? renderThockSample(ctx);
 
     const engine: ThockEngine = {
       ctx,

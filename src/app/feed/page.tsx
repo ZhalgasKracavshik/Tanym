@@ -29,6 +29,7 @@ import { ActivityFeedItem, useActivityFeed } from '@/components/ActivityFeed';
 import { useReactions } from '@/lib/supabase/reactions';
 import { Icon } from '@/components/Icon';
 import { EmptyState, Kicker, Skeleton } from '@/components/ui';
+import { LikeButton } from '@/components/LikeButton';
 import { StaggerGroup, StaggerItem } from '@/components/motion';
 
 export default function FeedPage() {
@@ -87,21 +88,15 @@ export default function FeedPage() {
                       {/*
                         Простой лайк, а не кнопка с подписью «Поддержать»:
                         сердце — общепринятый знак сам по себе, и объяснять
-                        его словом рядом незачем. Закрашивается только у
-                        нажатой: заполненный контур — универсальный признак
-                        «уже отметил», такой же понятный без подписи.
+                        его словом рядом незачем. Отклик на нажатие — заливка,
+                        короткий «поп» и разлёт частиц: лайк ставят мимоходом,
+                        и без движения непонятно, засчиталось ли оно.
                       */}
-                      <button
-                        onClick={() => toggle(item.id, item.kind)}
-                        aria-pressed={liked}
-                        aria-label={liked ? 'Убрать лайк' : 'Нравится'}
-                        className={`inline-flex items-center gap-1.5 rounded-[var(--radius-control)] px-3 py-2 text-sm font-semibold tabular-nums transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
-                          liked ? 'text-brand-600' : 'text-ink-400 hover:bg-ink-50 hover:text-ink-600'
-                        }`}
-                      >
-                        <Icon name="heart" size={17} fill={liked ? 'currentColor' : 'none'} />
-                        {count > 0 && count}
-                      </button>
+                      <LikeButton
+                        liked={liked}
+                        count={count}
+                        onToggle={() => toggle(item.id, item.kind)}
+                      />
                     </div>
                   }
                 />

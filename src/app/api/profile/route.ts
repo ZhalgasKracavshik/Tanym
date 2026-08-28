@@ -237,20 +237,41 @@ export async function POST(request: Request) {
     return NextResponse.json({ profile: finalProfile, class: { name: classRow.name, code: classRow.code } });
   }
 
-  // Ученик: код обязателен, без него профиль не создаётся вовсе — иначе
-  // получился бы ученик, которого никто не мониторит.
-  const classCode: string = (body?.classCode ?? '').trim().toUpperCase();
-  if (!classCode) return NextResponse.json({ error: 'class_code_required' }, { status: 400 });
+  /*
+    Ученик: код класса необязателен.
 
-  const { data: cls } = await supabase.from('classes').select('id, name, code').eq('code', classCode).maybeSingle();
-  if (!cls) return NextResponse.json({ error: 'class_not_found' }, { status: 404 });
+    Раньше без кода профиль не создавался вовсе — «ученик, которого никто
+    не мониторит». Но на практике это упирало в тупик тех, у кого кода
+    сейчас нет: зарегистрироваться они не могли, а значит не могли и
+    ничего другого. Теперь профиль создаётся без класса, а код спрашивают
+    в онбординге, где от него можно отказаться и ввести позже
+    (join_class_by_code).
+
+    Неверный код по-прежнему ошибка, а не молчаливое «ну и ладно»: человек
+    что-то ввёл, и он должен узнать, что это не сработало.
+  */
+  const classCode: string = (body?.classCode ?? '').trim().toUpperCase();
+
+  let cls: { id: string; name: string; code: string } | null = null;
+  if (classCode) {
+    const { data } = await supabase
+      .from('classes')
+      .select('id, name, code')
+      .eq('code', classCode)
+      .maybeSingle();
+    if (!data) return NextResponse.json({ error: 'class_not_found' }, { status: 404 });
+    cls = data;
+  }
 
   const { data, error } = await supabase
     .from('profiles')
-    .insert({ id: user.id, role, name, class_id: cls.id })
+    .insert({ id: user.id, role, name, class_id: cls?.id ?? null })
     .select()
     .single();
 
   if (error) return NextResponse.json(await describeInsertError(supabase, error), { status: 403 });
-  return NextResponse.json({ profile: data, class: { name: cls.name, code: cls.code } });
+  return NextResponse.json({
+    profile: data,
+    class: cls ? { name: cls.name, code: cls.code } : null,
+  });
 }

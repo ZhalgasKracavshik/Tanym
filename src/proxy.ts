@@ -101,6 +101,17 @@ export async function proxy(request: NextRequest) {
   return response;
 }
 
+/*
+  Статические файлы проходят мимо проверки.
+
+  В списке исключений были только картинки, и всё остальное из public
+  попадало в middleware наравне со страницами: гостю вместо файла уходил
+  редирект на /login, то есть HTML. На звуке клавиатуры это выражалось в
+  «Unable to decode audio data» — декодер получал разметку страницы вместо
+  wav. Заодно снимается лишняя проверка сессии на каждый шрифт и значок.
+*/
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico|wav|mp3|ogg|m4a|woff|woff2|ttf|otf|webmanifest|txt|xml)$).*)',
+  ],
 };

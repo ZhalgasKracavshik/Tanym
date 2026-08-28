@@ -25,6 +25,7 @@ import { Icon } from './Icon';
 import { Logo, LogoMark } from './Logo';
 import { Avatar } from './Avatar';
 import { MobileTabBar } from './MobileTabBar';
+import { useSlidingPill } from './useSlidingPill';
 import { avatarPhotoUrl } from '@/lib/supabase/avatarPhoto';
 
 /**
@@ -119,6 +120,48 @@ const TEXT: Dict<{
   },
 };
 
+/**
+ * Список разделов с переезжающей подсветкой.
+ *
+ * Подсветка активного пункта — отдельная пилюля, которая едет между
+ * пунктами, а не фон, мгновенно перекрашивающийся на новом месте: переезд
+ * показывает, откуда и куда ушёл выбор.
+ */
+function NavList({
+  items,
+  pathname,
+}: {
+  items: { href: string; label: string; icon: IconName }[];
+  pathname: string;
+}) {
+  // Ключ — текущий путь: по нему хук понимает, что пора двигать пилюлю.
+  const { containerRef, pillRef } = useSlidingPill<HTMLUListElement>(pathname);
+
+  return (
+    <ul ref={containerRef} className="t-tabs flex flex-col gap-0.5">
+      <span ref={pillRef} aria-hidden className="t-tabs-pill rounded-lg bg-brand-50" />
+      {items.map((item) => {
+        const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+        return (
+          <li key={item.href}>
+            <Link
+              href={item.href}
+              aria-current={active ? 'page' : undefined}
+              data-pill-active={active ? 'true' : undefined}
+              className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
+                active ? 'text-brand-700' : 'text-ink-500 hover:bg-ink-50 hover:text-ink-800'
+              }`}
+            >
+              <Icon name={item.icon} size={19} className={active ? 'text-brand-600' : 'text-ink-400'} />
+              {item.label}
+            </Link>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 export function SiteSidebar() {
   const pathname = usePathname();
   const { state, hydrated, setLanguage } = useStore();
@@ -160,27 +203,14 @@ export function SiteSidebar() {
     (item) => !schoolProfile || !HIDDEN_FOR_ROLE[schoolProfile.role].includes(item.href)
   );
 
-  const navList = (
-    <ul className="flex flex-col gap-0.5">
-      {NAV.map((item) => {
-        const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
-        return (
-          <li key={item.href}>
-            <Link
-              href={item.href}
-              aria-current={active ? 'page' : undefined}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold outline-none transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
-                active ? 'bg-brand-50 text-brand-700' : 'text-ink-500 hover:bg-ink-50 hover:text-ink-800'
-              }`}
-            >
-              <Icon name={item.icon} size={19} className={active ? 'text-brand-600' : 'text-ink-400'} />
-              {item.label}
-            </Link>
-          </li>
-        );
-      })}
-    </ul>
-  );
+  /*
+    Отдельным компонентом, а не общей переменной с разметкой: список
+    рисуется дважды — в постоянной колонке и в мобильном drawer, — а у
+    пилюли есть ref на контейнер. Одна переменная означала бы один ref на
+    два элемента: он достался бы тому, который отрисован последним, и во
+    втором списке пилюля осталась бы неразмещённой.
+  */
+  const navList = <NavList items={NAV} pathname={pathname} />;
 
   const languageSwitcher = (
     <div className="flex rounded-lg border border-ink-200 p-0.5" role="group" aria-label={t.language}>

@@ -1,28 +1,30 @@
 'use client';
 
 /**
- * Онбординг: класс → предметы → цель.
+ * Онбординг: код класса → класс → предметы → цель.
  *
- * Собирает ровно те три поля, без которых кабинет, план и диагностика
- * не могут работать. Это не выдуманный список: useEffectiveProfile
- * возвращает null, пока у ученика нет grade и subject_ids, и все эти
- * страницы показывают «Профиль ещё не создан». Раньше кнопка оттуда вела
- * сюда, а здесь стоял только спиннер с редиректом — круг замыкался, и
- * заполнить профиль по подсказке приложения было невозможно.
+ * Собирает поля, без которых кабинет, план и диагностика не работают.
+ * Это не выдуманный список: useEffectiveProfile возвращает null, пока у
+ * ученика нет grade и subject_ids, и все эти страницы показывают «Профиль
+ * ещё не создан». Раньше кнопка оттуда вела сюда, а здесь стоял только
+ * спиннер с редиректом — круг замыкался, и заполнить профиль по подсказке
+ * приложения было невозможно.
+ *
+ * Шаг с кодом класса появляется, только если класса ещё нет: код перестал
+ * быть обязательным на регистрации, потому что упирал в тупик тех, у кого
+ * его нет под рукой, — а без регистрации они не могут вообще ничего.
  *
  * Даты здесь нет намеренно: срок под свою цель ученик ставит сам в
  * профиле, и это не обязательно дата экзамена.
  *
- * Мастер, а не одна форма: три коротких экрана с крупными кнопками
- * выбора читаются как знакомство, а длинная анкета на входе — как
- * препятствие. Пропустить можно на любом шаге, поэтому никто не заперт:
- * ученик, который ещё не знает своей цели, доходит до кабинета и
- * возвращается к профилю позже.
+ * Мастер, а не одна форма: короткие экраны с крупными кнопками выбора
+ * читаются как знакомство, а длинная анкета на входе — как препятствие.
  */
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
+import { createClient } from '@/lib/supabase/client';
 import { useStore } from '@/components/StoreProvider';
 import { SUBJECTS } from '@/data';
 import { GRADES, LEARNING_GOALS } from '@/lib/types';
@@ -31,10 +33,22 @@ import { Icon } from '@/components/Icon';
 import { Spinner } from '@/components/motion';
 import { SuccessCheckMark } from '@/components/SuccessCheckMark';
 
-type Step = 'grade' | 'subjects' | 'goal';
-const STEPS: Step[] = ['grade', 'subjects', 'goal'];
+type Step = 'classcode' | 'grade' | 'subjects' | 'goal';
+
+/*
+  Пропустить можно только те шаги, ответ на которые ученик может не знать
+  прямо сейчас: код класса ему выдаёт учитель, а цель — вопрос, на который
+  не у всех есть готовый ответ в первую минуту. Класс и предметы он про
+  себя знает всегда, и без них персонализация не считается вовсе, поэтому
+  там «Позже» не показываем.
+*/
+const SKIPPABLE: Step[] = ['classcode', 'goal'];
 
 const STEP_TITLE: Record<Step, { title: string; hint: string }> = {
+  classcode: {
+    title: 'Код класса',
+    hint: 'Шесть символов от классного руководителя — по ним учитель увидит ваш прогресс. Если кода пока нет, введёте позже в профиле.',
+  },
   grade: {
     title: 'В каком вы классе?',
     hint: 'От класса зависит программа и сложность заданий.',
@@ -55,6 +69,7 @@ export default function OnboardingPage() {
   const { updateProfile } = useStore();
 
   const [stepIndex, setStepIndex] = useState(0);
+  const [classCode, setClassCode] = useState('');
   const [grade, setGrade] = useState<Grade | null>(null);
   const [subjectIds, setSubjectIds] = useState<SubjectId[]>([]);
   const [goal, setGoal] = useState<LearningGoal | null>(null);
@@ -62,7 +77,22 @@ export default function OnboardingPage() {
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const step = STEPS[stepIndex];
+  /*
+    Шаг с кодом показываем только тем, у кого класса ещё нет: пришедший с
+    кодом на регистрации уже подключён, и переспрашивать его незачем.
+    Состав шагов фиксируем на первый рендер — иначе успешное присоединение
+    к классу убрало бы текущий шаг из списка прямо под ногами.
+  */
+  const [needsClassCode] = useState(
+    () => profile?.role === 'student' && !profile.class_id,
+  );
+  const steps = useMemo<Step[]>(
+    () => (needsClassCode ? ['classcode', 'grade', 'subjects', 'goal'] : ['grade', 'subjects', 'goal']),
+    [needsClassCode],
+  );
+
+  const step = steps[Math.min(stepIndex, steps.length - 1)];
+  const canSkip = SKIPPABLE.includes(step);
 
   /*
     Учителю здесь делать нечего: класс, предметы и цель — ученические поля,
@@ -96,10 +126,35 @@ export default function OnboardingPage() {
   }
 
   const canContinue = useMemo(() => {
+    if (step === 'classcode') return classCode.trim().length > 0;
     if (step === 'grade') return grade !== null;
     if (step === 'subjects') return subjectIds.length > 0;
     return goal !== null;
-  }, [step, grade, subjectIds, goal]);
+  }, [step, classCode, grade, subjectIds, goal]);
+
+  /**
+   * Присоединение к классу по коду.
+   *
+   * Через функцию в базе, а не обычным обновлением: class_id намеренно
+   * закрыт для правки пользователем, иначе класс можно было бы себе
+   * назначить любой, вообще не зная кода.
+   */
+  async function joinClass(): Promise<boolean> {
+    const code = classCode.trim();
+    if (!code) return true;
+    const supabase = createClient();
+    const { error: rpcError } = await supabase.rpc('join_class_by_code', { p_code: code });
+    if (rpcError) {
+      setError(
+        /class_not_found/.test(rpcError.message)
+          ? 'Класс с таким кодом не найден. Проверьте код у учителя.'
+          : 'Не удалось присоединиться к классу. Попробуйте ещё раз.',
+      );
+      return false;
+    }
+    await refresh();
+    return true;
+  }
 
   function toggleSubject(id: SubjectId) {
     setSubjectIds((prev) =>
@@ -170,21 +225,36 @@ export default function OnboardingPage() {
 
   async function next() {
     setError(null);
-    if (stepIndex < STEPS.length - 1) {
+
+    // Код отправляем при уходе с шага, а не отдельной кнопкой: иначе
+    // «Далее» после ввода кода молча ничего бы с ним не сделало.
+    if (step === 'classcode') {
+      setSaving(true);
+      const joined = await joinClass();
+      setSaving(false);
+      if (!joined) return;
+    }
+
+    if (stepIndex < steps.length - 1) {
       setStepIndex((index) => index + 1);
       return;
     }
     await finish();
   }
 
-  /** «Позже» на последнем шаге тоже сохраняет уже выбранное. */
+  /**
+   * «Позже» — пропуск текущего шага, а не всего мастера.
+   *
+   * На последнем шаге пропускать дальше нечего, поэтому он завершает
+   * онбординг, сохранив то, что уже выбрано.
+   */
   async function skip() {
     setError(null);
-    setSaving(true);
-    await persist();
-    setSaving(false);
-    router.replace('/dashboard');
-    router.refresh();
+    if (stepIndex < steps.length - 1) {
+      setStepIndex((index) => index + 1);
+      return;
+    }
+    await finish();
   }
 
   if (loading || !isSignedIn || profile?.role === 'teacher' || profile?.role === 'admin') {
@@ -211,7 +281,7 @@ export default function OnboardingPage() {
     <div className="mx-auto flex min-h-screen max-w-2xl flex-col px-5 py-10 sm:px-6">
       {/* Прогресс: видно, сколько осталось, — три шага не пугают */}
       <div className="flex items-center gap-2">
-        {STEPS.map((item, index) => (
+        {steps.map((item, index) => (
           <span
             key={item}
             className={`h-1.5 flex-1 rounded-full transition-colors duration-300 ${
@@ -221,7 +291,7 @@ export default function OnboardingPage() {
         ))}
       </div>
       <p className="mt-3 text-xs font-semibold uppercase tracking-wider text-ink-400">
-        Шаг {stepIndex + 1} из {STEPS.length}
+        Шаг {stepIndex + 1} из {steps.length}
       </p>
 
       <h1 className="mt-4 text-2xl font-bold text-ink-900 sm:text-3xl">
@@ -230,6 +300,24 @@ export default function OnboardingPage() {
       <p className="mt-2 text-sm leading-relaxed text-ink-500">{STEP_TITLE[step].hint}</p>
 
       <div className="mt-7 flex-1">
+        {step === 'classcode' && (
+          <div className="max-w-xs">
+            <input
+              value={classCode}
+              onChange={(event) => setClassCode(event.target.value.toUpperCase())}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' && canContinue && !saving) next();
+              }}
+              maxLength={6}
+              autoCapitalize="characters"
+              spellCheck={false}
+              placeholder="K7X9QF"
+              aria-label="Код класса"
+              className="h-14 w-full rounded-[var(--radius-control)] border-2 border-ink-200 bg-white px-4 text-center font-mono text-xl font-black tracking-[0.3em] uppercase text-ink-900 outline-none transition-colors focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
+            />
+          </div>
+        )}
+
         {step === 'grade' && (
           <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
             {GRADES.map((item) => {
@@ -349,19 +437,22 @@ export default function OnboardingPage() {
           className="flex h-12 flex-1 items-center justify-center gap-2 rounded-[var(--radius-control)] text-[15px] font-bold text-white shadow-[var(--shadow-glow)] transition-all disabled:opacity-45 disabled:shadow-none"
           style={{ background: 'var(--gradient-brand)' }}
         >
-          {saving ? <Spinner /> : stepIndex === STEPS.length - 1 ? 'Готово' : 'Далее'}
+          {saving ? <Spinner /> : stepIndex === steps.length - 1 ? 'Готово' : 'Далее'}
           {!saving && <Icon name="arrowRight" size={17} />}
         </button>
       </div>
 
-      <button
-        type="button"
-        onClick={skip}
-        disabled={saving}
-        className="mx-auto mt-4 rounded-lg px-3 py-2 text-sm font-semibold text-ink-400 transition-colors hover:text-ink-700 disabled:opacity-50"
-      >
-        Позже — заполню в профиле
-      </button>
+      {/* «Позже» есть только там, где ответа может не быть на руках */}
+      {canSkip && (
+        <button
+          type="button"
+          onClick={skip}
+          disabled={saving}
+          className="mx-auto mt-4 rounded-lg px-3 py-2 text-sm font-semibold text-ink-400 transition-colors hover:text-ink-700 disabled:opacity-50"
+        >
+          Позже
+        </button>
+      )}
     </div>
   );
 }

@@ -56,9 +56,6 @@ const TEXT: Dict<{
   eventIn: (n: number) => string;
   eventToday: string;
   allEvents: string;
-  targetHintBefore: string;
-  targetHintLink: string;
-  targetHintAfter: string;
   todayKicker: string;
   todayStart: string;
   todayRing: string;
@@ -98,9 +95,6 @@ const TEXT: Dict<{
     eventIn: (n) => (n === 1 ? 'через 1 день' : n < 5 ? `через ${n} дня` : `через ${n} дней`),
     eventToday: 'сегодня',
     allEvents: 'Вся афиша',
-    targetHintBefore: 'Укажи дату экзамена в ',
-    targetHintLink: 'профиле',
-    targetHintAfter: ', и появится обратный отсчёт с подсказкой по темпу.',
     todayKicker: 'Сегодняшняя задача',
     todayStart: 'Начать',
     todayRing: 'освоено',
@@ -140,9 +134,6 @@ const TEXT: Dict<{
     eventIn: (n) => `${n} күннен кейін`,
     eventToday: 'бүгін',
     allEvents: 'Барлық афиша',
-    targetHintBefore: 'Емтихан күнін ',
-    targetHintLink: 'профильде',
-    targetHintAfter: ' көрсет, сонда кері санақ пен қарқын бойынша кеңес пайда болады.',
     todayKicker: 'Бүгінгі тапсырма',
     todayStart: 'Бастау',
     todayRing: 'меңгерілді',
@@ -182,9 +173,6 @@ const TEXT: Dict<{
     eventIn: (n) => (n === 1 ? 'in 1 day' : `in ${n} days`),
     eventToday: 'today',
     allEvents: 'All events',
-    targetHintBefore: 'Set your exam date in your ',
-    targetHintLink: 'profile',
-    targetHintAfter: ' and a countdown with pacing tips will appear.',
     todayKicker: "Today's task",
     todayStart: 'Start',
     todayRing: 'mastered',
@@ -525,17 +513,6 @@ export default function DashboardPage() {
                 </Card>
               )}
 
-              {!profile.targetDate && (
-                <Card className="border-accent-200 bg-accent-50">
-                  <p className="text-sm text-accent-700">
-                    {t.targetHintBefore}
-                    <a href="/profile" className="font-semibold underline">
-                      {t.targetHintLink}
-                    </a>
-                    {t.targetHintAfter}
-                  </p>
-                </Card>
-              )}
             </div>
           </div>
         </>
