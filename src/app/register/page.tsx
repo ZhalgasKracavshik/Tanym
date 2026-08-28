@@ -28,9 +28,11 @@ import {
 } from '@/components/auth-ui';
 import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
 import {
+  canBeTeacher,
   domainRejectionMessage,
-  fetchAllowedDomains,
+  fetchAllowedDomainRows,
   isEmailDomainAllowed,
+  teacherDomainMessage,
 } from '@/lib/supabase/allowedDomains';
 
 function translateError(message: string): string {
@@ -96,10 +98,26 @@ export default function RegisterPage() {
       отвечает ему «почта уже зарегистрирована». Выбраться из этого
       состояния самостоятельно нельзя — в базе такой пользователь уже есть.
     */
-    const allowedDomains = await fetchAllowedDomains();
+    const domainRows = await fetchAllowedDomainRows();
+    const allowedDomains = domainRows.map((row) => row.domain);
     if (!isEmailDomainAllowed(email, allowedDomains)) {
       setStatus('idle');
       setError(domainRejectionMessage(allowedDomains));
+      return;
+    }
+
+    /*
+      Роль учителя открывает панель класса и данные детей, поэтому её
+      выдаём только со школьной почты. Проверяем до signUp по той же
+      причине, что и домен вообще: иначе учётная запись создалась бы, а
+      профиль — нет, и человек остался бы ни с чем.
+
+      Настоящая проверка всё равно стоит в политике базы: эта нужна, чтобы
+      объяснить причину, а не чтобы защитить.
+    */
+    if (role === 'teacher' && !canBeTeacher(email, domainRows)) {
+      setStatus('idle');
+      setError(teacherDomainMessage(domainRows));
       return;
     }
 

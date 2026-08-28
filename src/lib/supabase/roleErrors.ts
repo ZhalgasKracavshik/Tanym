@@ -14,7 +14,7 @@
  * им незачем.
  */
 
-import { domainRejectionMessage } from './allowedDomains';
+import { domainRejectionMessage, formatDomains } from './allowedDomains';
 
 const MESSAGES: Record<string, string> = {
   class_not_found: 'Класс с таким кодом не найден. Проверьте код у учителя.',
@@ -28,6 +28,17 @@ const MESSAGES: Record<string, string> = {
 export function describeRoleError(error?: string, domains?: string[]): string {
   if (!error) return 'Не удалось создать профиль.';
   if (error === 'domain_not_allowed') return domainRejectionMessage(domains ?? []);
+  /*
+    Отдельно от domain_not_allowed: домен разрешён, закрыта именно роль
+    учителя. Сообщение «зарегистрируйтесь с почты на gmail.com» человеку,
+    который пришёл как раз с gmail, ничего не объяснило бы.
+  */
+  if (error === 'teacher_domain_required') {
+    const list = formatDomains(domains ?? []);
+    return list
+      ? `Учителем можно зарегистрироваться только со школьной почты на ${list}. С личной почты доступна регистрация ученика.`
+      : 'Учителем можно зарегистрироваться только со школьной почты.';
+  }
   if (MESSAGES[error]) return MESSAGES[error];
   /*
     Страховка на случай, если база ответит текстом, а не кодом: показывать

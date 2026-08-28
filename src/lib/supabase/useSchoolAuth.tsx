@@ -75,7 +75,15 @@ interface SchoolAuthValue {
   profile: SchoolProfile | null;
   schoolClass: SchoolClass | null;
   isSignedIn: boolean;
-  refresh: () => Promise<void>;
+  /**
+   * silent=true — не трогать loading.
+   *
+   * Флаг был в реализации с самого начала, но отсутствовал в типе, поэтому
+   * снаружи его никто передать не мог: любое сохранение профиля поднимало
+   * loading, а страница профиля на нём показывает скелетоны — и каждое
+   * нажатие кнопки выглядело как полная перезагрузка страницы.
+   */
+  refresh: (silent?: boolean) => Promise<void>;
   signInWithProvider: (provider: OAuthProvider, nextPath: string) => Promise<void>;
   /** Оставлено ради существующих вызовов; внутри — signInWithProvider('google'). */
   signInWithGoogle: (nextPath: string) => Promise<void>;

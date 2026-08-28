@@ -22,15 +22,52 @@
 
 import { createClient } from './client';
 
-export async function fetchAllowedDomains(): Promise<string[]> {
+export interface AllowedDomain {
+  domain: string;
+  /** С этого домена можно регистрироваться учителем, а не только учеником. */
+  allowsTeacher: boolean;
+}
+
+export async function fetchAllowedDomainRows(): Promise<AllowedDomain[]> {
   try {
     const supabase = createClient();
-    const { data, error } = await supabase.from('allowed_school_domains').select('domain');
+    const { data, error } = await supabase
+      .from('allowed_school_domains')
+      .select('domain, allows_teacher');
     if (error) return [];
-    return (data ?? []).map((row) => String(row.domain).toLowerCase());
+    return (data ?? []).map((row) => ({
+      domain: String(row.domain).toLowerCase(),
+      allowsTeacher: Boolean(row.allows_teacher),
+    }));
   } catch {
     return [];
   }
+}
+
+export async function fetchAllowedDomains(): Promise<string[]> {
+  return (await fetchAllowedDomainRows()).map((row) => row.domain);
+}
+
+/** Домены, с которых разрешена роль учителя. */
+export function teacherDomains(rows: AllowedDomain[]): string[] {
+  return rows.filter((row) => row.allowsTeacher).map((row) => row.domain);
+}
+
+/**
+ * Пустой список снова означает «не смогли прочитать»: пропускаем дальше,
+ * решение всё равно за политикой в базе.
+ */
+export function canBeTeacher(email: string, rows: AllowedDomain[]): boolean {
+  if (rows.length === 0) return true;
+  const address = email.trim().toLowerCase();
+  return rows.some((row) => row.allowsTeacher && address.endsWith(`@${row.domain}`));
+}
+
+export function teacherDomainMessage(rows: AllowedDomain[]): string {
+  const list = formatDomains(teacherDomains(rows));
+  return list
+    ? `Учителем можно зарегистрироваться только со школьной почты на ${list}. С личной почты доступна регистрация ученика.`
+    : 'Учителем можно зарегистрироваться только со школьной почты.';
 }
 
 /**

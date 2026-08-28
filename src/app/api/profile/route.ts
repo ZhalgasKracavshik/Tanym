@@ -49,14 +49,34 @@ function randomClassCode(): string {
 async function describeInsertError(
   supabase: Awaited<ReturnType<typeof createClient>>,
   error: { code?: string; message: string },
+  context: { role: string; email: string },
 ): Promise<{ error: string; domains?: string[] }> {
   // 42501 — insufficient_privilege, то есть отказ именно политики RLS.
   if (error.code !== '42501') return { error: error.message };
 
-  const { data } = await supabase.from('allowed_school_domains').select('domain');
+  const { data } = await supabase
+    .from('allowed_school_domains')
+    .select('domain, allows_teacher');
+  const rows = (data ?? []) as { domain: string; allows_teacher: boolean }[];
+  const address = context.email.toLowerCase();
+  const matched = rows.find((row) => address.endsWith(`@${row.domain.toLowerCase()}`));
+
+  /*
+    Два разных отказа, и путать их нельзя. Домен может быть разрешён
+    вообще, но закрыт для роли учителя — тогда сообщение «зарегистрируйтесь
+    с почты на gmail.com» звучало бы издевательски: человек как раз с неё и
+    пришёл. Разводим случаи по тому, нашёлся ли домен в списке.
+  */
+  if (matched && context.role === 'teacher' && !matched.allows_teacher) {
+    return {
+      error: 'teacher_domain_required',
+      domains: rows.filter((row) => row.allows_teacher).map((row) => row.domain),
+    };
+  }
+
   return {
     error: 'domain_not_allowed',
-    domains: (data ?? []).map((row) => row.domain as string),
+    domains: rows.map((row) => row.domain),
   };
 }
 
@@ -211,7 +231,7 @@ export async function POST(request: Request) {
     // что у auth.uid() уже есть строка profiles с role='teacher'.
     const { error: profileError } = await supabase.from('profiles').insert({ id: user.id, role, name });
     if (profileError) {
-      return NextResponse.json(await describeInsertError(supabase, profileError), { status: 403 });
+      return NextResponse.json(await describeInsertError(supabase, profileError, { role, email: user.email ?? "" }), { status: 403 });
     }
 
     let classRow = null;
@@ -269,7 +289,7 @@ export async function POST(request: Request) {
     .select()
     .single();
 
-  if (error) return NextResponse.json(await describeInsertError(supabase, error), { status: 403 });
+  if (error) return NextResponse.json(await describeInsertError(supabase, error, { role, email: user.email ?? "" }), { status: 403 });
   return NextResponse.json({
     profile: data,
     class: cls ? { name: cls.name, code: cls.code } : null,

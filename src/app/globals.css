@@ -550,6 +550,57 @@ h1 {
   }
 }
 
+/*
+  Точечный индикатор загрузки: сетка 4×4, по которой пробегает подсветка.
+
+  Задержка у каждой точки своя и приходит из JS переменной --d — сам
+  «вариант» анимации это просто таблица задержек, а не отдельные кадры.
+*/
+:root {
+  --matrix-cycle: 1200ms;
+  --matrix-base: #d3e0e8;
+  --matrix-active: #d85f2e;
+  --matrix-ease: ease-in-out;
+}
+
+.t-matrix {
+  display: grid;
+  grid-template-columns: repeat(4, 6px);
+  grid-auto-rows: 6px;
+  gap: 5px;
+}
+
+.t-matrix i {
+  display: block;
+  border-radius: 2px;
+  background: var(--matrix-base);
+  animation: t-matrix-pulse var(--matrix-cycle) var(--matrix-ease) infinite;
+  animation-delay: calc(var(--d, 0) * 1ms);
+}
+
+/* Углы у скруглённых вариантов не рисуются вовсе. */
+.t-matrix i.is-gap {
+  visibility: hidden;
+  animation: none;
+}
+
+@keyframes t-matrix-pulse {
+  0%,
+  45%,
+  100% {
+    background-color: var(--matrix-base);
+  }
+  15% {
+    background-color: var(--matrix-active);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-matrix i {
+    animation: none !important;
+  }
+}
+
 /* Уважаем системную настройку «уменьшить движение». */
 @media (prefers-reduced-motion: reduce) {
   *,

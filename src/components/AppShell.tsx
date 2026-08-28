@@ -8,12 +8,14 @@
  * десять и вертикальный список читается без прокрутки.
  */
 
-import { usePathname } from 'next/navigation';
+import { useEffect } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import { SiteHeader } from './SiteHeader';
 import { SiteSidebar } from './SiteSidebar';
 import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
 import { useStore } from './StoreProvider';
 import { LandingAuthBanner } from './LandingAuthBanner';
+import { MatrixLoader } from './MatrixLoader';
 
 /**
  * Экраны без навигации приложения вообще.
@@ -28,10 +30,27 @@ import { LandingAuthBanner } from './LandingAuthBanner';
  */
 const SHELLESS_ROUTES = ['/login', '/register', '/forgot-password', '/reset-password', '/for-schools', '/for-centers'];
 
+/**
+ * Регистрация считается незавершённой, пока у ученика нет класса обучения
+ * и предметов.
+ *
+ * Это не произвольная планка: ровно на этих двух полях useEffectiveProfile
+ * возвращает null, и кабинет, план и диагностика показывают «Профиль ещё
+ * не создан». Код класса и цель в этот список не входят — их в мастере
+ * разрешено отложить.
+ *
+ * Учителю и администратору эти поля не нужны вовсе: у них другие разделы.
+ */
+function needsOnboarding(profile: { role: string; grade: number | null; subject_ids: string[] | null } | null) {
+  if (!profile || profile.role !== 'student') return false;
+  return profile.grade == null || !profile.subject_ids?.length;
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { loading, isSignedIn, profile } = useSchoolAuth();
-  const { state } = useStore();
+  const { state, hydrated } = useStore();
   const isLanding = pathname === '/';
 
   /*
@@ -42,6 +61,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   */
   const pendingRoleChoice = !loading && isSignedIn && !profile;
   const isShellless = SHELLESS_ROUTES.includes(pathname);
+  const onboardingPending = needsOnboarding(profile);
+
+  /*
+    Незавершённую регистрацию доводим до конца, а не пускаем гулять по
+    разделам: половина из них всё равно упрётся в «Профиль ещё не создан».
+    Редирект в эффекте, а не в теле — во время рендера роутер трогать нельзя.
+  */
+  useEffect(() => {
+    if (loading || !hydrated) return;
+    if (onboardingPending && pathname !== '/onboarding') {
+      router.replace('/onboarding');
+    }
+  }, [loading, hydrated, onboardingPending, pathname, router]);
 
   if (isShellless) {
     return <main className="flex-1">{children}</main>;
@@ -53,6 +85,27 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <SiteHeader />
         <main className="flex-1">{children}</main>
       </>
+    );
+  }
+
+  /*
+    Экран загрузки на всю страницу вместо скелетонов по кускам.
+
+    Данные приезжают из двух мест и не одновременно: профиль приходит с
+    сервера вместе с разметкой, а прогресс лежит в localStorage и читается
+    уже в браузере, после первого кадра. Из-за этого страница успевала
+    показать цифры по умолчанию и через мгновение переписать их на
+    настоящие — то самое мигание характеристик при жёсткой перезагрузке.
+    Пока не готово и то и другое, показываем один спокойный индикатор.
+
+    Лендинг и экраны входа сюда не попадают (обработаны выше): им ждать
+    нечего, а маркетинговую страницу задерживать индикатором вредно.
+  */
+  if (!hydrated || loading) {
+    return (
+      <main className="flex flex-1 items-center justify-center px-6 py-24">
+        <MatrixLoader variant="scan" rounded />
+      </main>
     );
   }
 
@@ -75,6 +128,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <LandingAuthBanner language={state.language} />
       </main>
     );
+  }
+
+  /*
+    Регистрация не доведена до конца — навигации нет вообще.
+
+    Раньше меню в этот момент показывали, и человек уходил из мастера в
+    разделы, которые без класса и предметов всё равно встречают его
+    заглушкой «Профиль ещё не создан». Пока анкета не заполнена, на экране
+    должен быть только мастер; редирект на него стоит выше.
+  */
+  if (onboardingPending) {
+    return <main className="flex-1">{children}</main>;
   }
 
   return (

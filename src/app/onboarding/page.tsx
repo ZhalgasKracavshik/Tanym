@@ -32,6 +32,7 @@ import type { Grade, LearningGoal, SubjectId } from '@/lib/types';
 import { Icon } from '@/components/Icon';
 import { Spinner } from '@/components/motion';
 import { SuccessCheckMark } from '@/components/SuccessCheckMark';
+import { OtpInput, type OtpStatus } from '@/components/ui/otp-input';
 
 type Step = 'classcode' | 'grade' | 'subjects' | 'goal';
 
@@ -76,6 +77,8 @@ export default function OnboardingPage() {
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Состояние поля кода: по нему OtpInput подсвечивает ячейки и подрагивает.
+  const [codeStatus, setCodeStatus] = useState<OtpStatus>('idle');
 
   /*
     Шаг с кодом показываем только тем, у кого класса ещё нет: пришедший с
@@ -145,6 +148,7 @@ export default function OnboardingPage() {
     const supabase = createClient();
     const { error: rpcError } = await supabase.rpc('join_class_by_code', { p_code: code });
     if (rpcError) {
+      setCodeStatus('error');
       setError(
         /class_not_found/.test(rpcError.message)
           ? 'Класс с таким кодом не найден. Проверьте код у учителя.'
@@ -152,7 +156,9 @@ export default function OnboardingPage() {
       );
       return false;
     }
-    await refresh();
+    setCodeStatus('success');
+    // Тихо: у мастера свой индикатор saving, а loading гасит весь экран.
+    await refresh(true);
     return true;
   }
 
@@ -199,7 +205,8 @@ export default function OnboardingPage() {
         );
         return false;
       }
-      await refresh();
+      // Тихо — иначе мастер моргнёт спиннером поверх уже заполненного шага.
+      await refresh(true);
       return true;
     } catch {
       setError('Не удалось сохранить. Проверьте связь и попробуйте ещё раз.');
@@ -301,21 +308,31 @@ export default function OnboardingPage() {
 
       <div className="mt-7 flex-1">
         {step === 'classcode' && (
-          <div className="max-w-xs">
-            <input
-              value={classCode}
-              onChange={(event) => setClassCode(event.target.value.toUpperCase())}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' && canContinue && !saving) next();
-              }}
-              maxLength={6}
-              autoCapitalize="characters"
-              spellCheck={false}
-              placeholder="K7X9QF"
-              aria-label="Код класса"
-              className="h-14 w-full rounded-[var(--radius-control)] border-2 border-ink-200 bg-white px-4 text-center font-mono text-xl font-black tracking-[0.3em] uppercase text-ink-900 outline-none transition-colors focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
-            />
-          </div>
+          /*
+            Посимвольное поле, а не одна строка: код диктуют вслух или
+            переписывают с доски, и по ячейкам сразу видно, сколько символов
+            уже введено и сколько осталось. Ошибку показываем здесь же
+            (поле подрагивает), поэтому общий блок с ошибкой на этом шаге
+            не дублируем.
+          */
+          <OtpInput
+            length={6}
+            mode="alphanumeric"
+            uppercase
+            autoFocus
+            groupEvery={3}
+            label="Код класса"
+            status={codeStatus}
+            errorMessage={error ?? ''}
+            defaultValue={classCode}
+            onChange={(value) => {
+              setClassCode(value);
+              if (codeStatus === 'error') {
+                setCodeStatus('idle');
+                setError(null);
+              }
+            }}
+          />
         )}
 
         {step === 'grade' && (
@@ -413,7 +430,8 @@ export default function OnboardingPage() {
         )}
       </div>
 
-      {error && (
+      {/* На шаге с кодом ошибку уже показывает само поле — не дублируем. */}
+      {error && step !== 'classcode' && (
         <p className="mt-5 rounded-[var(--radius-control)] border border-danger-200 bg-danger-50 px-4 py-3 text-sm font-semibold text-danger-700">
           {error}
         </p>
