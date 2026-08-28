@@ -7,6 +7,8 @@ import { daysUntil, rankTopics, weakestSkills } from '@/lib/personalization';
 import type { PlanRequest, PlanResponse } from '@/lib/ai/contracts';
 import { useStore } from '@/components/StoreProvider';
 import { useEffectiveProfile } from '@/lib/useEffectiveProfile';
+import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
+import { StudentOnlyNotice } from '@/components/StudentOnlyNotice';
 import type { Dict } from '@/lib/i18n';
 import { AiBadge } from '@/components/AiBadge';
 import { Icon } from '@/components/Icon';
@@ -145,6 +147,7 @@ export default function PlanPage() {
     профиля. Подробности — в useEffectiveProfile.
   */
   const profile = useEffectiveProfile();
+  const { profile: schoolProfile } = useSchoolAuth();
 
   const [subjectId, setSubjectId] = useState<string | null>(null);
   const [plan, setPlan] = useState<PlanResponse | null>(null);
@@ -271,6 +274,15 @@ export default function PlanPage() {
         <Skeleton className="h-64 w-full" />
       </div>
     );
+  }
+
+  /*
+    План строится по анкете ученика, которой у учителя нет: без этой
+    проверки он получал «Профиль ещё не создан» и кнопку в мастер, откуда
+    его тут же возвращает обратно.
+  */
+  if (schoolProfile && schoolProfile.role !== 'student') {
+    return <StudentOnlyNotice role={schoolProfile.role} />;
   }
 
   if (!profile) {

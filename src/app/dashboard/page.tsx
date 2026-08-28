@@ -8,6 +8,7 @@
  * между кабинетом, планом и панелью учителя.
  */
 
+import Link from 'next/link';
 import { getSubject, getTopic } from '@/data';
 import { daysUntil, rankTopics, summarize, weakestSkills } from '@/lib/personalization';
 import { almatyDateIso, almatyYesterdayIso } from '@/lib/date';
@@ -15,6 +16,8 @@ import { daysLeftUntil } from '@/lib/events';
 import { usePublishedEvents } from '@/lib/supabase/events';
 import { useStore } from '@/components/StoreProvider';
 import { useEffectiveProfile } from '@/lib/useEffectiveProfile';
+import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
+import { StudentOnlyNotice } from '@/components/StudentOnlyNotice';
 import type { Dict } from '@/lib/i18n';
 import { Icon } from '@/components/Icon';
 import type { IconName } from '@/components/Icon';
@@ -223,6 +226,7 @@ export default function DashboardPage() {
     профиля. Подробности — в useEffectiveProfile.
   */
   const profile = useEffectiveProfile();
+  const { profile: schoolProfile } = useSchoolAuth();
   const t = TEXT[state.language];
 
   if (!hydrated) {
@@ -233,6 +237,15 @@ export default function DashboardPage() {
         <Skeleton className="h-64 w-full" />
       </div>
     );
+  }
+
+  /*
+    Учителю и администратору кабинет ученика не нужен: анкеты с классом и
+    предметами у них нет, и заглушка «Профиль ещё не создан» отправляла их
+    в мастер, который тут же возвращает обратно.
+  */
+  if (schoolProfile && schoolProfile.role !== 'student') {
+    return <StudentOnlyNotice role={schoolProfile.role} />;
   }
 
   if (!profile) {
@@ -507,9 +520,11 @@ export default function DashboardPage() {
                       ? t.eventToday
                       : t.eventIn(daysLeftUntil(upcomingEvent.startsAt))}
                   </p>
-                  <a href="/events" className="mt-3 inline-block text-sm font-semibold text-brand-600 hover:underline">
+                  {/* Link, а не <a>: обычная ссылка перезагружает всё
+                      приложение целиком вместо перехода внутри него. */}
+                  <Link href="/events" className="mt-3 inline-block text-sm font-semibold text-brand-600 hover:underline">
                     {t.allEvents}
-                  </a>
+                  </Link>
                 </Card>
               )}
 

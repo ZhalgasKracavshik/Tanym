@@ -13,6 +13,7 @@
  */
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { LISTING_TYPES } from '@/lib/listings';
 import type { Listing, ListingType } from '@/lib/listings';
 import type { Dict } from '@/lib/i18n';
@@ -100,6 +101,7 @@ const TEXT: Dict<{
   verified: string;
   unverified: string;
   unverifiedHint: string;
+  more: string;
   spots: (n: number) => string;
   noSpots: string;
   schedule: string;
@@ -120,6 +122,7 @@ const TEXT: Dict<{
     verified: 'Проверено школой',
     unverified: 'Без проверки школы',
     unverifiedHint: 'Школа не проверяла это предложение. Обсуди с родителями, прежде чем платить.',
+    more: 'Подробнее',
     spots: (n) => (n === 1 ? 'осталось 1 место' : n < 5 ? `осталось ${n} места` : `осталось ${n} мест`),
     noSpots: 'мест нет',
     schedule: 'Когда',
@@ -140,6 +143,7 @@ const TEXT: Dict<{
     verified: 'Мектеп тексерген',
     unverified: 'Мектеп тексермеген',
     unverifiedHint: 'Мектеп бұл ұсынысты тексерген жоқ. Төлемес бұрын ата-анаңмен ақылдас.',
+    more: 'Толығырақ',
     spots: (n) => `${n} орын қалды`,
     noSpots: 'орын жоқ',
     schedule: 'Қашан',
@@ -160,6 +164,7 @@ const TEXT: Dict<{
     verified: 'Verified by school',
     unverified: 'Not verified by school',
     unverifiedHint: 'The school has not vetted this offer. Talk to your parents before paying.',
+    more: 'Details',
     spots: (n) => (n === 1 ? '1 spot left' : `${n} spots left`),
     noSpots: 'no spots left',
     schedule: 'When',
@@ -260,10 +265,24 @@ export default function MarketplacePage() {
           {sorted.map((listing) => {
             const meta = LISTING_TYPES.find((type) => type.id === listing.type);
             return (
-              <Card
+              /*
+                Карточка — ссылка на само объявление.
+
+                Страница /marketplace/[id] существовала и раньше (её открывали
+                из очереди модерации), но со списка на неё не вело ничего:
+                карточка подсвечивалась при наведении, картинка увеличивалась —
+                то есть обещала нажатие, — а нажимать было не на что. Всё
+                описание, расписание и контакты остаются на детальной
+                странице, здесь им тесно.
+              */
+              <Link
                 key={listing.id}
-                className="group flex flex-col overflow-hidden p-0 transition-all duration-300 hover:shadow-[var(--shadow-lift)]"
+                href={`/marketplace/${listing.id}`}
+                className="group block h-full rounded-[var(--radius-card)] outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
               >
+                <Card
+                  className="flex h-full flex-col overflow-hidden p-0 transition-all duration-300 hover:shadow-[var(--shadow-lift)]"
+                >
                 {/*
                   Обложка, если её загрузили при публикации, иначе — цветной
                   баннер с иконкой вида, как на афише.
@@ -274,9 +293,18 @@ export default function MarketplacePage() {
                   человек загружал фото, оно сохранялось в хранилище, а
                   увидеть его на «Возможностях» было негде.
                 */}
+                {/*
+                  Обложка в пропорции 16:10, а не полосой в 96 пикселей.
+
+                  Узкая полоса срезала у любой фотографии всё, кроме тонкого
+                  пояса по центру: лица, доски, залы — всё уходило за кадр, и
+                  снимок переставал что-либо сообщать. Фиксированная
+                  пропорция вместо фиксированной высоты ещё и держит ряд
+                  ровным на любой ширине колонки.
+                */}
                 <div
-                  className={`relative flex h-24 items-center justify-center overflow-hidden ${
-                    listing.coverUrl ? 'bg-ink-200' : TYPE_BANNER[listing.type]
+                  className={`relative flex aspect-[16/10] items-center justify-center overflow-hidden ${
+                    listing.coverUrl ? 'bg-ink-100' : TYPE_BANNER[listing.type]
                   }`}
                 >
                   {listing.coverUrl ? (
@@ -360,9 +388,21 @@ export default function MarketplacePage() {
                       {listing.verified ? t.verified : t.unverified}
                     </p>
                     {!listing.verified && <p className="mt-2 text-xs text-ink-400">{t.unverifiedHint}</p>}
+
+                    {/* Явная подпись к нажатию: подсветка при наведении есть
+                        только у мыши, а на телефоне её не существует. */}
+                    <span className="mt-4 flex items-center gap-1.5 text-sm font-semibold text-brand-600">
+                      {t.more}
+                      <Icon
+                        name="arrowRight"
+                        size={15}
+                        className="transition-transform duration-200 group-hover:translate-x-1"
+                      />
+                    </span>
                   </div>
                 </div>
-              </Card>
+                </Card>
+              </Link>
             );
           })}
         </div>

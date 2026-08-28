@@ -20,6 +20,7 @@ import type { Dict } from '@/lib/i18n';
 import { useStore } from '@/components/StoreProvider';
 import { useEffectiveProfile } from '@/lib/useEffectiveProfile';
 import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
+import { StudentOnlyNotice } from '@/components/StudentOnlyNotice';
 import { useChatHistory } from '@/lib/supabase/chat';
 import { AiBadge } from '@/components/AiBadge';
 import { Icon } from '@/components/Icon';
@@ -224,6 +225,14 @@ export default function ChatPage() {
         <Skeleton className="h-64 w-full" />
       </div>
     );
+  }
+
+  /*
+    Наставник отвечает по классу и цели ученика — учителю он не адресован,
+    и просить его «создать профиль» бессмысленно: анкеты у роли нет.
+  */
+  if (schoolProfile && schoolProfile.role !== 'student') {
+    return <StudentOnlyNotice role={schoolProfile.role} />;
   }
 
   if (!schoolProfile) {
