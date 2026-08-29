@@ -23,6 +23,7 @@ import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
 import { StudentOnlyNotice } from '@/components/StudentOnlyNotice';
 import { useChatHistory } from '@/lib/supabase/chat';
 import { AiBadge } from '@/components/AiBadge';
+import { AiAnswer, AiTextScaleControl, useAiTextScale } from '@/components/AiAnswer';
 import { Icon } from '@/components/Icon';
 import { PressButton } from '@/components/motion';
 import { Button, ButtonLink, Card, EmptyState, Kicker, Skeleton } from '@/components/ui';
@@ -116,6 +117,22 @@ export default function ChatPage() {
   const [question, setQuestion] = useState('');
   const [loading, setLoading] = useState(false);
   const [showKeyboard, setShowKeyboard] = useState(false);
+  const [aiScale, setAiScale] = useAiTextScale();
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+
+  /*
+    Копирование ответа: разбор задачи переносят в тетрадь и в заметки, а
+    выделять мышью многоуровневый список неудобно.
+  */
+  function copyAnswer(text: string, index: number) {
+    navigator.clipboard
+      ?.writeText(text)
+      .then(() => {
+        setCopiedIndex(index);
+        setTimeout(() => setCopiedIndex((current) => (current === index ? null : current)), 2000);
+      })
+      .catch(() => {});
+  }
 
   /*
     Переливаем серверную историю в локальное состояние ровно один раз
@@ -277,6 +294,9 @@ export default function ChatPage() {
           <h1 className="mt-2 text-3xl font-semibold text-ink-900 sm:text-4xl">{t.title}</h1>
         </div>
         <div className="flex items-center gap-2">
+          {/* Кегль ответа рядом с самим диалогом, а не в общих настройках:
+              его меняют по ходу чтения, а не один раз при заведении аккаунта. */}
+          <AiTextScaleControl scale={aiScale} onChange={setAiScale} />
           <div className="hidden md:block">
             <Button
               variant={showKeyboard ? 'secondary' : 'ghost'}
@@ -331,11 +351,27 @@ export default function ChatPage() {
             {message.role === 'user' ? (
               <p className="max-w-[85%] rounded-2xl bg-brand-500 px-4 py-3 text-white">{message.content}</p>
             ) : (
-              <div className="max-w-[90%] rounded-2xl border border-ink-200 bg-white px-4 py-3">
-                <div className="mb-2">
+              /*
+                Ответ наставника — отдельная карточка с полем и подписью,
+                а не просто пузырь с текстом: разбор задачи читают дольше
+                реплики в переписке, и ему нужен воздух и структура.
+              */
+              <div className="w-full max-w-[92%] overflow-hidden rounded-2xl border border-ink-200 bg-white shadow-[var(--shadow-rest)]">
+                <div className="flex items-center justify-between gap-3 border-b border-ink-100 bg-ink-50/60 px-4 py-2">
                   <AiBadge live={message.live ?? false} />
+                  <button
+                    type="button"
+                    onClick={() => copyAnswer(message.content, index)}
+                    className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-semibold text-ink-400 transition-colors hover:bg-white hover:text-ink-700"
+                    aria-label="Скопировать ответ"
+                  >
+                    <Icon name={copiedIndex === index ? 'check' : 'copy'} size={13} />
+                    {copiedIndex === index ? 'Скопировано' : 'Копировать'}
+                  </button>
                 </div>
-                <p className="whitespace-pre-line leading-relaxed text-ink-700">{message.content}</p>
+                <div className="px-4 py-3">
+                  <AiAnswer text={message.content} scale={aiScale} />
+                </div>
               </div>
             )}
           </div>

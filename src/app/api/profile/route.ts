@@ -234,24 +234,49 @@ export async function POST(request: Request) {
       return NextResponse.json(await describeInsertError(supabase, profileError, { role, email: user.email ?? "" }), { status: 403 });
     }
 
-    let classRow = null;
+    /*
+      Класс создаётся функцией в базе, а не двумя запросами отсюда.
+
+      Раньше здесь был insert в classes, а следом обычный update
+      profiles.class_id. Но UPDATE на profiles выдан поколоночно, и class_id
+      в него намеренно не входит — иначе ученик переписал бы себе класс в
+      обход кода. Этот update падал с 42501, его ошибку никто не проверял
+      (данные деструктурировались без error), и роут отвечал 200 с
+      profile: null. В итоге ни один учитель не был привязан к своему
+      классу: панель не показывала ни кода для учеников, ни списка, а
+      повторно зарегистрироваться было нельзя — профиль-то уже создан.
+
+      Функция делает обе операции разом и под своими правами, а повторный
+      вызов возвращает уже существующий класс вместо второго.
+    */
+    let classRow: { id: string; name: string; code: string } | null = null;
+    let classError: { code?: string; message: string } | null = null;
+
     for (let attempt = 0; attempt < 5 && !classRow; attempt++) {
       const { data, error } = await supabase
-        .from('classes')
-        .insert({ teacher_id: user.id, code: randomClassCode() })
-        .select()
+        .rpc('create_own_class', { p_code: randomClassCode() })
         .single();
-      if (!error) classRow = data;
-      // unique_violation на code — берём другой код и пробуем ещё раз.
-      else if (error.code !== '23505') return NextResponse.json({ error: error.message }, { status: 500 });
+      if (!error) {
+        classRow = data as { id: string; name: string; code: string };
+        break;
+      }
+      classError = error;
+      // unique_violation по коду — берём другой и пробуем ещё раз.
+      if (error.code !== '23505') break;
     }
-    if (!classRow) return NextResponse.json({ error: 'class_code_collision' }, { status: 500 });
 
+    if (!classRow) {
+      return NextResponse.json(
+        { error: classError?.code === '23505' ? 'class_code_collision' : (classError?.message ?? 'class_create_failed') },
+        { status: 500 },
+      );
+    }
+
+    // Профиль перечитываем после привязки, иначе вернём его без class_id.
     const { data: finalProfile } = await supabase
       .from('profiles')
-      .update({ class_id: classRow.id })
+      .select('*')
       .eq('id', user.id)
-      .select()
       .single();
 
     return NextResponse.json({ profile: finalProfile, class: { name: classRow.name, code: classRow.code } });

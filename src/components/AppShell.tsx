@@ -42,7 +42,16 @@ const SHELLESS_ROUTES = ['/login', '/register', '/forgot-password', '/reset-pass
  * Учителю и администратору эти поля не нужны вовсе: у них другие разделы.
  */
 function needsOnboarding(profile: { role: string; grade: number | null; subject_ids: string[] | null } | null) {
-  if (!profile || profile.role !== 'student') return false;
+  if (!profile) return false;
+
+  /*
+    Учителю нужен свой минимум — предметы, которые он ведёт. Без них панель
+    класса открывается на первом предмете из общего списка, а не на его
+    собственном. Класс обучения и цель у него не спрашиваются вовсе.
+  */
+  if (profile.role === 'teacher') return !profile.subject_ids?.length;
+
+  if (profile.role !== 'student') return false;
   return profile.grade == null || !profile.subject_ids?.length;
 }
 

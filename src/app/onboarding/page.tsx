@@ -33,8 +33,9 @@ import { Icon } from '@/components/Icon';
 import { Spinner } from '@/components/motion';
 import { SuccessCheckMark } from '@/components/SuccessCheckMark';
 import { OtpInput, type OtpStatus } from '@/components/ui/otp-input';
+import { fireCelebration } from '@/components/ui/confetti';
 
-type Step = 'classcode' | 'grade' | 'subjects' | 'goal';
+type Step = 'classcode' | 'grade' | 'subjects' | 'goal' | 'classname' | 'teachsubjects';
 
 /*
   Пропустить можно только те шаги, ответ на которые ученик может не знать
@@ -46,6 +47,14 @@ type Step = 'classcode' | 'grade' | 'subjects' | 'goal';
 const SKIPPABLE: Step[] = ['classcode', 'goal'];
 
 const STEP_TITLE: Record<Step, { title: string; hint: string }> = {
+  classname: {
+    title: 'Как называется ваш класс?',
+    hint: 'Ученики увидят это название, когда подключатся по коду. Например: 9А или «Физика, 11 класс».',
+  },
+  teachsubjects: {
+    title: 'Какие предметы вы ведёте?',
+    hint: 'Панель класса откроется сразу на них, а не на первом предмете из списка.',
+  },
   classcode: {
     title: 'Код класса',
     hint: 'Шесть символов от классного руководителя — по ним учитель увидит ваш прогресс. Если кода пока нет, введёте позже в профиле.',
@@ -66,11 +75,12 @@ const STEP_TITLE: Record<Step, { title: string; hint: string }> = {
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const { profile, isSignedIn, loading, refresh } = useSchoolAuth();
+  const { profile, schoolClass, isSignedIn, loading, refresh } = useSchoolAuth();
   const { updateProfile } = useStore();
 
   const [stepIndex, setStepIndex] = useState(0);
   const [classCode, setClassCode] = useState('');
+  const [className, setClassName] = useState('');
   const [grade, setGrade] = useState<Grade | null>(null);
   const [subjectIds, setSubjectIds] = useState<SubjectId[]>([]);
   const [goal, setGoal] = useState<LearningGoal | null>(null);
@@ -89,10 +99,21 @@ export default function OnboardingPage() {
   const [needsClassCode] = useState(
     () => profile?.role === 'student' && !profile.class_id,
   );
-  const steps = useMemo<Step[]>(
-    () => (needsClassCode ? ['classcode', 'grade', 'subjects', 'goal'] : ['grade', 'subjects', 'goal']),
-    [needsClassCode],
-  );
+
+  /*
+    Роль решает, о чём вообще спрашивать. Учителю не нужны класс обучения,
+    предметы «для себя» и цель — ему нужно назвать свой класс и указать,
+    что он ведёт: без этого панель открывается на первом предмете из
+    списка, а у класса остаётся имя по умолчанию «Мой класс», одинаковое
+    у всех школ сразу.
+  */
+  const isTeacher = profile?.role === 'teacher';
+  const steps = useMemo<Step[]>(() => {
+    if (isTeacher) return ['classname', 'teachsubjects'];
+    return needsClassCode
+      ? ['classcode', 'grade', 'subjects', 'goal']
+      : ['grade', 'subjects', 'goal'];
+  }, [isTeacher, needsClassCode]);
 
   const step = steps[Math.min(stepIndex, steps.length - 1)];
   const canSkip = SKIPPABLE.includes(step);
@@ -107,9 +128,23 @@ export default function OnboardingPage() {
       router.replace('/login');
       return;
     }
-    if (profile?.role === 'teacher') router.replace('/teacher');
+    /*
+      Учителя больше не разворачиваем на входе: у него теперь свои шаги.
+      Уходит он отсюда сам, закончив настройку, — или сразу, если она уже
+      сделана (предметы заполнены).
+
+      done в условии обязателен. Сохранение обновляет профиль, предметы
+      становятся непустыми, и этот же эффект тут же увёл бы учителя в
+      панель — поверх галочки и конфетти, которые к тому моменту только
+      начали показываться. Пока идёт поздравление, уходом распоряжается
+      finish(), а не эффект.
+    */
+    if (done) return;
+    if (profile?.role === 'teacher' && profile.subject_ids?.length) {
+      router.replace('/teacher');
+    }
     if (profile?.role === 'admin') router.replace('/admin');
-  }, [loading, isSignedIn, profile?.role, router]);
+  }, [loading, isSignedIn, done, profile?.role, profile?.subject_ids?.length, router]);
 
   /*
     Подставляем то, что уже есть в профиле: сюда попадают и те, кто зашёл
@@ -128,12 +163,25 @@ export default function OnboardingPage() {
     if (profile.goal) setGoal(profile.goal as LearningGoal);
   }
 
+  /*
+    Имя класса подставляем отдельно: оно живёт не в профиле, а в classes,
+    и приходит своим полем контекста. Значение по умолчанию не
+    подставляем — иначе учитель «подтвердит» его не глядя, и мы получим
+    ещё один класс с именем «Мой класс».
+  */
+  const [prefilledClassFor, setPrefilledClassFor] = useState<string | null>(null);
+  if (schoolClass && prefilledClassFor !== schoolClass.code) {
+    setPrefilledClassFor(schoolClass.code);
+    if (schoolClass.name && schoolClass.name !== 'Мой класс') setClassName(schoolClass.name);
+  }
+
   const canContinue = useMemo(() => {
     if (step === 'classcode') return classCode.trim().length > 0;
+    if (step === 'classname') return className.trim().length > 0;
     if (step === 'grade') return grade !== null;
-    if (step === 'subjects') return subjectIds.length > 0;
+    if (step === 'subjects' || step === 'teachsubjects') return subjectIds.length > 0;
     return goal !== null;
-  }, [step, classCode, grade, subjectIds, goal]);
+  }, [step, classCode, className, grade, subjectIds, goal]);
 
   /**
    * Присоединение к классу по коду.
@@ -175,7 +223,50 @@ export default function OnboardingPage() {
    * ушёл, план хотя бы знает программу. Поля, которых нет, просто не
    * попадают в запрос, а не перетирают уже сохранённое нулями.
    */
+  /**
+   * Сохранение настроек учителя: имя класса и предметы, которые он ведёт.
+   *
+   * Имя класса меняется функцией в базе, а не обычным обновлением: у
+   * classes нет политики на UPDATE вовсе (то есть правка запрещена всем),
+   * а поколоночные гранты открыты целиком — политика на UPDATE заодно
+   * позволила бы переписать владельца класса и его код.
+   */
+  async function persistTeacher(): Promise<boolean> {
+    const name = className.trim();
+    const supabase = createClient();
+
+    if (name) {
+      const { error: rpcError } = await supabase.rpc('rename_own_class', { p_name: name });
+      if (rpcError) {
+        setError('Не удалось сохранить название класса. Попробуйте ещё раз.');
+        return false;
+      }
+    }
+
+    if (subjectIds.length > 0) {
+      try {
+        const res = await fetch('/api/profile', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ subjectIds }),
+        });
+        if (!res.ok) {
+          setError('Не удалось сохранить предметы. Проверьте связь и попробуйте ещё раз.');
+          return false;
+        }
+      } catch {
+        setError('Не удалось сохранить предметы. Проверьте связь и попробуйте ещё раз.');
+        return false;
+      }
+    }
+
+    await refresh(true);
+    return true;
+  }
+
   async function persist(): Promise<boolean> {
+    if (isTeacher) return persistTeacher();
+
     const patch: Record<string, unknown> = {};
     if (grade !== null) patch.grade = grade;
     if (subjectIds.length > 0) patch.subjectIds = subjectIds;
@@ -221,11 +312,16 @@ export default function OnboardingPage() {
     setSaving(false);
     if (!ok) return;
 
-    // Показываем галочку и только потом уходим — переход без подтверждения
-    // читается как «ничего не сохранилось».
+    /*
+      Галочка, конфетти и только потом переход. Мгновенный уход без
+      подтверждения читается как «ничего не сохранилось», а поздравить
+      человека имеет смысл ровно один раз — когда анкета действительно
+      заполнена, а не на каждом шаге.
+    */
     setDone(true);
+    fireCelebration();
     setTimeout(() => {
-      router.replace('/dashboard');
+      router.replace(isTeacher ? '/teacher' : '/dashboard');
       router.refresh();
     }, 1100);
   }
@@ -264,7 +360,13 @@ export default function OnboardingPage() {
     await finish();
   }
 
-  if (loading || !isSignedIn || profile?.role === 'teacher' || profile?.role === 'admin') {
+  /*
+    Спиннер только тем, кому здесь действительно нечего делать: пока грузимся,
+    гостю, администратору и учителю, который настройку уже прошёл (его в этот
+    момент уводит эффект выше). Учитель без предметов остаётся на своих шагах.
+  */
+  const teacherDone = isTeacher && !!profile?.subject_ids?.length;
+  if (loading || !isSignedIn || profile?.role === 'admin' || teacherDone) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Spinner />
@@ -333,6 +435,71 @@ export default function OnboardingPage() {
               }
             }}
           />
+        )}
+
+        {step === 'classname' && (
+          <div className="max-w-md">
+            <label htmlFor="class-name" className="block text-sm font-semibold text-ink-700">
+              Название класса
+            </label>
+            <input
+              id="class-name"
+              value={className}
+              onChange={(event) => setClassName(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' && canContinue && !saving) next();
+              }}
+              maxLength={60}
+              autoFocus
+              placeholder="Например: 9А"
+              className="mt-2 h-12 w-full rounded-[var(--radius-control)] border-2 border-ink-200 bg-white px-4 text-base text-ink-900 outline-none transition-colors focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
+            />
+            {schoolClass && (
+              <p className="mt-3 text-sm text-ink-500">
+                Код для подключения учеников:{' '}
+                <span className="font-mono font-bold tracking-widest text-brand-600">
+                  {schoolClass.code}
+                </span>
+              </p>
+            )}
+          </div>
+        )}
+
+        {step === 'teachsubjects' && (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {SUBJECTS.map((subject) => {
+              const active = subjectIds.includes(subject.id);
+              return (
+                <button
+                  key={subject.id}
+                  type="button"
+                  onClick={() => toggleSubject(subject.id)}
+                  aria-pressed={active}
+                  className={`flex items-center gap-3 rounded-[var(--radius-control)] border-2 p-4 text-left transition-all ${
+                    active
+                      ? 'border-brand-500 bg-brand-50 shadow-[var(--shadow-rest)]'
+                      : 'border-ink-200 bg-white hover:border-brand-300'
+                  }`}
+                >
+                  <span
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-control)] text-white"
+                    style={{ backgroundColor: subject.accent }}
+                  >
+                    <Icon name={subject.icon} size={20} />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-bold text-ink-900">{subject.title}</span>
+                    <span className="mt-0.5 block text-xs text-ink-500">{subject.topics.length} тем</span>
+                  </span>
+                  {active && (
+                    <span className="text-brand-600">
+                      <Icon name="check" size={18} />
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         )}
 
         {step === 'grade' && (

@@ -17,6 +17,7 @@ import type { SocraticRequest, SocraticResponse } from '@/lib/ai/contracts';
 import type { Dict } from '@/lib/i18n';
 import { useStore } from '@/components/StoreProvider';
 import { AiBadge } from '@/components/AiBadge';
+import { AiAnswer, AiTextScaleControl, useAiTextScale } from '@/components/AiAnswer';
 import { Icon } from '@/components/Icon';
 import { Badge, Button, ButtonLink, EmptyState, Panel, RailRow, Skeleton } from '@/components/ui';
 
@@ -113,6 +114,7 @@ export function MaterialClient({ materialId }: { materialId: string }) {
   const material = getMaterial(materialId);
 
   const [taskIndex, setTaskIndex] = useState(0);
+  const [aiScale, setAiScale] = useAiTextScale();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState('');
   const [loading, setLoading] = useState(false);
@@ -273,6 +275,10 @@ export function MaterialClient({ materialId }: { materialId: string }) {
             {t.mentor}
           </p>
           <p className="leading-relaxed text-ink-700">{task.opening}</p>
+          {/* Кегль разбора настраивается там же, где его читают. */}
+          <div className="mt-3">
+            <AiTextScaleControl scale={aiScale} onChange={setAiScale} />
+          </div>
         </div>
 
         {messages.map((message, index) => (
@@ -289,7 +295,9 @@ export function MaterialClient({ materialId }: { materialId: string }) {
                 <div className="mb-2">
                   <AiBadge live={message.live ?? false} />
                 </div>
-                <p className="whitespace-pre-line leading-relaxed text-ink-700">{message.content}</p>
+                {/* Разбор наставника рисуется структурой, а не сплошным
+                    текстом: см. src/components/AiAnswer.tsx */}
+                <AiAnswer text={message.content} scale={aiScale} />
               </div>
             )}
           </div>

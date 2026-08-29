@@ -19,7 +19,8 @@ import type { Listing, ListingType } from '@/lib/listings';
 import type { Dict } from '@/lib/i18n';
 import { useStore } from '@/components/StoreProvider';
 import { Icon } from '@/components/Icon';
-import { Badge, Card, EmptyState, Kicker } from '@/components/ui';
+import { EmptyState, Kicker } from '@/components/ui';
+import { OpportunityCard } from '@/components/ui/opportunity-card';
 import { createClient } from '@/lib/supabase/client';
 import { PublishAction } from '@/components/PublishAction';
 
@@ -264,144 +265,55 @@ export default function MarketplacePage() {
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {sorted.map((listing) => {
             const meta = LISTING_TYPES.find((type) => type.id === listing.type);
-            return (
-              /*
-                Карточка — ссылка на само объявление.
 
-                Страница /marketplace/[id] существовала и раньше (её открывали
-                из очереди модерации), но со списка на неё не вело ничего:
-                карточка подсвечивалась при наведении, картинка увеличивалась —
-                то есть обещала нажатие, — а нажимать было не на что. Всё
-                описание, расписание и контакты остаются на детальной
-                странице, здесь им тесно.
-              */
+            /*
+              Короткая строка справа от метки собирается из того, что
+              действительно есть у объявления: цена, формат и остаток мест.
+              Пустые части не дают «· ·» посреди строки.
+            */
+            const metaParts = [
+              listing.price === null
+                ? t.free
+                : `${listing.price.toLocaleString('ru-RU')} ${t.perLesson}${
+                    listing.priceNote ? ` / ${listing.priceNote}` : ''
+                  }`,
+              formatLabel[listing.format],
+              listing.spots !== undefined
+                ? listing.spots > 0
+                  ? t.spots(listing.spots)
+                  : t.noSpots
+                : null,
+            ].filter(Boolean) as string[];
+
+            return (
               <Link
                 key={listing.id}
                 href={`/marketplace/${listing.id}`}
-                className="group block h-full rounded-[var(--radius-card)] outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                className="group block h-full rounded-3xl outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
               >
-                <Card
-                  className="flex h-full flex-col overflow-hidden p-0 transition-all duration-300 hover:shadow-[var(--shadow-lift)]"
-                >
-                {/*
-                  Обложка, если её загрузили при публикации, иначе — цветной
-                  баннер с иконкой вида, как на афише.
-
-                  Поле загрузки в форме публикации существовало и раньше, но
-                  сюда, на саму карточку, картинка не попадала никогда: вью
-                  запроса просто не забирала колонку cover_path. То есть
-                  человек загружал фото, оно сохранялось в хранилище, а
-                  увидеть его на «Возможностях» было негде.
-                */}
-                {/*
-                  Обложка в пропорции 16:10, а не полосой в 96 пикселей.
-
-                  Узкая полоса срезала у любой фотографии всё, кроме тонкого
-                  пояса по центру: лица, доски, залы — всё уходило за кадр, и
-                  снимок переставал что-либо сообщать. Фиксированная
-                  пропорция вместо фиксированной высоты ещё и держит ряд
-                  ровным на любой ширине колонки.
-                */}
-                <div
-                  className={`relative flex aspect-[16/10] items-center justify-center overflow-hidden ${
-                    listing.coverUrl ? 'bg-ink-100' : TYPE_BANNER[listing.type]
-                  }`}
-                >
-                  {listing.coverUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element -- внешний бакет, домен для next/image не настроен
-                    <img
-                      src={listing.coverUrl}
-                      alt=""
-                      loading="lazy"
-                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    />
-                  ) : (
-                    meta && (
-                      <Icon
-                        name={meta.icon}
-                        size={34}
-                        className="text-white/85 transition-transform duration-500 group-hover:scale-110"
-                      />
-                    )
-                  )}
-                  <span className="absolute right-3 top-3">
-                    <Badge tone={listing.price === null ? 'success' : 'neutral'} className="tabular-nums">
-                      {listing.price === null
-                        ? t.free
-                        : `${listing.price.toLocaleString('ru-RU')} ${t.perLesson}${
-                            listing.priceNote ? ` / ${listing.priceNote}` : ''
-                          }`}
-                    </Badge>
-                  </span>
-                </div>
-
-                <div className="flex flex-1 flex-col p-5 sm:p-6">
-                  <Badge tone="brand" className="w-fit">
-                    {meta && <Icon name={meta.icon} size={14} />}
-                    {meta?.title[state.language]}
-                  </Badge>
-
-                  <h2 className="mt-3 line-clamp-2 font-bold text-ink-900">{listing.title}</h2>
-                  <p className="mt-2 text-sm text-ink-400">
-                    {listing.authorName} · {listing.authorRole}
-                  </p>
-                  <p className="mt-2 line-clamp-2 text-sm text-ink-600">{listing.description}</p>
-
-                  <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink-500">
-                    <span>{listing.category}</span>
-                    <span aria-hidden>·</span>
-                    <span>{formatLabel[listing.format]}</span>
-                    {listing.spots !== undefined && (
-                      <>
-                        <span aria-hidden>·</span>
-                        <span
-                          className={`tabular-nums ${
-                            listing.spots > 0 ? 'font-semibold text-success-700' : 'text-ink-400'
-                          }`}
-                        >
-                          {listing.spots > 0 ? t.spots(listing.spots) : t.noSpots}
-                        </span>
-                      </>
-                    )}
-                  </p>
-
-                  {/* Подробности и действие прибиты к низу — карточки в ряду
-                      выравниваются по нижнему краю независимо от длины текста */}
-                  <div className="mt-auto pt-4">
-                    <dl className="space-y-2 border-t border-ink-200 pt-4 text-sm">
-                      <div className="flex gap-2">
-                        <dt className="shrink-0 text-ink-400">{t.schedule}:</dt>
-                        <dd className="text-ink-700">{listing.schedule}</dd>
-                      </div>
-                      <div className="flex gap-2">
-                        <dt className="shrink-0 text-ink-400">{t.contact}:</dt>
-                        <dd className="text-ink-700">{listing.contact}</dd>
-                      </div>
-                    </dl>
-
-                    <p
-                      className={`mt-4 flex items-center gap-2 text-xs ${
+                <OpportunityCard
+                  headline={listing.title}
+                  excerpt={listing.description}
+                  cover={listing.coverUrl}
+                  fallbackClassName={TYPE_BANNER[listing.type]}
+                  fallbackIcon={meta?.icon}
+                  tag={meta?.title[state.language]}
+                  tagIcon={meta?.icon}
+                  meta={metaParts.join(' · ')}
+                  writer={listing.authorName}
+                  writerRole={listing.authorRole}
+                  action={t.more}
+                  footerNote={
+                    <span
+                      className={`inline-flex items-center gap-1.5 text-xs ${
                         listing.verified ? 'font-semibold text-success-700' : 'text-ink-400'
                       }`}
                     >
                       <Icon name={listing.verified ? 'check' : 'close'} size={14} />
                       {listing.verified ? t.verified : t.unverified}
-                    </p>
-                    {!listing.verified && <p className="mt-2 text-xs text-ink-400">{t.unverifiedHint}</p>}
-
-                    {/* Явная подпись к нажатию: подсветка при наведении есть
-                        только у мыши, а на телефоне её не существует. */}
-                    <span className="mt-4 flex items-center gap-1.5 text-sm font-semibold text-brand-600">
-                      {t.more}
-                      <Icon
-                        name="arrowRight"
-                        size={15}
-                        className="transition-transform duration-200 group-hover:translate-x-1"
-                      />
                     </span>
-                  </div>
-                </div>
-                </Card>
+                  }
+                />
               </Link>
             );
           })}

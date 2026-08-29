@@ -19,6 +19,7 @@ import type { Dict } from '@/lib/i18n';
 import { useStore } from '@/components/StoreProvider';
 import { createClient } from '@/lib/supabase/client';
 import { AiBadge } from '@/components/AiBadge';
+import { AiAnswer, AiTextScaleControl, useAiTextScale } from '@/components/AiAnswer';
 import { Icon } from '@/components/Icon';
 import { Badge, Button, ButtonLink, EmptyState, Panel, RailRow, Skeleton } from '@/components/ui';
 
@@ -131,6 +132,7 @@ export function CommunityMaterialClient({ materialId }: { materialId: string }) 
   const t = TEXT[state.language];
 
   const [material, setMaterial] = useState<CommunityMaterial | null | undefined>(undefined);
+  const [aiScale, setAiScale] = useAiTextScale();
   const [taskIndex, setTaskIndex] = useState(0);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState('');
@@ -277,6 +279,10 @@ export function CommunityMaterialClient({ materialId }: { materialId: string }) 
             {t.mentor}
           </p>
           <p className="leading-relaxed text-ink-700">{task.opening}</p>
+          {/* Кегль разбора настраивается там же, где его читают. */}
+          <div className="mt-3">
+            <AiTextScaleControl scale={aiScale} onChange={setAiScale} />
+          </div>
         </div>
 
         {messages.map((message, index) => (
@@ -293,7 +299,9 @@ export function CommunityMaterialClient({ materialId }: { materialId: string }) 
                 <div className="mb-2">
                   <AiBadge live={message.live ?? false} />
                 </div>
-                <p className="whitespace-pre-line leading-relaxed text-ink-700">{message.content}</p>
+                {/* Разбор наставника рисуется структурой, а не сплошным
+                    текстом: см. src/components/AiAnswer.tsx */}
+                <AiAnswer text={message.content} scale={aiScale} />
               </div>
             )}
           </div>
