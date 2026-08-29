@@ -74,11 +74,17 @@ export async function getServerProfile(): Promise<ServerProfileResult> {
 
   if (!user) return { profile: null, email: null, emailConfirmed: false, schoolClass: null };
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .maybeSingle();
+  /*
+    Свой профиль читается функцией с правами владельца, а не обычным
+    select. Телефон закрыт правом на колонку — иначе его читал бы любой
+    одноклассник, ведь RLS работает построчно и строку показывает целиком.
+    Грант выдаётся роли, а не строке, поэтому без этой функции владелец не
+    увидел бы и собственный номер.
+  */
+  const { data: rawProfile } = await supabase.rpc('get_own_profile').maybeSingle();
+  // rpc не знает формы возвращаемой строки, поэтому тип задаём здесь —
+  // ровно тот же, что и раньше отдавал select('*').
+  const profile = (rawProfile as ServerProfile | null) ?? null;
 
   let schoolClass: ServerSchoolClass | null = null;
   if (profile?.class_id) {
@@ -91,7 +97,7 @@ export async function getServerProfile(): Promise<ServerProfileResult> {
   }
 
   return {
-    profile: (profile as ServerProfile | null) ?? null,
+    profile,
     email: user.email ?? null,
     emailConfirmed: user.email_confirmed_at !== null && user.email_confirmed_at !== undefined,
     schoolClass,

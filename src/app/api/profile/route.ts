@@ -199,15 +199,21 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: 'nothing_to_update' }, { status: 400 });
   }
 
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from('profiles')
     .update(patch)
-    .eq('id', user.id)
-    .select()
-    .single();
+    .eq('id', user.id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 403 });
-  return NextResponse.json({ profile: data });
+
+  /*
+    Читаем профиль отдельным вызовом, а не через RETURNING.
+    Телефон закрыт правом на колонку, поэтому select('*') на profiles
+    больше не проходит даже у владельца: грант выдан роли, а не строке.
+    Функция с правами владельца отдаёт свою строку целиком.
+  */
+  const { data: updated } = await supabase.rpc('get_own_profile').maybeSingle();
+  return NextResponse.json({ profile: updated ?? null });
 }
 
 export async function POST(request: Request) {
@@ -273,11 +279,8 @@ export async function POST(request: Request) {
     }
 
     // Профиль перечитываем после привязки, иначе вернём его без class_id.
-    const { data: finalProfile } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single();
+    // Та же причина, что и выше: свою строку читаем функцией.
+    const { data: finalProfile } = await supabase.rpc('get_own_profile').maybeSingle();
 
     return NextResponse.json({ profile: finalProfile, class: { name: classRow.name, code: classRow.code } });
   }
@@ -308,15 +311,17 @@ export async function POST(request: Request) {
     cls = data;
   }
 
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from('profiles')
-    .insert({ id: user.id, role, name, class_id: cls?.id ?? null })
-    .select()
-    .single();
+    .insert({ id: user.id, role, name, class_id: cls?.id ?? null });
 
   if (error) return NextResponse.json(await describeInsertError(supabase, error, { role, email: user.email ?? "" }), { status: 403 });
+
+  // Созданную строку читаем функцией: RETURNING не проходит, потому что
+  // телефон закрыт правом на колонку (см. get_own_profile).
+  const { data: created } = await supabase.rpc('get_own_profile').maybeSingle();
   return NextResponse.json({
-    profile: data,
+    profile: created ?? null,
     class: cls ? { name: cls.name, code: cls.code } : null,
   });
 }
