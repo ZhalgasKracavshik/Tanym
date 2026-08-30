@@ -135,6 +135,15 @@ export function LandingAuthBanner({ language }: { language: Language }) {
       if (!result.ok) setError(describeRoleError(result.error, result.domains));
     }
 
+    /** Профиль ученика без класса: код доспросим позже, в мастере. */
+    async function submitWithoutCode() {
+      setError(null);
+      setSubmitting(true);
+      const result = await chooseRole('student', '');
+      setSubmitting(false);
+      if (!result.ok) setError(describeRoleError(result.error, result.domains));
+    }
+
     if (pendingRole === 'student') {
       return shell(
         <div>
@@ -156,6 +165,27 @@ export function LandingAuthBanner({ language }: { language: Language }) {
               {t.back}
             </Button>
           </div>
+
+          {/*
+            Выход для тех, у кого кода ещё нет.
+
+            Код выдаёт учитель, и в первый день у половины класса его на
+            руках не бывает. Без этой кнопки такой ученик оказывался заперт
+            намертво: профиль не создать без кода, «Я учитель» упрётся в
+            проверку школьной почты, а повторная регистрация ответит, что
+            почта уже занята. Сервер профиль без класса создавать умеет —
+            не хватало только способа об этом попросить. Код потом
+            вводится в мастере или в профиле.
+          */}
+          <button
+            type="button"
+            onClick={() => submitWithoutCode()}
+            disabled={submitting}
+            className="mt-3 rounded-lg text-sm font-semibold text-brand-600 underline-offset-2 hover:underline disabled:opacity-50"
+          >
+            У меня пока нет кода
+          </button>
+
           {error && <p className="mt-2 text-sm font-semibold text-danger-600">{error}</p>}
         </div>
       );

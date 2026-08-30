@@ -44,7 +44,7 @@ type Step = 'classcode' | 'grade' | 'subjects' | 'goal' | 'classname' | 'teachsu
   себя знает всегда, и без них персонализация не считается вовсе, поэтому
   там «Позже» не показываем.
 */
-const SKIPPABLE: Step[] = ['classcode', 'goal'];
+const SKIPPABLE: Step[] = ['classcode', 'goal', 'classname'];
 
 const STEP_TITLE: Record<Step, { title: string; hint: string }> = {
   classname: {
@@ -235,14 +235,17 @@ export default function OnboardingPage() {
     const name = className.trim();
     const supabase = createClient();
 
-    if (name) {
-      const { error: rpcError } = await supabase.rpc('rename_own_class', { p_name: name });
-      if (rpcError) {
-        setError('Не удалось сохранить название класса. Попробуйте ещё раз.');
-        return false;
-      }
-    }
+    /*
+      Предметы сохраняем ПЕРВЫМИ, и только их неудача блокирует мастер.
 
+      Порядок был обратным, и это запирало учителя намертво: если
+      переименование класса падало (например, строки класса ещё нет),
+      функция выходила до сохранения предметов. А выход из мастера
+      определяется именно предметами — пустой subject_ids заставляет
+      AppShell вернуть учителя сюда с любой страницы, навигации на этом
+      экране нет, и пропустить шаг нечем. Название класса такого веса не
+      имеет: его можно поправить позже в профиле.
+    */
     if (subjectIds.length > 0) {
       try {
         const res = await fetch('/api/profile', {
@@ -260,7 +263,20 @@ export default function OnboardingPage() {
       }
     }
 
+    // Название — по возможности. Не вышло — говорим об этом, но мастер
+    // завершаем: держать человека взаперти из-за подписи класса нельзя.
+    let renameFailed = false;
+    if (name) {
+      const { error: rpcError } = await supabase.rpc('rename_own_class', { p_name: name });
+      renameFailed = Boolean(rpcError);
+    }
+
     await refresh(true);
+
+    if (renameFailed) {
+      setError('Предметы сохранены, а название класса — нет. Его можно задать позже в профиле.');
+    }
+
     return true;
   }
 

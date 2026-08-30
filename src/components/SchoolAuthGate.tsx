@@ -164,6 +164,23 @@ export function SchoolAuthGate({ requireRole, language, children }: SchoolAuthGa
       }
     }
 
+    /*
+      Профиль ученика без класса. Код выдаёт учитель, и в первый день его
+      на руках может не быть — без этого выхода человек заперт: профиль не
+      создать, «Я учитель» упрётся в школьную почту, а повторная
+      регистрация ответит, что почта занята. Код доспрашивается позже.
+    */
+    async function submitWithoutCode() {
+      setSubmitError(null);
+      setSubmitting(true);
+      const result = await chooseRole('student', '');
+      setSubmitting(false);
+      if (!result.ok) {
+        setSubmitDomains(result.domains);
+        setSubmitError(result.error ?? 'class_not_found');
+      }
+    }
+
     if (pendingRole === 'student') {
       return (
         <div className="rounded-xl border border-ink-200 bg-ink-50 p-5">
@@ -196,6 +213,14 @@ export function SchoolAuthGate({ requireRole, language, children }: SchoolAuthGa
             <Button variant="ghost" onClick={() => setPendingRole(null)}>
               {t.back}
             </Button>
+            <button
+              type="button"
+              onClick={() => submitWithoutCode()}
+              disabled={submitting}
+              className="rounded-lg px-2 text-sm font-semibold text-brand-600 underline-offset-2 hover:underline disabled:opacity-50"
+            >
+              У меня пока нет кода
+            </button>
           </div>
         </div>
       );

@@ -16,7 +16,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { emptyState, loadState, saveState, clearState, createId, STORAGE_KEY } from '@/lib/storage';
-import { applyAttemptToProgress, nextDifficulty, pointsForAttempt } from '@/lib/personalization';
+import { applyAttemptToProgress, awardsPoints, nextDifficulty, pointsForAttempt } from '@/lib/personalization';
 import { almatyDateIso, almatyYesterdayIso } from '@/lib/date';
 import type {
   AppState,
@@ -133,11 +133,25 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const recordAttempt = useCallback((attempt: Omit<TaskAttempt, 'at'>, topicTaskCount: number) => {
     setState((previous) => {
       const full: TaskAttempt = { ...attempt, at: new Date().toISOString() };
+
+      /*
+        Баллы — только за первое верное решение задания.
+
+        Раньше начислялось за каждый верный ответ, а задание можно решать
+        сколько угодно раз: на экране итога есть «Пройти ещё раз», ответы
+        уже известны. Один и тот же круг из шести задач поднимал очки
+        бесконечно, и в школьном рейтинге такой ученик обходил тех, кто
+        решал честно, — сравнивать баллы становилось бессмысленно.
+        Повторный проход остаётся тренировкой: попытка записывается,
+        мастерство пересчитывается, очки не капают.
+      */
+      const earnsPoints = awardsPoints(previous.attempts, full.taskId);
+
       const withAttempt: AppState = {
         ...previous,
         attempts: [...previous.attempts, full],
         topicProgress: applyAttemptToProgress(previous.topicProgress, full, topicTaskCount),
-        points: previous.points + pointsForAttempt(full.correct, full.difficulty),
+        points: previous.points + (earnsPoints ? pointsForAttempt(full.correct, full.difficulty) : 0),
         streak: updateStreak(previous.streak),
       };
 

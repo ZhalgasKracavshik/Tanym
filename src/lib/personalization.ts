@@ -27,6 +27,7 @@ import type {
   Subject,
   Task,
   TaskAttempt,
+  TaskId,
   Topic,
   TopicId,
 } from './types';
@@ -469,6 +470,22 @@ export function applyAttemptToProgress(
 }
 
 /** Очки за верный ответ: чем сложнее задание, тем больше. Основа геймификации. */
+/**
+ * Начислять ли баллы за эту попытку.
+ *
+ * Баллы даются только за ПЕРВОЕ верное решение задания. Задание можно
+ * проходить сколько угодно раз — на экране итога есть «Пройти ещё раз», и
+ * ответы к этому моменту уже известны. Без этой проверки один и тот же
+ * круг задач поднимал очки бесконечно, и школьный рейтинг переставал
+ * что-либо значить: накрутивший обходил тех, кто решал честно.
+ *
+ * Повторный проход остаётся тренировкой: попытка записывается, мастерство
+ * пересчитывается, очки не капают.
+ */
+export function awardsPoints(attempts: TaskAttempt[], taskId: TaskId): boolean {
+  return !attempts.some((attempt) => attempt.taskId === taskId && attempt.correct);
+}
+
 export function pointsForAttempt(correct: boolean, difficulty: Difficulty): number {
   return correct ? difficulty * 10 : 0;
 }

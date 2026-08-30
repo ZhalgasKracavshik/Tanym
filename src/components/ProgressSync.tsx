@@ -32,6 +32,36 @@ export function ProgressSync() {
     // у гостя и у учителя своего прогресса для мониторинга нет.
     if (!hydrated || !profile || profile.role !== 'student') return;
 
+    /*
+      Пустой снимок наверх не уходит НИКОГДА.
+
+      Локальный прогресс лежит в localStorage, а строка student_progress на
+      сервере одна на ученика. Стоило открыть Tanym на другом компьютере —
+      в школьном классе, в другом браузере, после очистки кэша — как
+      loadState отдавал пустое состояние, эффект срабатывал на самой
+      гидратации, и через четыре секунды, без единого действия человека,
+      его настоящие баллы, серия и разобранные темы затирались нулями.
+      Сервер был единственной копией: восстанавливать нечем.
+
+      Та же строка защищает кнопку «Сбросить локальные данные»: она обещает
+      очистить прогресс «в этом браузере», и обещание нужно сдержать — до
+      этой проверки она заодно обнуляла место в школьном рейтинге и всю
+      статистику у учителя.
+
+      Отправлять нечего — значит и запроса нет. Как только ученик решит
+      хотя бы одно задание, состояние перестанет быть пустым и синхронизация
+      пойдёт обычным порядком.
+    */
+    const hasLocalActivity =
+      state.attempts.length > 0 ||
+      state.points > 0 ||
+      state.streak.current > 0 ||
+      state.streak.longest > 0 ||
+      Object.keys(state.diagnostics).length > 0 ||
+      Object.keys(state.topicProgress).length > 0;
+
+    if (!hasLocalActivity) return;
+
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => {
       const mastery = computeSkillMastery(state);

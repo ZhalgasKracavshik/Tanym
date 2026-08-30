@@ -134,6 +134,34 @@ function ProfileContent() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [savedAlert, setSavedAlert] = useState(false);
   const [savedTick, setSavedTick] = useState(0);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  /*
+    Черновики множественных наборов.
+
+    Отметки предметов, интересов и дней считались от значения, пришедшего
+    с сервера, а оно обновляется только после ответа PATCH. Три быстрых
+    клика подряд читали одну и ту же исходную пустоту и уходили тремя
+    запросами вида ['math'], ['physics'], ['history'] — в базе оставался
+    последний, то есть один предмет вместо трёх. Пока ответ не пришёл,
+    источник истины — то, что человек уже нажал.
+  */
+  const [subjectsDraft, setSubjectsDraft] = useState<string[] | null>(null);
+  const [interestsDraft, setInterestsDraft] = useState<string[] | null>(null);
+  const [daysDraft, setDaysDraft] = useState<number[] | null>(null);
+
+  /*
+    Те же наборы, но в ref — и это не дубль состояния, а необходимость.
+
+    Состояние обновляется к следующему рендеру, а два клика подряд успевают
+    произойти в одном такте: второй обработчик читает замыкание первого
+    рендера и не видит только что сделанного выбора. Проверено вживую —
+    два быстрых клика сохраняли один предмет вместо двух. Ref меняется
+    синхронно, поэтому следующий клик в том же такте считает от него.
+  */
+  const subjectsRef = useRef<string[] | null>(null);
+  const interestsRef = useRef<string[] | null>(null);
+  const daysRef = useRef<number[] | null>(null);
 
   // Редактирование имени
   const [editingName, setEditingName] = useState(false);
@@ -201,7 +229,7 @@ function ProfileContent() {
 
   const socialLinks = socialDraft ?? parseSocialLinks(schoolProfile?.social_links);
   const currentGrade = (schoolProfile?.grade ?? state.profile?.grade ?? 10) as Grade;
-  const currentSubjects = schoolProfile?.subject_ids ?? state.profile?.subjectIds ?? ['math'];
+  const currentSubjects = subjectsDraft ?? schoolProfile?.subject_ids ?? state.profile?.subjectIds ?? ['math'];
   const currentGoal = (schoolProfile?.goal ?? state.profile?.goal ?? 'ent') as LearningGoal;
   const currentTargetDate = schoolProfile?.target_date ?? state.profile?.targetDate ?? '';
 
@@ -235,25 +263,61 @@ function ProfileContent() {
     setTimeout(() => setSavedAlert(false), 3000);
   }
 
-  function save(patch: Parameters<typeof updateProfile>[0], remote: Record<string, unknown>) {
+  /**
+   * Сохранение поля профиля.
+   *
+   * Плашка «Изменения успешно сохранены» показывается ТОЛЬКО после
+   * успешного ответа. Раньше она рисовалась до запроса и не зависела от
+   * него вовсе: протухшая сессия давала 401, ошибка глоталась пустым
+   * catch, а человек видел зелёное «сохранено» — и терял введённое,
+   * ничего об этом не узнав.
+   */
+  async function save(
+    patch: Parameters<typeof updateProfile>[0],
+    remote: Record<string, unknown>,
+  ): Promise<boolean> {
+    // Локальную копию меняем сразу: экран не должен ждать сети.
     updateProfile(patch);
-    triggerSaveFeedback();
-    if (!schoolProfile) return;
-    fetch('/api/profile', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(remote),
-    })
+    setSaveError(null);
+
+    // Без школьного профиля сохранять некуда — правка чисто локальная.
+    if (!schoolProfile) {
+      triggerSaveFeedback();
+      return true;
+    }
+
+    try {
+      const res = await fetch('/api/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(remote),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        setSaveError(
+          data?.error === 'not_authenticated'
+            ? 'Сессия истекла — войдите заново, изменения не сохранены.'
+            : data?.error === 'invalid_phone'
+              ? 'Проверьте номер телефона: изменения не сохранены.'
+              : 'Не удалось сохранить. Проверьте связь и попробуйте ещё раз.',
+        );
+        return false;
+      }
+
+      triggerSaveFeedback();
       /*
         Тихое обновление. refresh() без флага поднимает loading, а на нём
         завязан скелетон в начале этой же страницы: выбор класса или
         предмета гасил всю страницу и рисовал её заново — со стороны это
-        выглядело как полная перезагрузка на каждое нажатие. Данные на
-        экране уже поменялись оптимистично через updateProfile, так что
-        ждать и мигать здесь нечем.
+        выглядело как полная перезагрузка на каждое нажатие.
       */
-      .then(() => refresh(true))
-      .catch(() => {});
+      await refresh(true);
+      return true;
+    } catch {
+      setSaveError('Не удалось сохранить. Проверьте связь и попробуйте ещё раз.');
+      return false;
+    }
   }
 
   /**
@@ -351,10 +415,20 @@ function ProfileContent() {
     save({}, { socialLinks: next });
   }
 
-  function toggleSubject(id: string) {
-    const current = currentSubjects;
-    const updated = current.includes(id) ? current.filter((item) => item !== id) : [...current, id];
-    if (updated.length > 0) save({ subjectIds: updated }, { subjectIds: updated });
+  async function toggleSubject(id: string) {
+    const base = subjectsRef.current ?? currentSubjects;
+    const updated = base.includes(id) ? base.filter((item) => item !== id) : [...base, id];
+    // Хотя бы один предмет обязателен: без них план строить не из чего.
+    if (updated.length === 0) return;
+
+    subjectsRef.current = updated;
+    setSubjectsDraft(updated);
+    const ok = await save({ subjectIds: updated }, { subjectIds: updated });
+    // Не сохранилось — возвращаем отметки к тому, что реально в базе.
+    if (!ok) {
+      subjectsRef.current = null;
+      setSubjectsDraft(null);
+    }
   }
 
   async function changePassword() {
@@ -569,8 +643,18 @@ function ProfileContent() {
         </div>
       </Reveal>
 
+      {/* Ошибка сохранения — важнее успеха, поэтому выше него */}
+      {saveError && (
+        <div className="mt-4 flex items-center gap-3 rounded-[var(--radius-control)] border border-danger-200 bg-danger-50 px-4 py-3">
+          <span className="shrink-0 text-danger-600">
+            <Icon name="alert" size={18} />
+          </span>
+          <span className="text-sm font-semibold text-danger-700">{saveError}</span>
+        </div>
+      )}
+
       {/* Уведомление об успешном сохранении */}
-      {savedAlert && (
+      {savedAlert && !saveError && (
         <div className="mt-4 flex items-center gap-3 rounded-[var(--radius-control)] border border-success-200 bg-success-50 px-4 py-3">
           {/*
             key по счётчику: без него React переиспользует тот же узел при
@@ -726,21 +810,24 @@ function ProfileContent() {
                   <p className="mt-1 text-xs text-ink-500">По ним подбираются конкурсы, кружки и дополнительные темы.</p>
                   <div className="mt-3 flex flex-wrap gap-2">
                     {INTERESTS.map((interest) => {
-                      const current = schoolProfile?.interests ?? [];
+                      const current = interestsDraft ?? schoolProfile?.interests ?? [];
                       const active = current.includes(interest.id);
                       return (
                         <button
                           key={interest.id}
-                          onClick={() =>
-                            save(
-                              {},
-                              {
-                                interests: active
-                                  ? current.filter((id) => id !== interest.id)
-                                  : [...current, interest.id],
-                              },
-                            )
-                          }
+                          onClick={async () => {
+                            const base = interestsRef.current ?? current;
+                            const updated = base.includes(interest.id)
+                              ? base.filter((id) => id !== interest.id)
+                              : [...base, interest.id];
+                            interestsRef.current = updated;
+                            setInterestsDraft(updated);
+                            const ok = await save({}, { interests: updated });
+                            if (!ok) {
+                              interestsRef.current = null;
+                              setInterestsDraft(null);
+                            }
+                          }}
                           className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-all ${
                             active
                               ? 'border-brand-400 bg-brand-50 text-brand-700 font-bold'
@@ -1134,21 +1221,24 @@ function ProfileContent() {
                   <span className="text-xs font-semibold text-ink-600 block mb-2">Дни недели:</span>
                   <div className="flex flex-wrap gap-2">
                     {WEEKDAYS.map((day) => {
-                      const current = schoolProfile?.study_days ?? [];
+                      const current = daysDraft ?? schoolProfile?.study_days ?? [];
                       const active = current.includes(day.id);
                       return (
                         <button
                           key={day.id}
-                          onClick={() =>
-                            save(
-                              {},
-                              {
-                                studyDays: active
-                                  ? current.filter((id) => id !== day.id)
-                                  : [...current, day.id],
-                              },
-                            )
-                          }
+                          onClick={async () => {
+                            const base = daysRef.current ?? current;
+                            const updated = base.includes(day.id)
+                              ? base.filter((id) => id !== day.id)
+                              : [...base, day.id];
+                            daysRef.current = updated;
+                            setDaysDraft(updated);
+                            const ok = await save({}, { studyDays: updated });
+                            if (!ok) {
+                              daysRef.current = null;
+                              setDaysDraft(null);
+                            }
+                          }}
                           className={`h-10 w-10 rounded-xl border text-sm font-bold transition-all ${
                             active
                               ? 'border-brand-500 bg-brand-50 text-brand-700'
@@ -1200,7 +1290,17 @@ function ProfileContent() {
                 <Button
                   variant="danger"
                   onClick={() => {
-                    if (window.confirm('Очистить локальный прогресс тренировок в этом браузере?')) {
+                    /*
+                      Формулировка честная: после защиты в ProgressSync
+                      сброс действительно остаётся локальным — пустое
+                      состояние наверх больше не уходит, и место в рейтинге
+                      школы сохраняется.
+                    */
+                    if (
+                      window.confirm(
+                        'Очистить прогресс тренировок в этом браузере? Баллы и место в школьном рейтинге сохранятся — они хранятся на сервере.',
+                      )
+                    ) {
                       resetAll();
                     }
                   }}

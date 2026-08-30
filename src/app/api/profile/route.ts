@@ -22,6 +22,9 @@ import {
   normalizePhone,
 } from '@/lib/profileFields';
 import { getServerProfile } from '@/lib/supabase/serverProfile';
+import { GRADES, LEARNING_GOALS } from '@/lib/types';
+import type { Grade } from '@/lib/types';
+import { SUBJECTS } from '@/data';
 
 function randomClassCode(): string {
   // Без похожих символов (0/O, 1/I) — код читают и вводят руками с доски.
@@ -107,10 +110,33 @@ export async function PATCH(request: Request) {
   if (!body) return NextResponse.json({ error: 'invalid_body' }, { status: 400 });
 
   const patch: Record<string, unknown> = {};
-  if (typeof body.name === 'string' && body.name.trim()) patch.name = body.name.trim();
-  if (typeof body.grade === 'number') patch.grade = body.grade;
-  if (Array.isArray(body.subjectIds)) patch.subject_ids = body.subjectIds;
-  if (typeof body.goal === 'string') patch.goal = body.goal;
+  if (typeof body.name === 'string' && body.name.trim()) patch.name = body.name.trim().slice(0, 120);
+
+  /*
+    Класс, предметы и цель проверяются по справочникам, а не принимаются
+    на веру. Ниже по коду то же самое уже делается для интересов, уровня
+    подготовки и расписания — эти три поля просто оставались исключением.
+    PATCH — обычный HTTP-запрос: «выбор из списка» существует только в
+    форме, а мимо неё сюда приходит что угодно. Класс 99 или цель
+    «qwerty» сохранились бы в базу и разъехались бы по расчёту плана,
+    который ищет тему по классу и цели.
+  */
+  if (typeof body.grade === 'number' && GRADES.includes(body.grade as Grade)) {
+    patch.grade = body.grade;
+  }
+
+  if (Array.isArray(body.subjectIds)) {
+    const known = new Set(SUBJECTS.map((subject) => subject.id));
+    // Дубли убираем, неизвестные предметы отбрасываем молча: массив
+    // уходит в базу как есть и потом используется как источник истины.
+    patch.subject_ids = [...new Set(body.subjectIds)].filter(
+      (id): id is string => typeof id === 'string' && known.has(id),
+    );
+  }
+
+  if (typeof body.goal === 'string' && LEARNING_GOALS.some((item) => item.id === body.goal)) {
+    patch.goal = body.goal;
+  }
   if (typeof body.targetDate === 'string' || body.targetDate === null) patch.target_date = body.targetDate;
   /*
     Подпись к сроку пишет сам ученик, поэтому обрезаем длину и превращаем
