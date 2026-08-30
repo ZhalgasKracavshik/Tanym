@@ -9,14 +9,14 @@
  * она же гарантирует, что заявки на модерации сюда не попадают.
  *
  * Разметка одной записи — `ActivityFeedItem` — экспортируется отдельно и
- * не дублируется больше нигде. Раньше у страницы /feed была своя копия
- * этой разметки, и когда здесь чинили утечку (скан диплома не должен
- * разворачиваться в общей ленте), копию на /feed забыли — она продолжала
- * показывать документ ребёнка. Общий источник делает такое расхождение
- * невозможным: правка в одном месте одна на оба места её использования.
+ * не дублируется больше нигде. Когда у ленты была ещё и собственная
+ * страница со своей копией этой разметки, починку утечки (скан диплома
+ * не должен разворачиваться в ленте) в копию перенести забыли, и она
+ * продолжала показывать документ ребёнка. Общий источник делает такое
+ * расхождение невозможным: правка одна на все места показа.
  */
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { AchievementCard, type AchievementCardTone } from './AchievementCard';
@@ -25,6 +25,9 @@ import { Icon } from './Icon';
 import type { IconName } from './Icon';
 import { LiftCard, StaggerGroup, StaggerItem } from './motion';
 import { avatarPhotoUrl } from '@/lib/supabase/avatarPhoto';
+import { useReactions } from '@/lib/supabase/reactions';
+import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
+import { LikeButton } from './LikeButton';
 
 type FeedKind = 'achievement_post' | 'achievement_approved' | 'listing_published';
 
@@ -166,9 +169,8 @@ export function useActivityFeed(limit = 20, refreshKey = 0) {
 /**
  * Одна запись ленты.
  *
- * `footer` — то, что дополнительно рисует конкретная страница под записью:
- * страница /feed кладёт туда реакцию, здесь (в общей ленте достижений)
- * ничего не передаётся. Сама карточка от этого не меняется — расхождение,
+ * `footer` — то, что дополнительно рисуется под записью: общая лента
+ * кладёт туда отклик. Сама карточка от этого не меняется — расхождение,
  * из-за которого была утечка, было именно в разметке самой записи.
  */
 export function ActivityFeedItem({ item, footer }: { item: FeedItem; footer?: ReactNode }) {
@@ -291,8 +293,23 @@ export function ActivityFeedItem({ item, footer }: { item: FeedItem; footer?: Re
   );
 }
 
+/*
+  Лайки живут здесь, а не на отдельной странице.
+
+  Раньше сердце висело только на /feed, и одна и та же запись в кабинете
+  и на странице достижений отклика не имела — при том что это ровно та же
+  запись из того же источника. Теперь отклик едет вместе с разметкой
+  записи, так что он есть везде, где лента показана.
+*/
 export function ActivityFeed({ limit = 20, refreshKey = 0 }: { limit?: number; refreshKey?: number }) {
   const items = useActivityFeed(limit, refreshKey);
+  const { profile } = useSchoolAuth();
+
+  /* Хук вызывается до любых ранних возвратов: порядок хуков должен быть
+     одинаковым на каждом рендере, иначе React сломается на первом же
+     переходе из состояния загрузки в список. */
+  const ids = useMemo(() => (items ?? []).map((item) => item.id), [items]);
+  const { counts, mine, toggle } = useReactions(ids, profile?.id ?? null);
 
   if (items === null) return null;
 
@@ -317,7 +334,18 @@ export function ActivityFeed({ limit = 20, refreshKey = 0 }: { limit?: number; r
     <StaggerGroup className="space-y-5">
       {items.map((item) => (
         <StaggerItem key={`${item.kind}-${item.id}`}>
-          <ActivityFeedItem item={item} />
+          <ActivityFeedItem
+            item={item}
+            footer={
+              <div className="flex items-center gap-2 border-t border-ink-100 px-2 py-2">
+                <LikeButton
+                  liked={mine.has(item.id)}
+                  count={counts[item.id] ?? 0}
+                  onToggle={() => toggle(item.id, item.kind)}
+                />
+              </div>
+            }
+          />
         </StaggerItem>
       ))}
     </StaggerGroup>

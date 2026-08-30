@@ -44,7 +44,7 @@ const HIDDEN_FOR_ROLE: Record<'student' | 'teacher' | 'admin', string[]> = {
 
 const TEXT: Dict<{
   plan: string;
-  feed: string;
+  more: string;
   dashboard: string;
   achievements: string;
   archive: string;
@@ -63,7 +63,7 @@ const TEXT: Dict<{
 }> = {
   ru: {
     plan: 'Мой план',
-    feed: 'Лента',
+    more: 'Ещё',
     dashboard: 'Кабинет',
     achievements: 'Достижения',
     archive: 'Архив',
@@ -82,7 +82,7 @@ const TEXT: Dict<{
   },
   kk: {
     plan: 'Жоспарым',
-    feed: 'Лента',
+    more: 'Тағы',
     dashboard: 'Кабинет',
     achievements: 'Жетістіктер',
     archive: 'Мұрағат',
@@ -101,7 +101,7 @@ const TEXT: Dict<{
   },
   en: {
     plan: 'My plan',
-    feed: 'Feed',
+    more: 'More',
     dashboard: 'Dashboard',
     achievements: 'Achievements',
     archive: 'Archive',
@@ -127,12 +127,22 @@ const TEXT: Dict<{
  * пунктами, а не фон, мгновенно перекрашивающийся на новом месте: переезд
  * показывает, откуда и куда ушёл выбор.
  */
+interface NavItem {
+  href: string;
+  label: string;
+  icon: IconName;
+  /** 'more' — раздел школьной жизни, он идёт под подзаголовком. */
+  section: 'study' | 'more';
+}
+
 function NavList({
   items,
   pathname,
+  moreLabel,
 }: {
-  items: { href: string; label: string; icon: IconName }[];
+  items: NavItem[];
   pathname: string;
+  moreLabel: string;
 }) {
   // Ключ — текущий путь: по нему хук понимает, что пора двигать пилюлю.
   const { containerRef, pillRef } = useSlidingPill<HTMLUListElement>(pathname);
@@ -140,10 +150,22 @@ function NavList({
   return (
     <ul ref={containerRef} className="t-tabs flex flex-col gap-0.5">
       <span ref={pillRef} aria-hidden className="t-tabs-pill rounded-lg bg-brand-50" />
-      {items.map((item) => {
+      {items.map((item, index) => {
         const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+        /*
+          Подзаголовок ставится там, где список переходит от учёбы к
+          школьной жизни. Отдельным <ul> эти группы не разнесены нарочно:
+          пилюля подсветки привязана к своему контейнеру, и второй список
+          завёл бы вторую пилюлю, которой не за что зацепиться.
+        */
+        const startsMore = item.section === 'more' && items[index - 1]?.section !== 'more';
         return (
           <li key={item.href}>
+            {startsMore && (
+              <p className="px-3 pb-1 pt-4 text-[11px] font-bold uppercase tracking-[0.14em] text-ink-400">
+                {moreLabel}
+              </p>
+            )}
             <Link
               href={item.href}
               aria-current={active ? 'page' : undefined}
@@ -185,19 +207,27 @@ export function SiteSidebar() {
     return () => window.removeEventListener('keydown', onKey);
   }, [open]);
 
-  const ALL_NAV: { href: string; label: string; icon: IconName }[] = [
-    { href: '/feed', label: t.feed, icon: 'sparkles' },
-    { href: '/announcements', label: t.announcements, icon: 'megaphone' },
-    { href: '/plan', label: t.plan, icon: 'compass' },
-    { href: '/dashboard', label: t.dashboard, icon: 'columns' },
-    { href: '/archive', label: t.archive, icon: 'folder' },
-    { href: '/events', label: t.events, icon: 'calendar' },
-    { href: '/marketplace', label: t.marketplace, icon: 'backpack' },
-    { href: '/achievements', label: t.achievements, icon: 'trophy' },
-    { href: '/leaderboard', label: t.leaderboard, icon: 'medal' },
-    { href: '/chat', label: t.mentor, icon: 'chat' },
-    { href: '/teacher', label: t.teacher, icon: 'cap' },
-    { href: '/admin', label: t.admin, icon: 'building' },
+  /*
+    Порядок повторяет учебный путь: кабинет с прогрессом, план занятий,
+    наставник, материалы, достижения, рейтинг — и только потом школьная
+    жизнь под подзаголовком «Ещё».
+
+    Раньше первыми в меню стояли лента и объявления, то есть продукт
+    открывался разделами, к обучению отношения не имеющими, и читался
+    как школьная соцсеть.
+  */
+  const ALL_NAV: NavItem[] = [
+    { href: '/dashboard', label: t.dashboard, icon: 'columns', section: 'study' },
+    { href: '/plan', label: t.plan, icon: 'compass', section: 'study' },
+    { href: '/chat', label: t.mentor, icon: 'chat', section: 'study' },
+    { href: '/archive', label: t.archive, icon: 'folder', section: 'study' },
+    { href: '/achievements', label: t.achievements, icon: 'trophy', section: 'study' },
+    { href: '/leaderboard', label: t.leaderboard, icon: 'medal', section: 'study' },
+    { href: '/teacher', label: t.teacher, icon: 'cap', section: 'study' },
+    { href: '/admin', label: t.admin, icon: 'building', section: 'study' },
+    { href: '/announcements', label: t.announcements, icon: 'megaphone', section: 'more' },
+    { href: '/events', label: t.events, icon: 'calendar', section: 'more' },
+    { href: '/marketplace', label: t.marketplace, icon: 'backpack', section: 'more' },
   ];
   const NAV = ALL_NAV.filter(
     (item) => !schoolProfile || !HIDDEN_FOR_ROLE[schoolProfile.role].includes(item.href)
@@ -210,7 +240,7 @@ export function SiteSidebar() {
     два элемента: он достался бы тому, который отрисован последним, и во
     втором списке пилюля осталась бы неразмещённой.
   */
-  const navList = <NavList items={NAV} pathname={pathname} />;
+  const navList = <NavList items={NAV} pathname={pathname} moreLabel={t.more} />;
 
   const languageSwitcher = (
     <div className="flex rounded-lg border border-ink-200 p-0.5" role="group" aria-label={t.language}>

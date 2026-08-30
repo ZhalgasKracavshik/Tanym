@@ -262,7 +262,7 @@ export function AchievementCard({
    * было записано там же, где решение о показе скана.
    *
    * В общешкольных лентах то же правило уже действует, только решается оно
-   * там самостоятельно — см. ActivityFeed.tsx и src/app/feed/page.tsx: записи
+   * там самостоятельно — см. ActivityFeed.tsx: записи
    * 'achievement_approved' идут вообще без вложения.
    */
   showProof?: boolean;

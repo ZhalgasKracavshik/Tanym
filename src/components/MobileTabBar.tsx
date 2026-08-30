@@ -23,7 +23,7 @@ import { useSlidingPill } from './useSlidingPill';
 import type { IconName } from './Icon';
 
 const TEXT: Dict<{
-  feed: string;
+  plan: string;
   dashboard: string;
   achievements: string;
   mentor: string;
@@ -34,7 +34,7 @@ const TEXT: Dict<{
   more: string;
 }> = {
   ru: {
-    feed: 'Лента',
+    plan: 'Мой план',
     dashboard: 'Кабинет',
     achievements: 'Портфолио',
     mentor: 'Наставник',
@@ -45,7 +45,7 @@ const TEXT: Dict<{
     more: 'Ещё',
   },
   kk: {
-    feed: 'Лента',
+    plan: 'Жоспарым',
     dashboard: 'Кабинет',
     achievements: 'Портфолио',
     mentor: 'Тәлімгер',
@@ -56,7 +56,7 @@ const TEXT: Dict<{
     more: 'Тағы',
   },
   en: {
-    feed: 'Feed',
+    plan: 'My plan',
     dashboard: 'Home',
     achievements: 'Portfolio',
     mentor: 'Mentor',
@@ -97,14 +97,15 @@ export function MobileTabBar({ onMore }: { onMore: () => void }) {
           ]
         : [
             /*
-              Лента первой: это то, куда заходят «просто посмотреть», а
-              такие заходы самые частые. Кабинет рядом — за ним приходят
-              осознанно и найдут его второй кнопкой без труда.
+              Порядок повторяет учебный путь: кабинет с прогрессом, план
+              занятий, наставник, достижения, рейтинг. Раньше первой стояла
+              лента школы — то есть на самом видном месте мобильной панели
+              был раздел, к учёбе отношения не имеющий.
             */
-            { href: '/feed', label: t.feed, icon: 'sparkles' },
             { href: '/dashboard', label: t.dashboard, icon: 'columns' },
-            { href: '/achievements', label: t.achievements, icon: 'trophy' },
+            { href: '/plan', label: t.plan, icon: 'compass' },
             { href: '/chat', label: t.mentor, icon: 'chat' },
+            { href: '/achievements', label: t.achievements, icon: 'trophy' },
             { href: '/leaderboard', label: t.leaderboard, icon: 'medal' },
           ];
 
