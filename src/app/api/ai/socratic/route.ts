@@ -21,6 +21,7 @@ import {
 } from '@/lib/ai/socratic';
 import { checkRateLimit, clientKeyFromRequest } from '@/lib/ai/rate-limit';
 import type { SocraticRequest, SocraticResponse } from '@/lib/ai/contracts';
+import { LIMITS, clampHistory, clampText, sanitizeProfile } from '@/lib/ai/sanitize';
 import { createClient } from '@/lib/supabase/server';
 
 /**
@@ -86,6 +87,13 @@ export async function POST(
     return NextResponse.json({ error: 'Нужны поля taskId и message' }, { status: 400 });
   }
 
+  /* Сообщение ученика уходит в промпт: длина ограничивается так же, как в
+     чате. Раньше здесь предела не было вовсе. */
+  const message = clampText(body.message, LIMITS.message);
+  if (message === '') {
+    return NextResponse.json({ error: 'Пустое сообщение' }, { status: 400 });
+  }
+
   const resolved = await resolveTask(body.taskId);
   if (!resolved) {
     return NextResponse.json({ error: 'Задание не найдено' }, { status: 404 });
@@ -94,12 +102,10 @@ export async function POST(
   const language = body.language ?? 'ru';
   // Элементы истории тоже проверяем: [null] ронял обращение к message.role
   // строкой ниже, и роут отвечал 500 вместо отказа или запасного текста.
-  const history = Array.isArray(body.history)
-    ? body.history.filter((message) => Boolean(message) && typeof message === 'object')
-    : [];
+  const history = clampHistory(body.history);
 
   // Вердикт выносит код, а не модель.
-  const solved = matchesArchiveAnswer(task, body.message);
+  const solved = matchesArchiveAnswer(task, message);
 
   // Сколько раз ученик уже отвечал — по этому числу решаем, пора ли
   // делать подсказки конкретнее.
@@ -120,13 +126,13 @@ export async function POST(
     const result = await generateText({
       system: solved ? socraticSuccessSystem(language) : socraticSystem(language, studentTurns),
       prompt: solved
-        ? socraticSuccessPrompt(task, body.message)
+        ? socraticSuccessPrompt(task, message)
         : socraticPrompt({
             task,
             materialTitle,
             history,
-            studentMessage: body.message,
-            profile: body.profile ?? null,
+            studentMessage: message,
+            profile: sanitizeProfile(body.profile),
           }),
       // Температура ниже, чем в свободном чате: наводящий вопрос должен быть
       // точным, а не изобретательным.

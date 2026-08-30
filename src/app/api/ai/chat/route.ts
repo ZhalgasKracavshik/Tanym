@@ -13,6 +13,7 @@ import { chatPrompt, chatSystem, type ChatInput } from '@/lib/ai/prompts';
 import { chatFallback } from '@/lib/ai/fallback';
 import { checkRateLimit, clientKeyFromRequest } from '@/lib/ai/rate-limit';
 import type { ChatRequest, ChatResponse } from '@/lib/ai/contracts';
+import { clampHistory, sanitizeProfile } from '@/lib/ai/sanitize';
 
 const MAX_QUESTION_LENGTH = 600;
 
@@ -48,8 +49,11 @@ export async function POST(request: Request): Promise<NextResponse<ChatResponse 
 
   const input: ChatInput = {
     question,
-    history: Array.isArray(body.history) ? body.history.slice(-6) : [],
-    profile: body.profile ?? null,
+    /* Реплик берётся столько же, сколько и раньше, но теперь ограничена и
+       длина каждой: шести сообщений по мегабайту хватало, чтобы раздуть
+       промпт и выжечь квоту ключа в пределах разрешённой частоты. */
+    history: clampHistory(body.history),
+    profile: sanitizeProfile(body.profile),
     topic: topic ?? null,
     subject: subject ?? null,
   };

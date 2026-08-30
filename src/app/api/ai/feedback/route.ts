@@ -15,6 +15,20 @@ import { feedbackPrompt, feedbackSystem, type FeedbackInput } from '@/lib/ai/pro
 import { feedbackFallback } from '@/lib/ai/fallback';
 import { checkRateLimit, clientKeyFromRequest } from '@/lib/ai/rate-limit';
 import type { FeedbackRequest, FeedbackResponse } from '@/lib/ai/contracts';
+import { LIMITS, clampNumber, clampText, clampTextList, sanitizeProfile } from '@/lib/ai/sanitize';
+
+/** Обрезка полей задания, присланного браузером (тема учителя). */
+function clampTask(task: FeedbackRequest['task']): FeedbackRequest['task'] {
+  if (!task) return undefined;
+  return {
+    ...task,
+    prompt: clampText(task.prompt, LIMITS.taskField),
+    hint: clampText(task.hint, LIMITS.taskField),
+    explanation: clampText(task.explanation, LIMITS.taskField),
+    options: task.options ? clampTextList(task.options, LIMITS.options, LIMITS.option) : undefined,
+    correctValue: task.correctValue === undefined ? undefined : clampText(task.correctValue, LIMITS.option),
+  };
+}
 
 export async function POST(request: Request): Promise<NextResponse<FeedbackResponse | { error: string }>> {
   const limit = checkRateLimit(clientKeyFromRequest(request));
@@ -38,7 +52,16 @@ export async function POST(request: Request): Promise<NextResponse<FeedbackRespo
 
   // Тему, созданную учителем, сервер не знает — она хранится в браузере,
   // поэтому для неё задание приходит в теле запроса.
-  const task = getTask(body.taskId) ?? body.task;
+  /*
+    Задание из реестра доверенное, присланное браузером — нет.
+
+    Второй путь существует ради тем, созданных учителем: они живут в
+    localStorage, сервер о них не знает. Но текст такого задания уходит в
+    промпт, поэтому длина полей ограничивается. Без этого одно поле
+    «эталонного решения» могло принести в запрос сколько угодно текста.
+  */
+  const registryTask = getTask(body.taskId);
+  const task = registryTask ?? (body.task ? clampTask(body.task) : undefined);
   if (!task) {
     return NextResponse.json({ error: 'Задание не найдено' }, { status: 404 });
   }
@@ -78,8 +101,10 @@ export async function POST(request: Request): Promise<NextResponse<FeedbackRespo
     },
     answer: body.answer,
     correct,
-    profile: body.profile ?? null,
-    skillMastery: typeof body.skillMastery === 'number' ? body.skillMastery : 0.5,
+    profile: sanitizeProfile(body.profile),
+    /* Владение навыком идёт в промпт процентом. Раньше сюда проходило любое
+       число, включая бесконечность и 1e308. */
+    skillMastery: clampNumber(body.skillMastery, 0, 1, 0.5),
   };
 
   const base = { correct, correctAnswer: correctAnswerText(task) };

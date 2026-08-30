@@ -14,6 +14,7 @@ import { planPrompt, planSystem, type PlanInput } from '@/lib/ai/prompts';
 import { planFallback } from '@/lib/ai/fallback';
 import { checkRateLimit, clientKeyFromRequest } from '@/lib/ai/rate-limit';
 import type { PlanRequest, PlanResponse } from '@/lib/ai/contracts';
+import { LIMITS, clampNumber, clampTextList, clampText, sanitizeProfile } from '@/lib/ai/sanitize';
 import type { RankedTopic, SkillMasteryEntry } from '@/lib/types';
 
 export async function POST(request: Request): Promise<NextResponse<PlanResponse | { error: string }>> {
@@ -62,28 +63,35 @@ export async function POST(request: Request): Promise<NextResponse<PlanResponse 
       return {
         topic,
         score: 0,
-        mastery: item.mastery,
+        mastery: clampNumber(item.mastery, 0, 1, 0),
         readiness: 1,
-        reasons: item.reasons ?? [],
+        /* Причины отбора приходят от браузера и попадают в промпт текстом.
+           Раньше они уходили туда без проверки длины и типа. */
+        reasons: clampTextList(item.reasons, LIMITS.reasons, LIMITS.reason),
         status: 'new',
       };
     })
     .filter((item): item is RankedTopic => item !== null)
     .slice(0, 3);
 
-  const weakSkills: SkillMasteryEntry[] = weakInput.map((item) => ({
-    skill: { id: item.skillId, subjectId: subject.id, title: item.title, grades: [] },
-    mastery: item.mastery,
+  const weakSkills: SkillMasteryEntry[] = weakInput.slice(0, LIMITS.topics).map((item) => ({
+    skill: {
+      id: clampText(item.skillId, 80),
+      subjectId: subject.id,
+      title: clampText(item.title, LIMITS.title),
+      grades: [],
+    },
+    mastery: clampNumber(item.mastery, 0, 1, 0),
     attempts: 0,
   }));
 
   const input: PlanInput = {
     subject,
-    profile: body.profile ?? null,
+    profile: sanitizeProfile(body.profile),
     diagnostic: body.diagnostic ?? null,
     ranked,
     weakSkills,
-    daysLeft: body.daysLeft ?? null,
+    daysLeft: typeof body.daysLeft === 'number' ? clampNumber(body.daysLeft, 0, 3650, 0) : null,
   };
 
   if (!isAiConfigured()) {
