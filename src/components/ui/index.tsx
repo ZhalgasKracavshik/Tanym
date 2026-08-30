@@ -117,7 +117,7 @@ export function Card({
   as?: 'div' | 'section' | 'article' | 'li';
 }) {
   return (
-    <Tag className={`rounded-2xl border border-ink-200 bg-white p-5 shadow-[var(--shadow-rest)] sm:p-6 ${className}`}>
+    <Tag className={`rounded-[var(--radius-card)] border border-ink-200 bg-white p-5 shadow-[var(--shadow-rest)] sm:p-6 ${className}`}>
       {children}
     </Tag>
   );
@@ -375,7 +375,7 @@ export function RailRow({
 }) {
   return (
     <div
-      className={`relative overflow-hidden rounded-xl border border-ink-200 bg-white py-4 pl-5 pr-4 sm:pl-6 ${
+      className={`relative overflow-hidden rounded-[var(--radius-control)] border border-ink-200 bg-white py-4 pl-5 pr-4 sm:pl-6 ${
         interactive
           ? 'transition-all duration-150 hover:border-ink-300 hover:shadow-[var(--shadow-lift)]'
           : ''
@@ -395,7 +395,7 @@ export function RailRow({
  * собственной сетки, а лишняя глубина делает страницу тяжелее.
  */
 export function Panel({ className = '', children }: { className?: string; children: ReactNode }) {
-  return <div className={`rounded-xl border border-ink-200 bg-white ${className}`}>{children}</div>;
+  return <div className={`rounded-[var(--radius-control)] border border-ink-200 bg-white ${className}`}>{children}</div>;
 }
 
 /**

@@ -41,7 +41,7 @@ export function AuthShell({
 
       {/* Glassmorphism карточка */}
       <Reveal immediate className="relative z-10 w-full max-w-sm">
-        <div className="rounded-2xl border border-white/20 bg-white/10 p-8 shadow-2xl backdrop-blur-xl">
+        <div className="rounded-[var(--radius-card)] border border-white/20 bg-white/10 p-8 shadow-2xl backdrop-blur-xl">
           {/* Лого */}
           <div className="mb-6 flex justify-center">
             <Link
