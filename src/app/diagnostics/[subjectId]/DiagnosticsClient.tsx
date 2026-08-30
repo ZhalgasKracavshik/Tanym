@@ -19,6 +19,7 @@ import { useStore } from '@/components/StoreProvider';
 import type { Dict } from '@/lib/i18n';
 import { Badge, Button, ButtonLink, EmptyState, Kicker, ProgressBar } from '@/components/ui';
 import { Icon } from '@/components/Icon';
+import { MathText } from '@/components/MathText';
 
 /** Подписи страницы на трёх языках. Ключи одинаковые — за этим следит TypeScript. */
 const TEXT: Dict<{
@@ -236,7 +237,7 @@ export function DiagnosticsClient({ subjectId }: { subjectId: string }) {
           />
         </div>
 
-        <p className="mt-10 text-3xl font-semibold leading-snug text-ink-900 sm:text-4xl">{task.prompt}</p>
+        <p className="mt-10 text-3xl font-semibold leading-snug text-ink-900 sm:text-4xl"><MathText>{task.prompt}</MathText></p>
 
         {task.kind === 'single' && task.options && (
           <div className="mt-4 grid gap-2">
@@ -251,7 +252,7 @@ export function DiagnosticsClient({ subjectId }: { subjectId: string }) {
                     : 'border-ink-200 bg-white text-ink-700 hover:border-brand-300 hover:shadow-[var(--shadow-lift)]'
                 }`}
               >
-                {option}
+                <MathText>{option}</MathText>
               </button>
             ))}
           </div>

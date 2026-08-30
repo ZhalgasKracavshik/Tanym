@@ -15,9 +15,10 @@
     "test:portfolio": "node scripts/test-portfolio.mjs",
     "test:level": "node scripts/test-level.mjs",
     "test:profile": "node scripts/test-profile-fields.mjs",
-    "test": "npm run validate && npm run test:answers && npm run test:leaderboard && npm run test:portfolio && npm run test:level && npm run test:profile && npm run test:aitext && npm run test:scoring",
+    "test": "npm run validate && npm run test:answers && npm run test:leaderboard && npm run test:portfolio && npm run test:level && npm run test:profile && npm run test:aitext && npm run test:scoring && npm run test:math",
     "test:aitext": "node scripts/test-aitext.mjs",
-    "test:scoring": "node scripts/test-scoring.mjs"
+    "test:scoring": "node scripts/test-scoring.mjs",
+    "test:math": "node scripts/test-mathtext.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",

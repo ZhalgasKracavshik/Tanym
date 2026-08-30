@@ -80,6 +80,16 @@
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 
   /*
+   * Шрифт формул.
+   *
+   * Отдельный от интерфейсного и намеренно с засечками: в наборе
+   * вариантов ответа строки отличаются одним знаком в середине, и
+   * переменная, набранная тем же шрифтом, что и подписи кнопок,
+   * читается как часть интерфейса, а не как математика.
+   */
+  --font-math: 'Cambria Math', 'STIX Two Math', 'Latin Modern Math', Georgia, 'Times New Roman', serif;
+
+  /*
    * Радиусы.
    *
    * Два размера, а не один на всё: крупная поверхность (карточка, модальное
@@ -640,4 +650,28 @@ h1 {
 
 .animate-soft-pulse {
   animation: tanym-pulse 1.4s ease-in-out infinite;
+}
+
+/*
+ * Надстрочные и подстрочные знаки.
+ *
+ * По умолчанию браузер поднимает sup/sub, не обнуляя высоту строки, —
+ * в абзаце с формулами строки начинают неровно расходиться, и разбор
+ * решения «дышит» сверху вниз. Нулевая line-height у самого знака и
+ * смещение через position убирают это: строка остаётся ровной.
+ */
+.math-text sup,
+.math-text sub {
+  font-size: 0.72em;
+  line-height: 0;
+  position: relative;
+  vertical-align: baseline;
+}
+
+.math-text sup {
+  top: -0.45em;
+}
+
+.math-text sub {
+  bottom: -0.2em;
 }

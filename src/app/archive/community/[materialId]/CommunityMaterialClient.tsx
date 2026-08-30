@@ -21,6 +21,7 @@ import { createClient } from '@/lib/supabase/client';
 import { AiBadge } from '@/components/AiBadge';
 import { AiAnswer, AiTextScaleControl, useAiTextScale } from '@/components/AiAnswer';
 import { Icon } from '@/components/Icon';
+import { MathText } from '@/components/MathText';
 import { Badge, Button, ButtonLink, EmptyState, Panel, RailRow, Skeleton } from '@/components/ui';
 
 interface CommunityTask {
@@ -268,7 +269,7 @@ export function CommunityMaterialClient({ materialId }: { materialId: string }) 
           {t.taskNumber(taskIndex + 1, material.tasks.length)}
         </p>
         <p className="mt-2 whitespace-pre-line text-2xl font-semibold leading-snug text-ink-900 sm:text-4xl">
-          {task.prompt}
+          <MathText>{task.prompt}</MathText>
         </p>
       </div>
 
@@ -278,7 +279,7 @@ export function CommunityMaterialClient({ materialId }: { materialId: string }) 
             <Icon name="columns" size={14} />
             {t.mentor}
           </p>
-          <p className="leading-relaxed text-ink-700">{task.opening}</p>
+          <p className="leading-relaxed text-ink-700"><MathText>{task.opening}</MathText></p>
           {/* Кегль разбора настраивается там же, где его читают. */}
           <div className="mt-3">
             <AiTextScaleControl scale={aiScale} onChange={setAiScale} />
@@ -366,7 +367,7 @@ export function CommunityMaterialClient({ materialId }: { materialId: string }) 
         {showSolution ? (
           <Panel className="p-5">
             <h2 className="text-lg font-bold text-ink-900">{t.solution}</h2>
-            <p className="mt-2 leading-relaxed text-ink-700">{task.explanation}</p>
+            <p className="mt-2 leading-relaxed text-ink-700"><MathText>{task.explanation}</MathText></p>
           </Panel>
         ) : (
           <Button

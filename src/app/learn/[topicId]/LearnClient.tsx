@@ -18,6 +18,7 @@ import { useStore } from '@/components/StoreProvider';
 import { AiBadge } from '@/components/AiBadge';
 import { Badge, Button, ButtonLink, Card, EmptyState, Panel, RailRow, Skeleton } from '@/components/ui';
 import { Icon } from '@/components/Icon';
+import { MathText } from '@/components/MathText';
 
 /**
  * Подписи страницы на трёх языках. Ключи одинаковые — за этим следит TypeScript.
@@ -349,7 +350,7 @@ export function LearnClient({ topicId }: { topicId: string }) {
             действительно самодостаточно.
           */}
           <p className="border-b border-ink-200 pb-6 text-lg leading-relaxed text-ink-700">
-            {topic.material.intro}
+            <MathText>{topic.material.intro}</MathText>
           </p>
 
           {topic.material.sections.length > 0 && (
@@ -357,10 +358,10 @@ export function LearnClient({ topicId }: { topicId: string }) {
               {topic.material.sections.map((section) => (
                 <section key={section.heading} className="py-6 first:pt-0">
                   <h2 className="text-lg font-bold text-ink-900">{section.heading}</h2>
-                  <p className="mt-2 leading-relaxed text-ink-700">{section.body}</p>
+                  <p className="mt-2 leading-relaxed text-ink-700"><MathText>{section.body}</MathText></p>
                   {section.formula && (
                     <p className="mt-4 rounded-xl bg-ink-50 px-4 py-3 font-mono text-sm text-ink-800">
-                      {section.formula}
+                      <MathText>{section.formula}</MathText>
                     </p>
                   )}
                 </section>
@@ -375,7 +376,7 @@ export function LearnClient({ topicId }: { topicId: string }) {
                 {topic.material.keyPoints.map((point) => (
                   <li key={point} className="flex items-start gap-2 text-sm text-brand-800">
                     <Icon name="check" size={16} className="mt-0.5 text-brand-600" />
-                    <span>{point}</span>
+                    <span><MathText>{point}</MathText></span>
                   </li>
                 ))}
               </ul>
@@ -392,8 +393,8 @@ export function LearnClient({ topicId }: { topicId: string }) {
               {topic.material.examples.map((example, i) => (
                 <RailRow key={example.problem} tone="accent">
                   <p className="text-xs font-medium uppercase tracking-wide text-ink-400">{t.example(i + 1)}</p>
-                  <p className="mt-2 font-medium text-ink-800">{example.problem}</p>
-                  <p className="mt-2 leading-relaxed text-ink-600">{example.solution}</p>
+                  <p className="mt-2 font-medium text-ink-800"><MathText>{example.problem}</MathText></p>
+                  <p className="mt-2 leading-relaxed text-ink-600"><MathText>{example.solution}</MathText></p>
                 </RailRow>
               ))}
             </div>
@@ -445,7 +446,7 @@ export function LearnClient({ topicId }: { topicId: string }) {
                 взгляде. Поэтому оно набрано заметно крупнее счётчика над ним
                 и крупнее названия темы в шапке страницы.
               */}
-              <p className="mt-4 text-2xl font-semibold leading-snug text-ink-900 sm:text-3xl">{task.prompt}</p>
+              <p className="mt-4 text-2xl font-semibold leading-snug text-ink-900 sm:text-3xl"><MathText>{task.prompt}</MathText></p>
 
               {/* Варианты ответа или поле ввода — в зависимости от типа задания */}
               {task.kind === 'single' && task.options && (
@@ -462,7 +463,7 @@ export function LearnClient({ topicId }: { topicId: string }) {
                           : 'border-ink-200 bg-white text-ink-700 hover:border-brand-300 hover:shadow-[var(--shadow-lift)]'
                       }`}
                     >
-                      {option}
+                      <MathText>{option}</MathText>
                     </button>
                   ))}
                 </div>
@@ -486,7 +487,7 @@ export function LearnClient({ topicId }: { topicId: string }) {
                   {showHint ? (
                     <p className="flex items-center gap-2 rounded-xl bg-accent-50 px-4 py-3 text-sm text-accent-700">
                       <Icon name="bulb" size={16} />
-                      {task.hint}
+                      <MathText>{task.hint}</MathText>
                     </p>
                   ) : (
                     <Button variant="ghost" size="sm" onClick={() => setShowHint(true)}>
@@ -527,7 +528,7 @@ export function LearnClient({ topicId }: { topicId: string }) {
                     <span>{feedback.correct ? t.correct : t.incorrect}</span>
                     {!feedback.correct && feedback.correctAnswer && (
                       <span className="font-normal">
-                        {t.correctAnswer} {feedback.correctAnswer}
+                        {t.correctAnswer} <MathText>{feedback.correctAnswer}</MathText>
                       </span>
                     )}
                   </div>
@@ -537,7 +538,7 @@ export function LearnClient({ topicId }: { topicId: string }) {
                       <span className="text-xs font-medium uppercase tracking-wide text-ink-400">{t.explanation}</span>
                       <AiBadge live={feedback.live} reason={feedback.fallbackReason} />
                     </div>
-                    <p className="mt-2 whitespace-pre-line leading-relaxed text-ink-700">{feedback.text}</p>
+                    <p className="mt-2 whitespace-pre-line leading-relaxed text-ink-700"><MathText>{feedback.text}</MathText></p>
                   </div>
                 </div>
               )}

@@ -17,6 +17,7 @@
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import { parseAiText } from '@/lib/aiText';
 import type { Block, Inline } from '@/lib/aiText';
+import { MathText } from '@/components/MathText';
 import { Icon } from './Icon';
 
 export type AiTextScale = 's' | 'm' | 'l';
@@ -111,14 +112,14 @@ function renderInline(spans: Inline[], keyPrefix: string, codeClass: string) {
     if (span.kind === 'bold') {
       return (
         <strong key={key} className="font-bold text-ink-900">
-          {span.text}
+          <MathText>{span.text}</MathText>
         </strong>
       );
     }
     if (span.kind === 'italic') {
       return (
         <em key={key} className="italic">
-          {span.text}
+          <MathText>{span.text}</MathText>
         </em>
       );
     }
@@ -130,11 +131,11 @@ function renderInline(spans: Inline[], keyPrefix: string, codeClass: string) {
             'rounded-md border border-ink-200 bg-ink-50 px-1.5 py-0.5 font-mono text-brand-700 ' + codeClass
           }
         >
-          {span.text}
+          <MathText plain>{span.text}</MathText>
         </code>
       );
     }
-    return <span key={key}>{span.text}</span>;
+    return <MathText key={key}>{span.text}</MathText>;
   });
 }
 
