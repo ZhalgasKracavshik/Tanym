@@ -21,6 +21,7 @@ import { AchievementForm, PortfolioGrid, portfolioPoints, usePortfolio } from '@
 import { Avatar } from '@/components/Avatar';
 import { SocialLinks } from '@/components/SocialLinks';
 import { parseSocialLinks } from '@/lib/social';
+import { checkPersonName } from '@/lib/personName';
 import type { SocialLink } from '@/lib/social';
 import { Icon, type IconName } from '@/components/Icon';
 import { Reveal } from '@/components/motion';
@@ -50,6 +51,22 @@ const LANGUAGE_OPTIONS: { id: 'ru' | 'kk' | 'en'; title: string }[] = [
 ];
 
 type ProfileTab = 'personal' | 'study' | 'activity' | 'settings';
+
+/**
+ * Накопленные, но ещё не отправленные учебные настройки.
+ *
+ * Ключи совпадают с полями PATCH /api/profile, поэтому черновик уходит на
+ * сервер как есть, без перекладывания из одной формы в другую. Наличие
+ * ключа означает «поле трогали»: у уровня подготовки осмысленно и
+ * значение null, то есть «уровень снят».
+ */
+interface StudyDraft {
+  grade?: Grade;
+  goal?: LearningGoal;
+  knowledgeLevel?: string | null;
+  interests?: string[];
+  subjectIds?: string[];
+}
 
 const TABS: { id: ProfileTab; label: string; icon: IconName }[] = [
   { id: 'personal', label: 'Личные данные', icon: 'sparkles' },
@@ -137,30 +154,38 @@ function ProfileContent() {
   const [saveError, setSaveError] = useState<string | null>(null);
 
   /*
-    Черновики множественных наборов.
+    Отложенные правки учебных настроек.
 
-    Отметки предметов, интересов и дней считались от значения, пришедшего
-    с сервера, а оно обновляется только после ответа PATCH. Три быстрых
-    клика подряд читали одну и ту же исходную пустоту и уходили тремя
-    запросами вида ['math'], ['physics'], ['history'] — в базе оставался
-    последний, то есть один предмет вместо трёх. Пока ответ не пришёл,
-    источник истины — то, что человек уже нажал.
+    Раньше каждое нажатие на класс, предмет, интерес, уровень или цель
+    отправляло отдельный запрос и показывало плашку «Сохранено». Выбирая
+    четыре предмета, человек получал четыре запроса и четыре всплывающие
+    плашки подряд — со стороны это выглядит как перезагрузка страницы на
+    каждый клик, о чём и написал пользователь.
+
+    Теперь выбор копится в одном черновике и уходит на сервер одним
+    запросом по кнопке «Готово». Экран обновляется сразу: всё видимое
+    берётся из черновика, а не из ответа сервера.
+
+    Отдельные черновики со ссылками (useRef) больше не нужны: они
+    существовали, чтобы два клика в одном такте не затирали друг друга, а
+    обновление через функцию читает предыдущее состояние и делает это
+    само по себе.
   */
-  const [subjectsDraft, setSubjectsDraft] = useState<string[] | null>(null);
-  const [interestsDraft, setInterestsDraft] = useState<string[] | null>(null);
+  const [studyDraft, setStudyDraft] = useState<StudyDraft>({});
   const [daysDraft, setDaysDraft] = useState<number[] | null>(null);
 
   /*
-    Те же наборы, но в ref — и это не дубль состояния, а необходимость.
+    Тот же набор, но в ref — и это не дубль состояния, а необходимость.
 
     Состояние обновляется к следующему рендеру, а два клика подряд успевают
     произойти в одном такте: второй обработчик читает замыкание первого
     рендера и не видит только что сделанного выбора. Проверено вживую —
-    два быстрых клика сохраняли один предмет вместо двух. Ref меняется
+    два быстрых клика сохраняли один день вместо двух. Ref меняется
     синхронно, поэтому следующий клик в том же такте считает от него.
+
+    Учебным настройкам такой ref больше не нужен: они копятся в
+    studyDraft, а он обновляется через функцию от предыдущего значения.
   */
-  const subjectsRef = useRef<string[] | null>(null);
-  const interestsRef = useRef<string[] | null>(null);
   const daysRef = useRef<number[] | null>(null);
 
   // Редактирование имени
@@ -228,9 +253,21 @@ function ProfileContent() {
   const level = levelFromPoints(totalPoints);
 
   const socialLinks = socialDraft ?? parseSocialLinks(schoolProfile?.social_links);
-  const currentGrade = (schoolProfile?.grade ?? state.profile?.grade ?? 10) as Grade;
-  const currentSubjects = subjectsDraft ?? schoolProfile?.subject_ids ?? state.profile?.subjectIds ?? ['math'];
-  const currentGoal = (schoolProfile?.goal ?? state.profile?.goal ?? 'ent') as LearningGoal;
+  /* Видимое значение — из черновика, если его трогали, иначе из профиля. */
+  const currentGrade = (studyDraft.grade ?? schoolProfile?.grade ?? state.profile?.grade ?? 10) as Grade;
+  const currentSubjects =
+    studyDraft.subjectIds ?? schoolProfile?.subject_ids ?? state.profile?.subjectIds ?? ['math'];
+  const currentGoal = (studyDraft.goal ?? schoolProfile?.goal ?? state.profile?.goal ?? 'ent') as LearningGoal;
+  const currentInterests = studyDraft.interests ?? schoolProfile?.interests ?? [];
+  /*
+    Уровень подготовки проверяется через «есть ли ключ», а не через ??:
+    его можно снять совсем, и тогда в черновике лежит null — значение
+    осмысленное, которое ?? молча заменил бы на прежнее.
+  */
+  const currentLevel =
+    'knowledgeLevel' in studyDraft ? studyDraft.knowledgeLevel : (schoolProfile?.knowledge_level ?? null);
+
+  const studyDirty = Object.keys(studyDraft).length > 0;
   const currentTargetDate = schoolProfile?.target_date ?? state.profile?.targetDate ?? '';
 
   // Текущая фотография (локальная Data URL или URL из Supabase)
@@ -300,7 +337,9 @@ function ProfileContent() {
             ? 'Сессия истекла — войдите заново, изменения не сохранены.'
             : data?.error === 'invalid_phone'
               ? 'Проверьте номер телефона: изменения не сохранены.'
-              : 'Не удалось сохранить. Проверьте связь и попробуйте ещё раз.',
+              : data?.error === 'invalid_name'
+                ? (data?.message ?? 'Укажите настоящие имя и фамилию.')
+                : 'Не удалось сохранить. Проверьте связь и попробуйте ещё раз.',
         );
         return false;
       }
@@ -386,9 +425,19 @@ function ProfileContent() {
   }
 
   function saveName() {
-    const trimmed = nameDraft.trim();
-    if (trimmed.length >= 2 && trimmed !== displayName) {
-      save({ name: trimmed }, { name: trimmed });
+    /*
+      Проверка та же, что и на регистрации: имя видно одноклассникам в
+      рейтинге. Сервер проверяет его повторно, здесь это нужно только
+      ради быстрого ответа — и чтобы не закрывать поле с мусором внутри.
+    */
+    const checked = checkPersonName(nameDraft);
+    if (!checked.ok) {
+      setSaveError(checked.reason);
+      return;
+    }
+    setSaveError(null);
+    if (checked.value !== displayName) {
+      save({ name: checked.value }, { name: checked.value });
     }
     setEditingName(false);
   }
@@ -415,20 +464,49 @@ function ProfileContent() {
     save({}, { socialLinks: next });
   }
 
-  async function toggleSubject(id: string) {
-    const base = subjectsRef.current ?? currentSubjects;
-    const updated = base.includes(id) ? base.filter((item) => item !== id) : [...base, id];
-    // Хотя бы один предмет обязателен: без них план строить не из чего.
-    if (updated.length === 0) return;
+  /*
+    Переключатели учебных настроек только правят черновик.
 
-    subjectsRef.current = updated;
-    setSubjectsDraft(updated);
-    const ok = await save({ subjectIds: updated }, { subjectIds: updated });
-    // Не сохранилось — возвращаем отметки к тому, что реально в базе.
-    if (!ok) {
-      subjectsRef.current = null;
-      setSubjectsDraft(null);
-    }
+    Обновление идёт функцией от предыдущего значения, поэтому два быстрых
+    клика в одном такте больше не затирают друг друга: второй считает от
+    результата первого, а не от замыкания прошлого рендера.
+  */
+  function toggleSubject(id: string) {
+    setStudyDraft((prev) => {
+      const base = prev.subjectIds ?? currentSubjects;
+      const updated = base.includes(id) ? base.filter((item) => item !== id) : [...base, id];
+      // Хотя бы один предмет обязателен: без них план строить не из чего.
+      if (updated.length === 0) return prev;
+      return { ...prev, subjectIds: updated };
+    });
+  }
+
+  function toggleInterest(id: string) {
+    setStudyDraft((prev) => {
+      const base = prev.interests ?? schoolProfile?.interests ?? [];
+      return {
+        ...prev,
+        interests: base.includes(id) ? base.filter((item) => item !== id) : [...base, id],
+      };
+    });
+  }
+
+  /**
+   * Отправка накопленного одним запросом.
+   *
+   * Локальная копия профиля обновляется теми же полями, иначе страницы,
+   * читающие её напрямую (план, кабинет), увидели бы прежние значения до
+   * следующей загрузки.
+   */
+  async function commitStudyDraft() {
+    if (!studyDirty) return;
+    const local: Parameters<typeof updateProfile>[0] = {};
+    if (studyDraft.grade !== undefined) local.grade = studyDraft.grade;
+    if (studyDraft.goal !== undefined) local.goal = studyDraft.goal;
+    if (studyDraft.subjectIds !== undefined) local.subjectIds = studyDraft.subjectIds;
+
+    const ok = await save(local, studyDraft as Record<string, unknown>);
+    if (ok) setStudyDraft({});
   }
 
   async function changePassword() {
@@ -654,6 +732,32 @@ function ProfileContent() {
       )}
 
       {/* Уведомление об успешном сохранении */}
+      {/*
+        Панель появляется, только когда есть несохранённое.
+
+        Она закреплена снизу, а не стоит внутри карточки: выбор класса,
+        предметов, интересов и цели разнесён по разным карточкам вкладки,
+        и кнопка у одной из них означала бы, что остальные сохраняются
+        как-то иначе. Одна панель на всю вкладку отправляет всё разом.
+      */}
+      {studyDirty && (
+        <div className="sticky bottom-4 z-20 mt-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-card)] border border-brand-200 bg-white/95 px-4 py-3 shadow-[var(--shadow-lift)] backdrop-blur">
+            <span className="text-sm font-semibold text-ink-700">
+              Есть несохранённые изменения
+            </span>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" onClick={() => setStudyDraft({})}>
+                Отменить
+              </Button>
+              <Button size="sm" onClick={commitStudyDraft}>
+                Готово
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {savedAlert && !saveError && (
         <div className="mt-4 flex items-center gap-3 rounded-[var(--radius-control)] border border-success-200 bg-success-50 px-4 py-3">
           {/*
@@ -786,11 +890,13 @@ function ProfileContent() {
                   <p className="mt-1 text-xs text-ink-500">Ваша текущая самооценка владения школьной программой.</p>
                   <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
                     {KNOWLEDGE_LEVELS.map((lvl) => {
-                      const active = schoolProfile?.knowledge_level === lvl.id;
+                      const active = currentLevel === lvl.id;
                       return (
                         <button
                           key={lvl.id}
-                          onClick={() => save({}, { knowledgeLevel: active ? null : lvl.id })}
+                          onClick={() =>
+                            setStudyDraft((prev) => ({ ...prev, knowledgeLevel: active ? null : lvl.id }))
+                          }
                           className={`rounded-xl border p-3 text-left transition-all ${
                             active
                               ? 'border-brand-500 bg-brand-50/70 text-brand-900 shadow-xs'
@@ -810,24 +916,11 @@ function ProfileContent() {
                   <p className="mt-1 text-xs text-ink-500">По ним подбираются конкурсы, кружки и дополнительные темы.</p>
                   <div className="mt-3 flex flex-wrap gap-2">
                     {INTERESTS.map((interest) => {
-                      const current = interestsDraft ?? schoolProfile?.interests ?? [];
-                      const active = current.includes(interest.id);
+                      const active = currentInterests.includes(interest.id);
                       return (
                         <button
                           key={interest.id}
-                          onClick={async () => {
-                            const base = interestsRef.current ?? current;
-                            const updated = base.includes(interest.id)
-                              ? base.filter((id) => id !== interest.id)
-                              : [...base, interest.id];
-                            interestsRef.current = updated;
-                            setInterestsDraft(updated);
-                            const ok = await save({}, { interests: updated });
-                            if (!ok) {
-                              interestsRef.current = null;
-                              setInterestsDraft(null);
-                            }
-                          }}
+                          onClick={() => toggleInterest(interest.id)}
                           className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-all ${
                             active
                               ? 'border-brand-400 bg-brand-50 text-brand-700 font-bold'
@@ -858,7 +951,7 @@ function ProfileContent() {
                   return (
                     <button
                       key={grade}
-                      onClick={() => save({ grade }, { grade })}
+                      onClick={() => setStudyDraft((prev) => ({ ...prev, grade }))}
                       className={`rounded-xl border-2 py-3 text-base font-bold tabular-nums transition-all ${
                         active
                           ? 'border-brand-500 bg-brand-500 text-white shadow-sm'
@@ -915,7 +1008,7 @@ function ProfileContent() {
                   return (
                     <button
                       key={goal.id}
-                      onClick={() => save({ goal: goal.id as LearningGoal }, { goal: goal.id })}
+                      onClick={() => setStudyDraft((prev) => ({ ...prev, goal: goal.id as LearningGoal }))}
                       className={`flex items-start gap-3 rounded-xl border-2 p-3.5 text-left transition-all ${
                         active
                           ? 'border-brand-500 bg-brand-50/70 shadow-xs'

@@ -27,6 +27,7 @@ import {
   SubmitButton,
 } from '@/components/auth-ui';
 import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
+import { checkPersonName } from '@/lib/personName';
 import {
   canBeTeacher,
   domainRejectionMessage,
@@ -77,7 +78,12 @@ export default function RegisterPage() {
     setError(null);
     setNotice(null);
 
-    if (!name.trim()) return setError('Как вас зовут?');
+    /*
+      Имя видно одноклассникам в рейтинге, поэтому проверка строже, чем
+      «поле не пустое»: раньше проходила одна буква или набор цифр.
+    */
+    const checkedName = checkPersonName(name);
+    if (!checkedName.ok) return setError(checkedName.reason);
     if (!email.trim() || !password) return setError('Заполните почту и пароль.');
     /*
       Код класса больше не обязателен здесь: его спросят в онбординге, где
@@ -121,7 +127,7 @@ export default function RegisterPage() {
       return;
     }
 
-    const signUp = await signUpWithPassword(email.trim(), password, name.trim());
+    const signUp = await signUpWithPassword(email.trim(), password, checkedName.value);
 
     if (!signUp.ok) {
       setStatus('idle');
@@ -200,7 +206,7 @@ export default function RegisterPage() {
           placeholder="Айсултан Жакыпов"
           value={name}
           onChange={(event) => setName(event.target.value)}
-          hint="Так вас увидят одноклассники в рейтинге."
+          hint="Настоящие имя и фамилия: так вас увидят одноклассники в рейтинге."
         />
 
         <Select

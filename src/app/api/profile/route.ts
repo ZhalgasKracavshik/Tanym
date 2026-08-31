@@ -24,6 +24,7 @@ import {
 import { getServerProfile } from '@/lib/supabase/serverProfile';
 import { GRADES, LEARNING_GOALS } from '@/lib/types';
 import type { Grade } from '@/lib/types';
+import { checkPersonName } from '@/lib/personName';
 import { SUBJECTS } from '@/data';
 
 function randomClassCode(): string {
@@ -110,7 +111,15 @@ export async function PATCH(request: Request) {
   if (!body) return NextResponse.json({ error: 'invalid_body' }, { status: 400 });
 
   const patch: Record<string, unknown> = {};
-  if (typeof body.name === 'string' && body.name.trim()) patch.name = body.name.trim().slice(0, 120);
+  /*
+    Имя проверяется и здесь, а не только на форме регистрации: PATCH можно
+    вызвать напрямую, минуя интерфейс, а имя видно другим ученикам.
+  */
+  if (body.name !== undefined) {
+    const checked = checkPersonName(body.name);
+    if (!checked.ok) return NextResponse.json({ error: 'invalid_name', message: checked.reason }, { status: 400 });
+    patch.name = checked.value;
+  }
 
   /*
     Класс, предметы и цель проверяются по справочникам, а не принимаются
