@@ -24,6 +24,7 @@ import { Icon } from './Icon';
 import type { IconName } from './Icon';
 import { LiftCard, StaggerGroup, StaggerItem } from './motion';
 import { avatarPhotoUrl } from '@/lib/supabase/avatarPhoto';
+import { safeExternalUrl } from '@/lib/safeUrl';
 import { useReactions } from '@/lib/supabase/reactions';
 import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
 import { LikeButton } from './LikeButton';
@@ -37,6 +38,8 @@ interface FeedRow {
   title: string;
   detail: string | null;
   media_path: string | null;
+  audio_path: string | null;
+  video_url: string | null;
   created_at: string;
   link: string;
 }
@@ -175,6 +178,14 @@ export function ActivityFeedItem({ item, footer }: { item: FeedItem; footer?: Re
   */
   const imageUrl = mediaUrl && !/\.pdf($|\?)/i.test(mediaUrl) ? mediaUrl : null;
 
+  const audioUrl =
+    item.audio_path && bucket
+      ? supabase.storage.from(bucket).getPublicUrl(item.audio_path).data.publicUrl
+      : null;
+
+  /* Ссылку пишет ученик — проверяем перед показом, см. lib/safeUrl. */
+  const videoUrl = safeExternalUrl(item.video_url);
+
   return (
     <LiftCard className="overflow-hidden rounded-[var(--radius-card)] border border-ink-200/80 bg-white shadow-[var(--shadow-rest)]">
       <Link href={item.link} className="block">
@@ -236,6 +247,44 @@ export function ActivityFeedItem({ item, footer }: { item: FeedItem; footer?: Re
           />
         )}
       </Link>
+
+      {/*
+        Аудио и видео вне ссылки на запись.
+
+        Проигрыватель внутри <Link> означал бы, что нажатие на «play»
+        одновременно уводит на другую страницу: браузер отдаёт клик и
+        элементу управления, и ссылке вокруг него.
+      */}
+      {audioUrl && (
+        <div className="border-t border-ink-100 px-5 py-4">
+          <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-ink-500">
+            <Icon name="sparkles" size={13} className="text-brand-500" />
+            Аудиозапись
+          </p>
+          {/* eslint-disable-next-line jsx-a11y/media-has-caption -- ученическая запись без стенограммы */}
+          <audio controls preload="none" src={audioUrl} className="w-full" />
+        </div>
+      )}
+
+      {videoUrl && (
+        <div className="border-t border-ink-100 px-5 py-4">
+          <a
+            href={videoUrl}
+            target="_blank"
+            /*
+              noopener и noreferrer обязательны: ссылку задаёт ученик, и
+              без них открытая страница получает доступ к вкладке-источнику
+              через window.opener.
+            */
+            rel="noopener noreferrer nofollow"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-600 underline-offset-2 hover:underline"
+          >
+            <Icon name="arrowRight" size={15} />
+            Смотреть видео
+          </a>
+        </div>
+      )}
+
       {footer}
     </LiftCard>
   );
