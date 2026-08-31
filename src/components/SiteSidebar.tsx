@@ -24,6 +24,7 @@ import type { IconName } from './Icon';
 import { Icon } from './Icon';
 import { Logo, LogoMark } from './Logo';
 import { Avatar } from './Avatar';
+import { useSidebarCollapsed } from '@/lib/localSetting';
 import { MobileTabBar } from './MobileTabBar';
 import { useSlidingPill } from './useSlidingPill';
 import { avatarPhotoUrl } from '@/lib/supabase/avatarPhoto';
@@ -60,6 +61,8 @@ const TEXT: Dict<{
   language: string;
   openMenu: string;
   closeMenu: string;
+  collapse: string;
+  expand: string;
 }> = {
   ru: {
     plan: 'Мой план',
@@ -79,6 +82,8 @@ const TEXT: Dict<{
     language: 'Язык интерфейса',
     openMenu: 'Открыть меню',
     closeMenu: 'Закрыть меню',
+    collapse: 'Свернуть меню',
+    expand: 'Развернуть меню',
   },
   kk: {
     plan: 'Жоспарым',
@@ -98,6 +103,8 @@ const TEXT: Dict<{
     language: 'Интерфейс тілі',
     openMenu: 'Мәзірді ашу',
     closeMenu: 'Мәзірді жабу',
+    collapse: 'Мәзірді жию',
+    expand: 'Мәзірді жаю',
   },
   en: {
     plan: 'My plan',
@@ -117,6 +124,8 @@ const TEXT: Dict<{
     language: 'Interface language',
     openMenu: 'Open menu',
     closeMenu: 'Close menu',
+    collapse: 'Collapse menu',
+    expand: 'Expand menu',
   },
 };
 
@@ -139,10 +148,13 @@ function NavList({
   items,
   pathname,
   moreLabel,
+  collapsed = false,
 }: {
   items: NavItem[];
   pathname: string;
   moreLabel: string;
+  /** Свёрнутая колонка: остаются только значки, подпись уходит в подсказку. */
+  collapsed?: boolean;
 }) {
   // Ключ — текущий путь: по нему хук понимает, что пора двигать пилюлю.
   const { containerRef, pillRef } = useSlidingPill<HTMLUListElement>(pathname);
@@ -161,21 +173,33 @@ function NavList({
         const startsMore = item.section === 'more' && items[index - 1]?.section !== 'more';
         return (
           <li key={item.href}>
-            {startsMore && (
-              <p className="px-3 pb-1 pt-4 text-[11px] font-bold uppercase tracking-[0.14em] text-ink-400">
-                {moreLabel}
-              </p>
-            )}
+            {/*
+              В свёрнутом виде вместо подзаголовка остаётся черта: место
+              под слово «Ещё» есть только в развёрнутой колонке, но
+              граница между учёбой и школьной жизнью нужна в обоих.
+            */}
+            {startsMore &&
+              (collapsed ? (
+                <span aria-hidden className="mx-auto my-2 block h-px w-6 bg-ink-200" />
+              ) : (
+                <p className="px-3 pb-1 pt-4 text-[11px] font-bold uppercase tracking-[0.14em] text-ink-400">
+                  {moreLabel}
+                </p>
+              ))}
             <Link
               href={item.href}
               aria-current={active ? 'page' : undefined}
               data-pill-active={active ? 'true' : undefined}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
-                active ? 'text-brand-700' : 'text-ink-500 hover:bg-ink-50 hover:text-ink-800'
-              }`}
+              /* Подпись скрыта визуально, но title и aria-label оставляют
+                 раздел доступным и с клавиатуры, и для скринридера. */
+              title={collapsed ? item.label : undefined}
+              aria-label={collapsed ? item.label : undefined}
+              className={`flex items-center rounded-lg py-2.5 text-sm font-semibold outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
+                collapsed ? 'justify-center px-0' : 'gap-3 px-3'
+              } ${active ? 'text-brand-700' : 'text-ink-500 hover:bg-ink-50 hover:text-ink-800'}`}
             >
               <Icon name={item.icon} size={19} className={active ? 'text-brand-600' : 'text-ink-400'} />
-              {item.label}
+              {!collapsed && item.label}
             </Link>
           </li>
         );
@@ -191,6 +215,7 @@ export function SiteSidebar() {
   const t = TEXT[state.language];
   const profile = state.profile;
   const [open, setOpen] = useState(false);
+  const [collapsed, toggleCollapsed] = useSidebarCollapsed();
 
   // Закрываем drawer при переходе на другой маршрут, иначе следующая
   // страница открылась бы с уже нажатым меню поверх себя.
@@ -240,7 +265,15 @@ export function SiteSidebar() {
     два элемента: он достался бы тому, который отрисован последним, и во
     втором списке пилюля осталась бы неразмещённой.
   */
-  const navList = <NavList items={NAV} pathname={pathname} moreLabel={t.more} />;
+  /*
+    Два отдельных вызова, а не одна переменная: у пилюли подсветки есть
+    ссылка на контейнер, и одна разметка на два места означала бы одну
+    ссылку на два элемента — она досталась бы отрисованному последним, и
+    во втором списке пилюля осталась бы неразмещённой. В выезжающем меню
+    на телефоне колонка всегда развёрнута: там она и так занимает экран.
+  */
+  const navList = <NavList items={NAV} pathname={pathname} moreLabel={t.more} collapsed={collapsed} />;
+  const drawerNavList = <NavList items={NAV} pathname={pathname} moreLabel={t.more} />;
 
   const languageSwitcher = (
     <div className="flex rounded-lg border border-ink-200 p-0.5" role="group" aria-label={t.language}>
@@ -296,6 +329,23 @@ export function SiteSidebar() {
     </div>
   );
 
+  /** Та же строка для свёрнутой колонки: только аватар, он же ссылка в профиль. */
+  const compactProfileRow = displayName && (
+    <Link
+      href="/profile"
+      title={displayName}
+      aria-label={displayName}
+      className="mx-auto flex h-10 w-10 items-center justify-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+    >
+      <Avatar
+        name={displayName}
+        colorId={schoolProfile?.avatar_color}
+        photoUrl={state.profile?.avatarPhotoUrl || avatarPhotoUrl(schoolProfile?.avatar_photo_path)}
+        size={34}
+      />
+    </Link>
+  );
+
   return (
     <>
       {/*
@@ -332,17 +382,52 @@ export function SiteSidebar() {
       {/* Нижняя панель под палец — заменила выезжающее меню как основной путь */}
       <MobileTabBar onMore={() => setOpen(true)} />
 
-      {/* Постоянная колонка: видна только от md и выше */}
-      <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col gap-6 overflow-y-auto border-r border-ink-200 bg-white px-4 py-6 md:flex">
-        <Link href="/dashboard" className="rounded-lg px-1 outline-none focus-visible:ring-2 focus-visible:ring-brand-500">
-          <Logo size={28} />
-        </Link>
+      {/*
+        Постоянная колонка: видна только от md и выше.
+
+        Свёрнутая колонка не прячется совсем, а сжимается до значков: если
+        убрать её целиком, пропадает и понимание, где ты находишься, а
+        разворачивать пришлось бы каждый раз ради одного перехода. Ширина
+        меняется с переходом, чтобы содержимое рядом не прыгало рывком.
+      */}
+      <aside
+        className={`sticky top-0 hidden h-screen shrink-0 flex-col gap-6 overflow-y-auto overflow-x-hidden border-r border-ink-200 bg-white py-6 transition-[width] duration-200 md:flex ${
+          collapsed ? 'w-[68px] px-2' : 'w-60 px-4'
+        }`}
+      >
+        <div className={`flex items-center ${collapsed ? 'justify-center' : 'justify-between gap-2'}`}>
+          {!collapsed && (
+            <Link
+              href="/dashboard"
+              className="min-w-0 rounded-lg px-1 outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            >
+              <Logo size={28} />
+            </Link>
+          )}
+          <button
+            type="button"
+            onClick={toggleCollapsed}
+            title={collapsed ? t.expand : t.collapse}
+            aria-label={collapsed ? t.expand : t.collapse}
+            aria-expanded={!collapsed}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-ink-400 outline-none transition-all duration-150 hover:bg-ink-50 hover:text-ink-700 focus-visible:ring-2 focus-visible:ring-brand-500"
+          >
+            <Icon name={collapsed ? 'chevron-right' : 'chevron-left'} size={18} />
+          </button>
+        </div>
+
         <nav aria-label={t.nav} className="flex-1">
           {navList}
         </nav>
+
+        {/*
+          Внизу в свёрнутом виде остаётся только аватар: он же ссылка в
+          профиль. Переключатель языка прячется — три подписи в колонку
+          шириной с иконку не помещаются, а в профиле язык тоже есть.
+        */}
         <div className="flex flex-col gap-3">
-          {profileRow}
-          {languageSwitcher}
+          {collapsed ? compactProfileRow : profileRow}
+          {!collapsed && languageSwitcher}
         </div>
       </aside>
 
@@ -366,7 +451,7 @@ export function SiteSidebar() {
               </button>
             </div>
             <nav aria-label={t.nav} className="flex-1">
-              {navList}
+              {drawerNavList}
             </nav>
             <div className="flex flex-col gap-3">
               {profileRow}
