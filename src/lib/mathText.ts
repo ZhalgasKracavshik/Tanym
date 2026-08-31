@@ -114,7 +114,19 @@ function proseMinus(text: string): string {
   `GPT4` или `Python3` в букву с индексом, потому что цифре там
   предшествует часть слова, а не отдельная переменная.
 */
-const PART_RE = /\^\(?(-?\d+)\)?|(?<![\p{L}\d_])([A-Za-z])(\d+)(?![\p{L}\d])/gu;
+/*
+  Скобки вокруг показателя разбираются только парой.
+
+  Раньше обе скобки были помечены необязательными, и запись 2^4), то есть
+  степень перед закрывающей скобкой выражения, теряла эту скобку: разбор
+  принимал её за вторую половину записи вида 2^(4). Выражение
+  (2^3 * 2^4) / 2^5 выводилось на экран без закрывающей скобки, то есть
+  с другим смыслом.
+
+  Минус в показателе принимается в обоих видах: к моменту разбора
+  расстановка знаков уже могла заменить дефис настоящим минусом.
+*/
+const PART_RE = /\^\(([-\u2212]?\d+)\)|\^([-\u2212]?\d+)|(?<![\p{L}\d_])([A-Za-z])(\d+)(?![\p{L}\d])/gu;
 
 export function formatMath(input: string): MathPart[] {
   const pure = isFormula(input);
@@ -127,11 +139,13 @@ export function formatMath(input: string): MathPart[] {
     const start = match.index ?? 0;
     if (start > last) parts.push({ kind: 'text', text: text.slice(last, start) });
 
-    if (match[1] !== undefined) {
-      parts.push({ kind: 'sup', text: match[1].replace('-', '\u2212') });
+    /* Показатель приходит либо из записи со скобками, либо без них. */
+    const power = match[1] ?? match[2];
+    if (power !== undefined) {
+      parts.push({ kind: 'sup', text: power.replace('-', '\u2212') });
     } else {
-      parts.push({ kind: 'text', text: match[2] });
-      parts.push({ kind: 'sub', text: match[3] });
+      parts.push({ kind: 'text', text: match[3] });
+      parts.push({ kind: 'sub', text: match[4] });
     }
     last = start + match[0].length;
   }
