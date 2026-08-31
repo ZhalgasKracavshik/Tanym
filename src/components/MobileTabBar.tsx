@@ -23,7 +23,7 @@ import { useSlidingPill } from './useSlidingPill';
 import type { IconName } from './Icon';
 
 const TEXT: Dict<{
-  plan: string;
+  archive: string;
   dashboard: string;
   achievements: string;
   mentor: string;
@@ -34,7 +34,7 @@ const TEXT: Dict<{
   more: string;
 }> = {
   ru: {
-    plan: 'Мой план',
+    archive: 'Архив',
     dashboard: 'Кабинет',
     achievements: 'Портфолио',
     mentor: 'Наставник',
@@ -45,7 +45,7 @@ const TEXT: Dict<{
     more: 'Ещё',
   },
   kk: {
-    plan: 'Жоспарым',
+    archive: 'Мұрағат',
     dashboard: 'Кабинет',
     achievements: 'Портфолио',
     mentor: 'Тәлімгер',
@@ -56,7 +56,7 @@ const TEXT: Dict<{
     more: 'Тағы',
   },
   en: {
-    plan: 'My plan',
+    archive: 'Archive',
     dashboard: 'Home',
     achievements: 'Portfolio',
     mentor: 'Mentor',
@@ -103,7 +103,7 @@ export function MobileTabBar({ onMore }: { onMore: () => void }) {
               был раздел, к учёбе отношения не имеющий.
             */
             { href: '/dashboard', label: t.dashboard, icon: 'columns' },
-            { href: '/plan', label: t.plan, icon: 'compass' },
+            { href: '/archive', label: t.archive, icon: 'folder' },
             { href: '/chat', label: t.mentor, icon: 'chat' },
             { href: '/achievements', label: t.achievements, icon: 'trophy' },
             { href: '/leaderboard', label: t.leaderboard, icon: 'medal' },

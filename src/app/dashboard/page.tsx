@@ -18,6 +18,7 @@ import { useStore } from '@/components/StoreProvider';
 import { useEffectiveProfile } from '@/lib/useEffectiveProfile';
 import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
 import { StudentOnlyNotice } from '@/components/StudentOnlyNotice';
+import { StudyPlan } from '@/components/StudyPlan';
 import type { Dict } from '@/lib/i18n';
 import { Icon } from '@/components/Icon';
 import type { IconName } from '@/components/Icon';
@@ -532,6 +533,17 @@ export default function DashboardPage() {
         </>
       )}
 
+      {/*
+        Учебный план стоит здесь же, а не отдельной страницей.
+
+        Кабинет отвечает на вопрос «где я», план — на вопрос «что
+        дальше», и это половинки одного вопроса: разведённые по разным
+        пунктам меню, они заставляли ходить туда-обратно, чтобы собрать
+        картину целиком.
+      */}
+      <div className="mt-14 border-t border-ink-200 pt-10">
+        <StudyPlan />
+      </div>
     </div>
   );
 }

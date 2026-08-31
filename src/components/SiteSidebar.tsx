@@ -242,8 +242,9 @@ export function SiteSidebar() {
     как школьная соцсеть.
   */
   const ALL_NAV: NavItem[] = [
+    /* Плана отдельным пунктом больше нет: он живёт внутри кабинета,
+       потому что отвечает на вторую половину того же вопроса. */
     { href: '/dashboard', label: t.dashboard, icon: 'columns', section: 'study' },
-    { href: '/plan', label: t.plan, icon: 'compass', section: 'study' },
     { href: '/chat', label: t.mentor, icon: 'chat', section: 'study' },
     { href: '/archive', label: t.archive, icon: 'folder', section: 'study' },
     { href: '/achievements', label: t.achievements, icon: 'trophy', section: 'study' },
