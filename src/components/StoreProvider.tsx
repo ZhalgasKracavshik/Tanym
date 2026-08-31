@@ -22,6 +22,7 @@ import type {
   AppState,
   CachedPlan,
   ChatMessage,
+  Conversation,
   DiagnosticResult,
   Difficulty,
   Language,
@@ -52,6 +53,9 @@ interface StoreValue {
   appendChat: (message: ChatMessage) => void;
   replaceChat: (messages: ChatMessage[]) => void;
   clearChat: () => void;
+  startConversation: () => string;
+  selectConversation: (id: string) => void;
+  deleteConversation: (id: string) => void;
   resetAll: () => void;
 }
 
@@ -222,23 +226,110 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setState((previous) => ({ ...previous, plans: { ...previous.plans, [plan.subjectId]: plan } }));
   }, []);
 
-  const appendChat = useCallback((message: ChatMessage) => {
-    setState((previous) => ({ ...previous, chat: [...previous.chat, message] }));
+  /*
+    Разговоры наставника.
+
+    Все действия правят состояние функцией от предыдущего значения: ответ
+    модели приходит асинхронно, и к этому моменту ученик мог успеть
+    переключить разговор или начать новый.
+  */
+
+  /** Заголовок полки — первый вопрос ученика, обрезанный до строки. */
+  const conversationTitle = (text: string) => {
+    const clean = text.trim().replace(/\s+/g, ' ');
+    return clean.length > 60 ? `${clean.slice(0, 60)}…` : clean || 'Новый разговор';
+  };
+
+  const startConversation = useCallback((): string => {
+    const id = createId('chat');
+    const now = new Date().toISOString();
+    setState((previous) => ({
+      ...previous,
+      activeChatId: id,
+      conversations: [
+        { id, title: 'Новый разговор', messages: [], createdAt: now, updatedAt: now },
+        ...previous.conversations,
+      ],
+    }));
+    return id;
+  }, []);
+
+  const selectConversation = useCallback((id: string) => {
+    setState((previous) => ({ ...previous, activeChatId: id }));
+  }, []);
+
+  const deleteConversation = useCallback((id: string) => {
+    setState((previous) => {
+      const conversations = previous.conversations.filter((item) => item.id !== id);
+      return {
+        ...previous,
+        conversations,
+        /* Удалили открытый разговор — открываем ближайший, а не пустоту. */
+        activeChatId: previous.activeChatId === id ? (conversations[0]?.id ?? null) : previous.activeChatId,
+      };
+    });
   }, []);
 
   /**
-   * Подставляет историю целиком.
+   * Добавляет реплику в открытый разговор.
    *
-   * Нужен для чата: переписка теперь хранится на сервере, и при открытии
-   * страницы её надо поднять в состояние одним куском, а не по сообщению
+   * Если открытого нет, разговор заводится здесь же: ученик просто пишет
+   * вопрос, и требовать от него сначала нажать «Новый разговор» незачем.
+   */
+  const appendChat = useCallback((message: ChatMessage) => {
+    setState((previous) => {
+      const now = new Date().toISOString();
+      const activeId = previous.activeChatId ?? createId('chat');
+      const exists = previous.conversations.some((item) => item.id === activeId);
+
+      const base: Conversation[] = exists
+        ? previous.conversations
+        : [{ id: activeId, title: 'Новый разговор', messages: [], createdAt: now, updatedAt: now }, ...previous.conversations];
+
+      return {
+        ...previous,
+        activeChatId: activeId,
+        conversations: base.map((item) => {
+          if (item.id !== activeId) return item;
+          const messages = [...item.messages, message];
+          /* Заголовок ставится один раз, по первому вопросу ученика. */
+          const needsTitle = item.messages.length === 0 && message.role === 'user';
+          return {
+            ...item,
+            title: needsTitle ? conversationTitle(message.content) : item.title,
+            messages,
+            updatedAt: now,
+          };
+        }),
+      };
+    });
+  }, []);
+
+  /**
+   * Подставляет историю открытого разговора целиком.
+   *
+   * Нужен, когда переписку поднимают одним куском, а не по сообщению
    * через appendChat — иначе локальные и серверные реплики задвоятся.
    */
   const replaceChat = useCallback((messages: ChatMessage[]) => {
-    setState((previous) => ({ ...previous, chat: messages }));
+    setState((previous) => ({
+      ...previous,
+      conversations: previous.conversations.map((item) =>
+        item.id === previous.activeChatId
+          ? { ...item, messages, updatedAt: new Date().toISOString() }
+          : item,
+      ),
+    }));
   }, []);
 
+  /** Очищает реплики открытого разговора, не удаляя сам разговор. */
   const clearChat = useCallback(() => {
-    setState((previous) => ({ ...previous, chat: [] }));
+    setState((previous) => ({
+      ...previous,
+      conversations: previous.conversations.map((item) =>
+        item.id === previous.activeChatId ? { ...item, messages: [] } : item,
+      ),
+    }));
   }, []);
 
   const resetAll = useCallback(() => {
@@ -269,6 +360,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       appendChat,
       replaceChat,
       clearChat,
+      startConversation,
+      selectConversation,
+      deleteConversation,
       resetAll,
     }),
     [
@@ -291,6 +385,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       appendChat,
       replaceChat,
       clearChat,
+      startConversation,
+      selectConversation,
+      deleteConversation,
       resetAll,
     ],
   );

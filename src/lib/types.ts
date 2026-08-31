@@ -239,6 +239,22 @@ export interface TopicProgress {
   lastAt: string;
 }
 
+/** Один разговор с наставником: заголовок для списка и сами реплики. */
+export interface Conversation {
+  id: string;
+  /**
+   * Заголовок для боковой полки.
+   *
+   * Берётся из первого вопроса ученика и потом не меняется: список
+   * разговоров должен быть узнаваемым, а не переписываться при каждом
+   * новом сообщении.
+   */
+  title: string;
+  messages: ChatMessage[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
@@ -292,7 +308,16 @@ export interface AppState {
   /** Темы, добавленные учителем через панель управления. */
   customTopics: Topic[];
   plans: Record<SubjectId, CachedPlan>;
-  chat: ChatMessage[];
+  /**
+   * Разговоры с наставником.
+   *
+   * Раньше здесь лежал один плоский список сообщений: начать новую тему
+   * можно было только стерев предыдущую. Теперь их несколько, как в
+   * привычных чатах с моделью, и каждый живёт своей жизнью.
+   */
+  conversations: Conversation[];
+  /** Открытый разговор. null — ни одного ещё не начато. */
+  activeChatId: string | null;
 }
 
 /* ------------------------------------------------------------------ */

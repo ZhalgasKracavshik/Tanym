@@ -12,7 +12,7 @@
  * лишний экран между жюри и продуктом.
  */
 
-import type { AppState } from './types';
+import type { AppState, ChatMessage, Conversation } from './types';
 
 export const STORAGE_KEY = 'tanym.state.v1';
 export const CURRENT_VERSION = 1;
@@ -35,7 +35,8 @@ export function emptyState(): AppState {
     leaderboardAnonymous: false,
     customTopics: [],
     plans: {},
-    chat: [],
+    conversations: [],
+    activeChatId: null,
   };
 }
 
@@ -79,12 +80,45 @@ export function loadState(): AppState {
       leaderboardAnonymous: parsed.leaderboardAnonymous === true,
       customTopics: Array.isArray(parsed.customTopics) ? parsed.customTopics : [],
       plans: parsed.plans ?? {},
-      chat: Array.isArray(parsed.chat) ? parsed.chat : [],
+      conversations: readConversations(parsed),
+      activeChatId: typeof parsed.activeChatId === 'string' ? parsed.activeChatId : null,
     };
   } catch {
     // Битый JSON — не роняем приложение, начинаем с чистого состояния.
     return emptyState();
   }
+}
+
+/**
+ * Разговоры из сохранённого состояния, с переносом старой переписки.
+ *
+ * До появления нескольких разговоров в состоянии лежал один плоский
+ * список сообщений в поле chat. Просто выбросить его нельзя: у людей,
+ * которые уже пользовались наставником, на глазах пропала бы вся
+ * переписка. Поэтому старый список становится первым разговором.
+ *
+ * Версия состояния при этом не поднималась намеренно: подъём версии в
+ * этом проекте означает полный сброс прогресса, а здесь достаточно
+ * подстановки, и терять диагностику с попытками ради переезда чата
+ * было бы несоразмерно.
+ */
+function readConversations(parsed: Partial<AppState> & { chat?: unknown }): Conversation[] {
+  if (Array.isArray(parsed.conversations)) return parsed.conversations;
+
+  const legacy = Array.isArray(parsed.chat) ? (parsed.chat as ChatMessage[]) : [];
+  if (legacy.length === 0) return [];
+
+  const firstQuestion = legacy.find((message) => message.role === 'user')?.content ?? 'Разговор';
+  const at = legacy[0]?.at ?? new Date(0).toISOString();
+  return [
+    {
+      id: 'legacy',
+      title: firstQuestion.slice(0, 60),
+      messages: legacy,
+      createdAt: at,
+      updatedAt: legacy.at(-1)?.at ?? at,
+    },
+  ];
 }
 
 export function saveState(state: AppState): void {

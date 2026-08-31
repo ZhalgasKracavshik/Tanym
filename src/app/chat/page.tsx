@@ -24,6 +24,7 @@ import { StudentOnlyNotice } from '@/components/StudentOnlyNotice';
 import { useChatHistory } from '@/lib/supabase/chat';
 import { AiBadge } from '@/components/AiBadge';
 import { AiAnswer, AiTextScaleControl, useAiTextScale } from '@/components/AiAnswer';
+import { ShimmerText } from '@/components/ShimmerText';
 import { Icon } from '@/components/Icon';
 import { PressButton } from '@/components/motion';
 import { Button, ButtonLink, Card, EmptyState, Kicker, Skeleton } from '@/components/ui';
@@ -38,6 +39,10 @@ const TEXT: Dict<{
   createProfile: string;
   clearHistory: string;
   confirmClear: string;
+  newChat: string;
+  noChats: string;
+  deleteChat: string;
+  confirmDeleteChat: string;
   greeting: (name: string) => string;
   placeholder: string;
   send: string;
@@ -53,6 +58,10 @@ const TEXT: Dict<{
     createProfile: 'Создать профиль',
     clearHistory: 'Очистить историю',
     confirmClear: 'Очистить всю историю разговора?',
+    newChat: 'Новый разговор',
+    noChats: 'Здесь появятся ваши разговоры с наставником.',
+    deleteChat: 'Удалить разговор',
+    confirmDeleteChat: 'Удалить этот разговор? Восстановить его будет нельзя.',
     greeting: (name) =>
       `Привет, ${name}. Я помогу разобраться с темой, а не решу задание за тебя. С чего начнём?`,
     placeholder: 'Напиши свой вопрос…',
@@ -74,6 +83,10 @@ const TEXT: Dict<{
     createProfile: 'Профиль құру',
     clearHistory: 'Тарихты тазалау',
     confirmClear: 'Әңгіме тарихы толығымен тазалансын ба?',
+    newChat: 'Жаңа әңгіме',
+    noChats: 'Мұнда тәлімгермен әңгімелеріңіз пайда болады.',
+    deleteChat: 'Әңгімені жою',
+    confirmDeleteChat: 'Бұл әңгімені жою керек пе? Оны қалпына келтіру мүмкін болмайды.',
     greeting: (name) =>
       `Сәлем, ${name}. Мен тапсырманы сенің орныңа шешіп бермеймін, тақырыпты түсінуге көмектесемін. Неден бастаймыз?`,
     placeholder: 'Сұрағыңды жаз…',
@@ -95,6 +108,10 @@ const TEXT: Dict<{
     createProfile: 'Create profile',
     clearHistory: 'Clear history',
     confirmClear: 'Clear the entire conversation history?',
+    newChat: 'New chat',
+    noChats: 'Your conversations with the mentor will appear here.',
+    deleteChat: 'Delete conversation',
+    confirmDeleteChat: 'Delete this conversation? It cannot be restored.',
     greeting: (name) =>
       `Hi, ${name}. I will help you understand the topic rather than solve it for you. Where shall we start?`,
     placeholder: 'Type your question…',
@@ -110,10 +127,30 @@ const TEXT: Dict<{
 };
 
 export default function ChatPage() {
-  const { state, hydrated, appendChat, clearChat, replaceChat } = useStore();
+  const {
+    state,
+    hydrated,
+    appendChat,
+    clearChat,
+    replaceChat,
+    startConversation,
+    selectConversation,
+    deleteConversation,
+  } = useStore();
   const { profile: schoolProfile } = useSchoolAuth();
   const { history, historyFor, saveMessage, clearHistory } = useChatHistory(schoolProfile?.id ?? null);
   const t = TEXT[state.language];
+
+  /*
+    Открытый разговор и его реплики.
+
+    Раньше страница читала один плоский список state.chat. Теперь
+    разговоров несколько, и всё, что раньше обращалось к state.chat,
+    обращается к репликам открытого.
+  */
+  const conversations = state.conversations;
+  const activeChat = conversations.find((item) => item.id === state.activeChatId) ?? null;
+  const messages = activeChat?.messages ?? [];
   const [question, setQuestion] = useState('');
   const [loading, setLoading] = useState(false);
   const [showKeyboard, setShowKeyboard] = useState(false);
@@ -154,15 +191,27 @@ export default function ChatPage() {
     if (history === null || historyFor === null) return;
     if (appliedFor.current === historyFor) return;
     appliedFor.current = historyFor;
-    if (history.length > 0) replaceChat(history);
-  }, [history, historyFor, replaceChat]);
+    /*
+      Серверную переписку поднимаем, только если локально пусто.
+
+      Она хранится одним потоком на ученика и о разговорах ничего не
+      знает. Подставлять её в открытый разговор поверх уже начатого
+      значило бы смешать разные темы в одну ленту. Зато у тех, кто
+      пользовался наставником раньше, история не пропадает: она станет
+      первым разговором.
+    */
+    if (history.length > 0 && conversations.length === 0) {
+      startConversation();
+      replaceChat(history);
+    }
+  }, [history, historyFor, replaceChat, conversations.length, startConversation]);
 
   // useRef хранит ссылку на элемент разметки — нужен, чтобы прокрутить ленту вниз.
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [state.chat.length, loading]);
+  }, [messages.length, loading]);
 
   /*
     Личность берём из школьного аккаунта, а не из локального профиля.
@@ -191,7 +240,7 @@ export default function ChatPage() {
     const body: ChatRequest = {
       question: trimmed,
       language: state.language,
-      history: state.chat.slice(-6),
+      history: messages.slice(-6),
       profile,
       subjectId: subject?.id ?? null,
       topicId: null,
@@ -284,7 +333,77 @@ export default function ChatPage() {
         }}
       />
 
-      <div className="mx-auto flex max-w-3xl flex-col px-4 py-10 sm:px-6">
+      <div className="mx-auto flex w-full max-w-6xl gap-6 px-4 py-10 sm:px-6">
+      {/*
+        Полка разговоров.
+
+        Стоит рядом с лентой, а не выпадающим списком сверху: у неё та же
+        задача, что и в привычных чатах с моделью — держать прошлые темы
+        на виду, чтобы вернуться к разбору можно было не вспоминая, что
+        именно спрашивал. На узком экране полка прячется: там на две
+        колонки места нет, а лента важнее списка.
+      */}
+      <aside className="hidden w-60 shrink-0 lg:block">
+        <div className="sticky top-6 space-y-3">
+          <Button
+            size="sm"
+            className="w-full"
+            onClick={() => {
+              startConversation();
+              setQuestion('');
+            }}
+          >
+            <span className="flex items-center justify-center gap-1.5">
+              <Icon name="plus" size={15} />
+              {t.newChat}
+            </span>
+          </Button>
+
+          {conversations.length === 0 ? (
+            <p className="px-1 text-xs leading-relaxed text-ink-400">{t.noChats}</p>
+          ) : (
+            <ul className="space-y-1">
+              {conversations.map((item) => {
+                const active = item.id === state.activeChatId;
+                return (
+                  <li key={item.id} className="group relative">
+                    <button
+                      type="button"
+                      onClick={() => selectConversation(item.id)}
+                      aria-current={active ? 'true' : undefined}
+                      className={`w-full truncate rounded-[var(--radius-control)] py-2 pl-3 pr-8 text-left text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-brand-500 ${
+                        active
+                          ? 'bg-brand-50 font-semibold text-brand-800'
+                          : 'text-ink-600 hover:bg-ink-50 hover:text-ink-900'
+                      }`}
+                    >
+                      {item.title}
+                    </button>
+                    {/*
+                      Удаление появляется по наведению, но остаётся в
+                      разметке всегда: кнопка, которой нет в дереве,
+                      недоступна с клавиатуры.
+                    */}
+                    <button
+                      type="button"
+                      aria-label={t.deleteChat}
+                      title={t.deleteChat}
+                      onClick={() => {
+                        if (window.confirm(t.confirmDeleteChat)) deleteConversation(item.id);
+                      }}
+                      className="absolute right-1 top-1.5 flex h-7 w-7 items-center justify-center rounded-lg text-ink-300 opacity-0 outline-none transition-all hover:bg-white hover:text-danger-600 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-brand-500 group-hover:opacity-100"
+                    >
+                      <Icon name="close" size={14} />
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      </aside>
+
+      <div className="flex min-w-0 flex-1 flex-col">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           {/* Микроподпись над заголовком: соседние по навигации страницы
@@ -308,7 +427,28 @@ export default function ChatPage() {
               <span>{showKeyboard ? 'Скрыть клавиатуру' : 'Ретро-клавиатура'}</span>
             </Button>
           </div>
-          {state.chat.length > 0 && (
+          {/*
+            Тот же «Новый разговор», но для узкого экрана: полка с
+            разговорами там скрыта, а начать новую тему нужно уметь и с
+            телефона. На широком экране кнопка не дублируется.
+          */}
+          <div className="lg:hidden">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                startConversation();
+                setQuestion('');
+              }}
+            >
+              <span className="flex items-center gap-1.5">
+                <Icon name="plus" size={15} />
+                {t.newChat}
+              </span>
+            </Button>
+          </div>
+
+          {messages.length > 0 && (
             <Button
               variant="ghost"
               size="sm"
@@ -326,7 +466,7 @@ export default function ChatPage() {
       </div>
 
       <div className="mt-6 space-y-3">
-        {state.chat.length === 0 && !loading && (
+        {messages.length === 0 && !loading && (
           <Card>
             <p className="text-ink-700">{t.greeting(displayName.split(' ')[0])}</p>
             <div className="mt-6 grid gap-2">
@@ -343,7 +483,7 @@ export default function ChatPage() {
           </Card>
         )}
 
-        {state.chat.map((message, index) => (
+        {messages.map((message, index) => (
           <div
             key={`${message.at}-${index}`}
             className={message.role === 'user' ? 'flex justify-end' : 'flex justify-start'}
@@ -377,10 +517,15 @@ export default function ChatPage() {
           </div>
         ))}
 
+        {/*
+          Пока модель отвечает — бегущий блик по подписи, а не полосы
+          скелетона: полосы обещают текст известной длины, а разбор бывает
+          и в две строки, и в двадцать.
+        */}
         {loading && (
-          <div className="max-w-[90%] space-y-2 rounded-2xl border border-ink-200 bg-white px-4 py-3">
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-9/12" />
+          <div className="flex items-center gap-2.5 rounded-2xl border border-ink-200 bg-white px-4 py-3">
+            <Icon name="sparkles" size={16} className="text-brand-500" />
+            <ShimmerText className="text-sm font-semibold">Наставник думает</ShimmerText>
           </div>
         )}
 
@@ -449,6 +594,7 @@ export default function ChatPage() {
           </div>
         </div>
       )}
+      </div>
       </div>
     </div>
   );
