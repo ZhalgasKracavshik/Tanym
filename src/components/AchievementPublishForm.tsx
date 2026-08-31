@@ -23,7 +23,8 @@ import { isSafeExternalUrl } from '@/lib/safeUrl';
   запрет, здесь — предупреждение до загрузки. Держать два разных набора
   нельзя, иначе форма пообещает то, что сервер не примет.
 */
-const PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+/* Фотография или документ: грамоты часто приходят в PDF, а не картинкой. */
+const PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
 const AUDIO_TYPES = ['audio/mpeg', 'audio/mp4', 'audio/x-m4a', 'audio/wav', 'audio/x-wav', 'audio/ogg'];
 const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 
@@ -35,7 +36,7 @@ const TEXT = {
     audioLabel: 'Аудиозапись (необязательно)',
     videoLabel: 'Ссылка на видео (необязательно)',
     videoPlaceholder: 'https://…',
-    badPhoto: 'Для фотографии подойдёт JPG, PNG или WebP.',
+    badPhoto: 'Подойдёт JPG, PNG, WebP или PDF.',
     badAudio: 'Для записи подойдёт MP3, M4A, WAV или OGG.',
     badVideo: 'Ссылка должна начинаться с http:// или https://.',
     tooBig: 'Файл больше 10 МБ. Возьмите файл поменьше.',
@@ -53,7 +54,7 @@ const TEXT = {
     audioLabel: 'Аудиожазба (міндетті емес)',
     videoLabel: 'Бейнеге сілтеме (міндетті емес)',
     videoPlaceholder: 'https://…',
-    badPhoto: 'Фотосурет үшін JPG, PNG немесе WebP жарайды.',
+    badPhoto: 'JPG, PNG, WebP немесе PDF жарайды.',
     badAudio: 'Жазба үшін MP3, M4A, WAV немесе OGG жарайды.',
     badVideo: 'Сілтеме http:// немесе https:// деп басталуы керек.',
     tooBig: 'Файл 10 МБ-тан үлкен. Кішірек файл таңдаңыз.',
@@ -71,7 +72,7 @@ const TEXT = {
     audioLabel: 'Audio recording (optional)',
     videoLabel: 'Video link (optional)',
     videoPlaceholder: 'https://…',
-    badPhoto: 'A photo can be JPG, PNG or WebP.',
+    badPhoto: 'JPG, PNG, WebP or PDF will do.',
     badAudio: 'A recording can be MP3, M4A, WAV or OGG.',
     badVideo: 'The link must start with http:// or https://.',
     tooBig: 'The file is larger than 10 MB. Pick a smaller one.',

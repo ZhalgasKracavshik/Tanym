@@ -249,6 +249,24 @@ export function ActivityFeedItem({ item, footer }: { item: FeedItem; footer?: Re
       </Link>
 
       {/*
+        Документ показывается ссылкой, а не картинкой: <img> на PDF
+        отрисовался бы битой иконкой во всю карточку.
+      */}
+      {mediaUrl && !imageUrl && (
+        <div className="border-t border-ink-100 px-5 py-4">
+          <a
+            href={mediaUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-600 underline-offset-2 hover:underline"
+          >
+            <Icon name="folder" size={15} />
+            Открыть документ
+          </a>
+        </div>
+      )}
+
+      {/*
         Аудио и видео вне ссылки на запись.
 
         Проигрыватель внутри <Link> означал бы, что нажатие на «play»
