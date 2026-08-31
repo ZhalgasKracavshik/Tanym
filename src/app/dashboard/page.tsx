@@ -24,7 +24,6 @@ import type { IconName } from '@/components/Icon';
 import { ButtonLink, Card, EmptyState, Kicker, ProgressBar, SectionHeader, Skeleton } from '@/components/ui';
 import { Reveal } from '@/components/motion';
 import { ProgressRing } from '@/components/ProgressRing';
-import { ActivityFeed } from '@/components/ActivityFeed';
 
 /** Подписи кабинета на трёх языках. Ключи одинаковые — за этим следит TypeScript. */
 const TEXT: Dict<{
@@ -533,23 +532,6 @@ export default function DashboardPage() {
         </>
       )}
 
-      {/*
-        Лента вынесена из ветки «есть прогресс» и стоит в самом низу.
-
-        Внутри ветки её не видел как раз тот, кому она нужнее всего:
-        у новичка ноль решённых заданий, и весь блок с метриками не
-        рендерится — а увидеть, что тут кто-то живёт и что-то публикует,
-        важнее всего именно в первый день.
-      */}
-      <div className="mt-12 border-t border-ink-200 pt-8">
-        <h2 className="flex items-center gap-2 text-lg font-bold text-ink-900">
-          <Icon name="sparkles" size={20} className="text-brand-500" />
-          {t.feedTitle}
-        </h2>
-        <div className="mt-4">
-          <ActivityFeed limit={5} />
-        </div>
-      </div>
     </div>
   );
 }

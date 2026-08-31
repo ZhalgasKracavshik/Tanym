@@ -19,7 +19,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
-import { AchievementCard, type AchievementCardTone } from './AchievementCard';
 import { Avatar } from './Avatar';
 import { Icon } from './Icon';
 import type { IconName } from './Icon';
@@ -87,19 +86,6 @@ const MEDIA_BUCKET: Partial<Record<FeedKind, string>> = {
   listing_published: 'card-covers',
 };
 
-/**
- * Типы записей, которые в ленте рисуются карточкой достижения.
- *
- * Заодно это и признак «достижение ли это»: ключ есть — рисуем карточкой,
- * ключа нет (объявление) — остаётся обычная строка. Значение — цвет заливки
- * для случая «фотографии нет»: подтверждённое достижение уходит в медальный
- * янтарь, добровольный пост — в фирменный оранжевый, как в общей ленте
- * достижений.
- */
-const ACHIEVEMENT_TONE: Partial<Record<FeedKind, AchievementCardTone>> = {
-  achievement_approved: 'accent',
-  achievement_post: 'brand',
-};
 
 /** «5 минут назад» вместо даты: лента читается как поток, а не как архив. */
 export function relativeTime(iso: string): string {
@@ -176,7 +162,6 @@ export function useActivityFeed(limit = 20, refreshKey = 0) {
 export function ActivityFeedItem({ item, footer }: { item: FeedItem; footer?: ReactNode }) {
   const supabase = createClient();
   const meta = KIND_META[item.kind];
-  const cardTone = ACHIEVEMENT_TONE[item.kind];
 
   const bucket = MEDIA_BUCKET[item.kind];
   const mediaUrl =
@@ -189,54 +174,6 @@ export function ActivityFeedItem({ item, footer }: { item: FeedItem; footer?: Re
     во всю карточку.
   */
   const imageUrl = mediaUrl && !/\.pdf($|\?)/i.test(mediaUrl) ? mediaUrl : null;
-
-  if (cardTone) {
-    const isPost = item.kind === 'achievement_post';
-
-    return (
-      <>
-        {/*
-          Автор идёт строкой над карточкой, а не поверх неё: лента
-          читается сверху вниз по столбцу «кто — что», и подпись,
-          уехавшая на фотографию, выпадает из этого столбца.
-        */}
-        <Link href={item.link} className="block">
-          <div className="flex items-center gap-3">
-            <Avatar name={item.actorName} colorId={item.actorColor} photoUrl={item.actorPhoto} size={40} />
-            <p className="min-w-0 text-sm text-ink-500">
-              <span className="font-semibold text-ink-900">{item.actorName}</span> {meta.label}
-              <span className="text-ink-300"> · {relativeTime(item.created_at)}</span>
-            </p>
-          </div>
-
-          {/*
-            Карточка вертикальная (4:5), поэтому её ширина ограничена:
-            на всю ленту в тысячу пикселей она развернулась бы в экран
-            высотой, и одна запись съела бы всю прокрутку.
-          */}
-          <div className="mt-3 w-full max-w-xs">
-            <AchievementCard
-              title={item.title}
-              /*
-                У подтверждённого достижения в detail лежит короткое
-                направление («Физика») — это подзаголовок. У поста там
-                подпись самого ученика, её место третьей строкой.
-              */
-              subtitle={isPost ? undefined : (item.detail ?? undefined)}
-              description={isPost ? (item.detail ?? undefined) : undefined}
-              date={item.created_at}
-              // Лента школы целиком на русском — переключателя языка у неё нет.
-              language="ru"
-              photoUrl={imageUrl}
-              tone={cardTone}
-              icon={meta.icon}
-            />
-          </div>
-        </Link>
-        {footer}
-      </>
-    );
-  }
 
   return (
     <LiftCard className="overflow-hidden rounded-[var(--radius-card)] border border-ink-200/80 bg-white shadow-[var(--shadow-rest)]">
@@ -283,9 +220,20 @@ export function ActivityFeedItem({ item, footer }: { item: FeedItem; footer?: Re
           отдавала NULL, даже когда обложку загружали. Сейчас вью читает
           published_listings.cover_path по-настоящему.
         */}
+        {/*
+          Фотография снизу и во всю ширину, как в записи соцсети: сначала
+          читают, кто и что, и только потом смотрят вложение. Высота
+          ограничена сверху, а не задана жёстко, — скан диплома и
+          горизонтальное фото не должны обрезаться до одинаковой полосы.
+        */}
         {imageUrl && (
           // eslint-disable-next-line @next/next/no-img-element -- внешний бакет, домен для next/image не настроен
-          <img src={imageUrl} alt="" loading="lazy" className="h-40 w-full bg-ink-50 object-cover" />
+          <img
+            src={imageUrl}
+            alt=""
+            loading="lazy"
+            className="max-h-[420px] w-full bg-ink-50 object-cover"
+          />
         )}
       </Link>
       {footer}
