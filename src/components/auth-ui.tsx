@@ -1,72 +1,145 @@
 'use client';
 
 /**
- * Кирпичики экранов входа и регистрации.
+ * Кирпичики экранов входа, регистрации и сброса пароля.
  *
- * Новый дизайн: glassmorphism форма поверх WebGL smokey-background.
- * Логика и хуки не изменились — только визуальная оболочка.
+ * Раньше эти экраны были тёмным стеклянным дизайном поверх WebGL-дыма —
+ * ровно тем, что не совпадает со стилем остального сайта: Taным нигде
+ * больше не тёмный, у него белые карточки на `--radius-card`,
+ * `--shadow-rest` и терракотовый акцент. Теперь форма живёт на такой же
+ * белой карточке, а тёмная дымка осталась только в декоративной левой
+ * колонке — том же приёме, что уже используется в кабинете и профиле
+ * (тёмная панель-акцент внутри светлой страницы).
  */
 
-import { useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import type { InputHTMLAttributes, ReactNode } from 'react';
 import Link from 'next/link';
 import { AnimatePresence } from 'framer-motion';
-import { Icon } from './Icon';
-import { Logo } from './Logo';
+import { Icon, type IconName } from './Icon';
+import { Logo, LogoMark } from './Logo';
 import { EASE_OUT, PressButton, Reveal, SuccessCheck, Spinner, motion } from './motion';
 import { SmokeyBackground } from './ui/smokey-background';
 
 /* ------------------------------------------------------------------ */
-/*  Оболочка                                                           */
+/*  Оболочка: тёплая колонка слева, белая карточка формы справа        */
 /* ------------------------------------------------------------------ */
 
+interface HeroFeature {
+  icon: IconName;
+  text: string;
+}
+
+/*
+  Появление содержимого левой колонки по очереди, а не всё разом.
+
+  StaggerGroup из motion.tsx для этого не подходит: он ждёт попадания в
+  область просмотра (`whileInView`), а колонка видна сразу при открытии
+  страницы — ждать прокрутки, которой не будет, значит остаться
+  невидимой навсегда. Здесь нужен `animate`, а не `whileInView`.
+*/
+const heroParent = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.1, delayChildren: 0.15 } },
+};
+const heroChild = {
+  hidden: { opacity: 0, y: 12 },
+  show: { opacity: 1, y: 0, transition: EASE_OUT },
+};
+
 export function AuthShell({
+  heroTitle,
+  heroText,
+  heroFeatures,
   title,
   subtitle,
   children,
   footer,
 }: {
+  heroTitle: string;
+  heroText: string;
+  heroFeatures?: HeroFeature[];
   title: string;
   subtitle: string;
   children: ReactNode;
   footer?: ReactNode;
 }) {
   return (
-    <div className="relative min-h-screen w-full overflow-hidden bg-ink-900 flex items-center justify-center p-4">
-      {/* WebGL smokey background — тёплая терракота, в тон бренду */}
-      <SmokeyBackground color="#d85f2e" />
+    // div, а не main: AppShell уже оборачивает бесшовные маршруты (в том
+    // числе этот) в свой <main>, и два <main> на странице — не разметка,
+    // а поломанная семантика документа.
+    <div className="flex min-h-screen w-full bg-[var(--gradient-warm)] p-2 lg:h-screen lg:overflow-hidden lg:p-4">
+      {/*
+        Левая колонка: та же тёмная дымка в терракоту, что и раньше во всей
+        оболочке, — но теперь как один акцентный блок среди светлой
+        страницы, а не как фон для всего экрана. Тот же приём уже стоит в
+        кабинете и в профиле (тёмная панель-акцент на градиенте
+        --gradient-ink внутри светлого макета).
+      */}
+      <div className="relative hidden h-full w-[43%] shrink-0 overflow-hidden rounded-[var(--radius-card)] shadow-[var(--shadow-float)] lg:flex lg:flex-col lg:justify-between">
+        <SmokeyBackground color="#d85f2e" />
 
-      {/* Затемняющий оверлей поверх шейдера, в той же тёплой тёмной гамме, что и --gradient-ink */}
-      <div className="absolute inset-0 bg-gradient-to-br from-ink-900/70 via-ink-800/50 to-brand-900/50" />
+        <Link
+          href="/"
+          className="relative z-10 flex w-fit items-center gap-2 p-8 outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+        >
+          <LogoMark size={30} />
+          <span className="text-lg font-black tracking-wider text-white">TANÝM</span>
+        </Link>
 
-      {/* Glassmorphism карточка */}
-      <Reveal immediate className="relative z-10 w-full max-w-sm">
-        <div className="rounded-[var(--radius-card)] border border-white/20 bg-white/10 p-8 shadow-2xl backdrop-blur-xl">
-          {/* Лого */}
-          <div className="mb-6 flex justify-center">
-            <Link
-              href="/"
-              className="inline-block rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-brand-400"
-            >
-              <Logo size={32} />
+        <motion.div
+          variants={heroParent}
+          initial="hidden"
+          animate="show"
+          className="relative z-10 space-y-6 p-10 pb-12"
+        >
+          <motion.div variants={heroChild}>
+            <h1 className="text-[2.35rem] font-semibold leading-[1.1] tracking-tight text-balance text-white">
+              {heroTitle}
+            </h1>
+            <p className="mt-3 max-w-xs text-[15px] leading-relaxed text-white/75">{heroText}</p>
+          </motion.div>
+
+          {heroFeatures && (
+            <div className="space-y-2.5">
+              {heroFeatures.map((feature) => (
+                <motion.div
+                  key={feature.text}
+                  variants={heroChild}
+                  className="flex items-center gap-3 rounded-[var(--radius-control)] border border-white/15 bg-white/10 px-4 py-3 backdrop-blur-sm"
+                >
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/15 text-white">
+                    <Icon name={feature.icon} size={16} />
+                  </span>
+                  <span className="text-sm font-medium text-white/90">{feature.text}</span>
+                </motion.div>
+              ))}
+            </div>
+          )}
+        </motion.div>
+      </div>
+
+      {/* Правая колонка: форма на обычной белой карточке — Card в остальном сайте выглядит так же */}
+      <div className="flex flex-1 items-center justify-center overflow-y-auto px-4 py-10 sm:px-8 lg:overflow-hidden lg:py-6">
+        <Reveal immediate className="w-full max-w-sm">
+          <div className="mb-6 flex justify-center lg:hidden">
+            <Link href="/" className="rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-brand-500">
+              <Logo size={30} />
             </Link>
           </div>
 
-          {/* Заголовок */}
-          <div className="mb-7 text-center">
-            <h1 className="text-3xl font-bold text-white">{title}</h1>
-            <p className="mt-2 text-sm text-gray-300">{subtitle}</p>
+          <div className="rounded-[var(--radius-card)] border border-ink-200 bg-white p-7 shadow-[var(--shadow-rest)] sm:p-8">
+            <div className="mb-6 text-center lg:text-left">
+              <h2 className="text-2xl font-semibold tracking-tight text-ink-900">{title}</h2>
+              <p className="mt-1.5 text-sm text-ink-500">{subtitle}</p>
+            </div>
+
+            {children}
+
+            {footer && <p className="mt-6 text-center text-sm text-ink-500">{footer}</p>}
           </div>
-
-          {/* Контент формы */}
-          {children}
-
-          {/* Футер с ссылкой */}
-          {footer && (
-            <p className="mt-6 text-center text-xs text-gray-400">{footer}</p>
-          )}
-        </div>
-      </Reveal>
+        </Reveal>
+      </div>
     </div>
   );
 }
@@ -75,17 +148,79 @@ export function AuthShell({
 /*  Поля                                                               */
 /* ------------------------------------------------------------------ */
 
-export function Field({
-  label,
-  hint,
-  ...props
-}: InputHTMLAttributes<HTMLInputElement> & { label: string; hint?: string }) {
+/**
+ * Держит последний непустой текст ошибки.
+ *
+ * Нужен ради самого перехода: `.t-error-msg` тает по `opacity` 220 мс, а
+ * если текст убрать из React в тот же момент, что и класс `is-error`,
+ * сообщение исчезнет мгновенно и будет таять уже пустая строка — на
+ * глаз это читалось бы как «текст оборвался», а не «сообщение аккуратно ушло».
+ *
+ * setState вызывается прямо в теле рендера, а не в эффекте: это тот самый
+ * официально одобренный React случай «подстроить состояние под новый
+ * проп» (сравнение с предыдущим значением перед вызовом не даёт уйти в
+ * бесконечный цикл). Через эффект пришлось бы ждать лишний кадр после
+ * покраски — сообщение на мгновение показывало бы старый текст, прежде
+ * чем эффект успевал его обновить.
+ */
+function useStickyMessage(value?: string): string | undefined {
+  const [sticky, setSticky] = useState(value);
+  if (value && value !== sticky) setSticky(value);
+  return sticky;
+}
+
+/**
+ * Запускает встряску поля заново на каждую новую попытку отправки.
+ *
+ * `shakeKey` — счётчик, который растёт при каждом submit(), а не только
+ * при неудачном: поле само решает, трясти ли себя, глядя на `error` в
+ * момент изменения счётчика. Класс снимается, вызывается reflow и
+ * добавляется заново — иначе повторная ошибка на том же поле не
+ * переиграла бы анимацию, потому что класс формально не менялся.
+ */
+function useShake(elementRef: React.RefObject<HTMLElement | null>, error: string | undefined, shakeKey?: number) {
+  const lastKey = useRef<number | undefined>(undefined);
+  useEffect(() => {
+    if (shakeKey === undefined || shakeKey === lastKey.current) return;
+    lastKey.current = shakeKey;
+    if (!error) return;
+    const el = elementRef.current;
+    if (!el) return;
+    el.classList.remove('is-shaking');
+    void el.offsetWidth;
+    el.classList.add('is-shaking');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shakeKey, error]);
+}
+
+type FieldProps = InputHTMLAttributes<HTMLInputElement> & {
+  label: string;
+  hint?: string;
+  /** Текст ошибки. Пока задан — рамка красная, поле трясётся при новом shakeKey. */
+  error?: string;
+  /** Счётчик попыток отправки формы — растёт на каждый submit(), см. useShake. */
+  shakeKey?: number;
+};
+
+export function Field({ label, hint, error, shakeKey, id, className, ...props }: FieldProps) {
+  const autoId = useId();
+  const fieldId = id ?? autoId;
+  const inputRef = useRef<HTMLInputElement>(null);
+  const displayError = useStickyMessage(error);
+  useShake(inputRef, error, shakeKey);
+
   return (
-    <div className="relative z-0">
+    <div className={`t-input-wrap relative z-0 ${error ? 'is-error' : ''}`}>
       <input
         {...props}
+        ref={inputRef}
+        id={fieldId}
         placeholder=" "
-        className="auth-field peer block w-full appearance-none border-0 border-b-2 border-gray-400/60 bg-transparent py-2.5 px-0 text-sm text-white outline-none transition-colors focus:border-brand-400 focus:ring-0"
+        aria-invalid={error ? 'true' : undefined}
+        aria-describedby={error ? `${fieldId}-error` : undefined}
+        className={`t-input peer block w-full appearance-none border-0 border-b-2 bg-transparent px-0 py-2.5 text-[15px] text-ink-900 outline-none transition-colors focus:ring-0 ${
+          error ? 'is-error' : ''
+        } ${className ?? ''}`}
       />
       {/*
         peer-autofill добавлен отдельно от peer-[:not(:placeholder-shown)] —
@@ -93,70 +228,108 @@ export function Field({
         браузером поля value меняется не так, как при наборе текста рукой,
         и Chrome не всегда пересчитывает :placeholder-shown у него вовремя.
         Подпись оставалась в «пустой» крупной позиции и печаталась прямо
-        поверх значения — то раздвоение текста, что видно на скриншоте.
-        :autofill матчится у браузера безошибочно, поэтому подпись сворачивается
-        и в этом случае тоже.
+        поверх значения. :autofill матчится у браузера безошибочно, поэтому
+        подпись сворачивается и в этом случае тоже.
       */}
-      <label className="absolute top-3 -z-10 origin-[0] transform text-sm text-gray-300 duration-300 peer-placeholder-shown:translate-y-0 peer-placeholder-shown:scale-100 peer-focus:-translate-y-6 peer-focus:scale-75 peer-focus:text-brand-400 peer-[:not(:placeholder-shown)]:-translate-y-6 peer-[:not(:placeholder-shown)]:scale-75 peer-autofill:-translate-y-6 peer-autofill:scale-75">
+      <label
+        htmlFor={fieldId}
+        className="absolute top-3 -z-10 origin-[0] -translate-y-0 scale-100 transform text-sm text-ink-400 duration-300 peer-focus:-translate-y-6 peer-focus:scale-75 peer-focus:text-brand-600 peer-[:not(:placeholder-shown)]:-translate-y-6 peer-[:not(:placeholder-shown)]:scale-75 peer-autofill:-translate-y-6 peer-autofill:scale-75"
+      >
         {label}
       </label>
-      {hint && <span className="mt-1 block text-xs text-gray-400">{hint}</span>}
+      {hint && !error && <span className="mt-1.5 block text-xs text-ink-400">{hint}</span>}
+      <p id={`${fieldId}-error`} className="t-error-msg mt-1.5 text-xs font-medium text-danger-600" role="alert">
+        {displayError}
+      </p>
     </div>
   );
 }
 
 /**
- * Пароль с переключателем видимости.
+ * Пароль с переключателем видимости и той же тряской при ошибке.
  */
 export function PasswordField({
   label,
   hint,
+  error,
+  shakeKey,
+  id,
+  className,
   ...props
-}: InputHTMLAttributes<HTMLInputElement> & { label: string; hint?: string }) {
+}: FieldProps) {
   const [visible, setVisible] = useState(false);
+  const autoId = useId();
+  const fieldId = id ?? autoId;
+  const inputRef = useRef<HTMLInputElement>(null);
+  const displayError = useStickyMessage(error);
+  useShake(inputRef, error, shakeKey);
 
   return (
-    <div className="relative z-0">
+    <div className={`t-input-wrap relative z-0 ${error ? 'is-error' : ''}`}>
       <input
         {...props}
+        ref={inputRef}
+        id={fieldId}
         type={visible ? 'text' : 'password'}
         placeholder=" "
-        className="auth-field peer block w-full appearance-none border-0 border-b-2 border-gray-400/60 bg-transparent py-2.5 px-0 pr-8 text-sm text-white outline-none transition-colors focus:border-brand-400 focus:ring-0"
+        aria-invalid={error ? 'true' : undefined}
+        aria-describedby={error ? `${fieldId}-error` : undefined}
+        className={`t-input peer block w-full appearance-none border-0 border-b-2 bg-transparent px-0 py-2.5 pr-8 text-[15px] text-ink-900 outline-none transition-colors focus:ring-0 ${
+          error ? 'is-error' : ''
+        } ${className ?? ''}`}
       />
-      {/* peer-autofill — см. комментарий в Field выше: тот же обход для
-          сохранённого браузером пароля. */}
-      <label className="absolute top-3 -z-10 origin-[0] transform text-sm text-gray-300 duration-300 peer-placeholder-shown:translate-y-0 peer-placeholder-shown:scale-100 peer-focus:-translate-y-6 peer-focus:scale-75 peer-focus:text-brand-400 peer-[:not(:placeholder-shown)]:-translate-y-6 peer-[:not(:placeholder-shown)]:scale-75 peer-autofill:-translate-y-6 peer-autofill:scale-75">
+      <label
+        htmlFor={fieldId}
+        className="absolute top-3 -z-10 origin-[0] -translate-y-0 scale-100 transform text-sm text-ink-400 duration-300 peer-focus:-translate-y-6 peer-focus:scale-75 peer-focus:text-brand-600 peer-[:not(:placeholder-shown)]:-translate-y-6 peer-[:not(:placeholder-shown)]:scale-75 peer-autofill:-translate-y-6 peer-autofill:scale-75"
+      >
         {label}
       </label>
       <button
         type="button"
         onClick={() => setVisible((v) => !v)}
         aria-label={visible ? 'Скрыть пароль' : 'Показать пароль'}
-        className="absolute right-0 top-2 flex h-8 w-8 items-center justify-center text-gray-400 transition-colors hover:text-white"
+        className="absolute right-0 top-2 flex h-8 w-8 items-center justify-center text-ink-400 transition-colors hover:text-ink-700"
       >
         <Icon name={visible ? 'eyeOff' : 'eye'} size={16} />
       </button>
-      {hint && <span className="mt-1 block text-xs text-gray-400">{hint}</span>}
+      {hint && !error && <span className="mt-1.5 block text-xs text-ink-400">{hint}</span>}
+      <p id={`${fieldId}-error`} className="t-error-msg mt-1.5 text-xs font-medium text-danger-600" role="alert">
+        {displayError}
+      </p>
     </div>
   );
 }
 
 export function Select({
   label,
+  id,
   children,
   ...props
 }: InputHTMLAttributes<HTMLSelectElement> & { label: string; children: ReactNode }) {
+  const autoId = useId();
+  const fieldId = id ?? autoId;
   return (
     <div className="relative z-0">
       <select
         {...(props as React.SelectHTMLAttributes<HTMLSelectElement>)}
-        className="peer block w-full appearance-none border-0 border-b-2 border-gray-400/60 bg-transparent py-2.5 px-0 text-sm text-white outline-none transition-colors focus:border-brand-400 focus:ring-0 [&>option]:bg-ink-800 [&>option]:text-white"
+        id={fieldId}
+        className="peer block w-full appearance-none border-0 border-b-2 border-ink-200 bg-transparent py-2.5 pl-0 pr-6 text-[15px] text-ink-900 outline-none transition-colors focus:border-brand-500 focus:ring-0"
       >
         {children}
       </select>
-      <label className="absolute top-3 -z-10 origin-[0] -translate-y-6 scale-75 transform text-sm text-gray-300 duration-300">
+      <label
+        htmlFor={fieldId}
+        className="absolute top-3 -z-10 origin-[0] -translate-y-6 scale-75 transform text-sm text-ink-400 duration-300"
+      >
         {label}
       </label>
+      {/* Нативный select с appearance-none теряет собственную стрелку — без
+          неё поле выглядит как обрубленный текстовый ввод, а не выбор. */}
+      <Icon
+        name="chevron-right"
+        size={14}
+        className="pointer-events-none absolute right-0 top-3.5 rotate-90 text-ink-400"
+      />
     </div>
   );
 }
@@ -169,27 +342,48 @@ export function ClassCodeField({
   onValueChange,
   label,
   hint,
+  error,
+  shakeKey,
 }: {
   value: string;
   onValueChange: (value: string) => void;
   label: string;
   hint?: string;
+  error?: string;
+  shakeKey?: number;
 }) {
+  const autoId = useId();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const displayError = useStickyMessage(error);
+  useShake(inputRef, error, shakeKey);
+
   return (
-    <div className="relative z-0">
+    <div className={`t-input-wrap relative z-0 ${error ? 'is-error' : ''}`}>
       <input
+        ref={inputRef}
+        id={autoId}
         value={value}
-        onChange={(e) => onValueChange(e.target.value.toUpperCase())}
+        onChange={(event) => onValueChange(event.target.value.toUpperCase())}
         maxLength={6}
         placeholder=" "
         autoCapitalize="characters"
         spellCheck={false}
-        className="peer block w-full appearance-none border-0 border-b-2 border-gray-400/60 bg-transparent py-2.5 px-0 text-center font-mono text-lg font-bold tracking-[0.3em] text-white outline-none transition-colors focus:border-brand-400 focus:ring-0"
+        aria-invalid={error ? 'true' : undefined}
+        aria-describedby={error ? `${autoId}-error` : undefined}
+        className={`t-input peer block w-full appearance-none border-0 border-b-2 bg-transparent px-0 py-2.5 text-center font-mono text-lg font-bold tracking-[0.3em] text-ink-900 outline-none transition-colors focus:ring-0 ${
+          error ? 'is-error' : ''
+        }`}
       />
-      <label className="absolute top-3 -z-10 origin-[0] transform text-sm text-gray-300 duration-300 peer-placeholder-shown:translate-y-0 peer-placeholder-shown:scale-100 peer-focus:-translate-y-6 peer-focus:scale-75 peer-focus:text-brand-400 peer-[:not(:placeholder-shown)]:-translate-y-6 peer-[:not(:placeholder-shown)]:scale-75">
+      <label
+        htmlFor={autoId}
+        className="absolute top-3 -z-10 origin-[0] -translate-y-0 scale-100 transform text-sm text-ink-400 duration-300 peer-focus:-translate-y-6 peer-focus:scale-75 peer-focus:text-brand-600 peer-[:not(:placeholder-shown)]:-translate-y-6 peer-[:not(:placeholder-shown)]:scale-75"
+      >
         {label}
       </label>
-      {hint && <span className="mt-1 block text-xs text-gray-400">{hint}</span>}
+      {hint && !error && <span className="mt-1.5 block text-xs text-ink-400">{hint}</span>}
+      <p id={`${autoId}-error`} className="t-error-msg mt-1.5 text-xs font-medium text-danger-600" role="alert">
+        {displayError}
+      </p>
     </div>
   );
 }
@@ -218,7 +412,7 @@ export function SubmitButton({
       type={type}
       onClick={onClick}
       disabled={disabled || loading || success}
-      className="group flex h-12 w-full items-center justify-center gap-2 rounded-lg text-[15px] font-semibold text-white shadow-lg transition-all duration-300 hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:ring-offset-2 focus:ring-offset-ink-900 disabled:opacity-60"
+      className="group flex h-12 w-full items-center justify-center gap-2 rounded-[var(--radius-control)] text-[15px] font-semibold text-white shadow-[var(--shadow-glow)] transition-all duration-300 hover:brightness-105 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:ring-offset-2 focus:ring-offset-white disabled:opacity-60"
       style={{ background: 'var(--gradient-brand)' }}
     >
       <AnimatePresence mode="wait" initial={false}>
@@ -268,16 +462,15 @@ export function SubmitButton({
   );
 }
 
-/** Сообщение об ошибке или успехе. */
+/** Сообщение об ошибке или успехе, не привязанное к конкретному полю. */
 export function FormMessage({ tone, children }: { tone: 'error' | 'success'; children: ReactNode }) {
   return (
     <motion.p
       initial={{ opacity: 0, y: -6 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`rounded-lg border px-4 py-3 text-sm font-medium backdrop-blur-sm ${
-        tone === 'error'
-          ? 'border-danger-500/30 bg-danger-500/20 text-danger-200'
-          : 'border-success-500/30 bg-success-500/20 text-success-200'
+      role={tone === 'error' ? 'alert' : 'status'}
+      className={`rounded-[var(--radius-control)] border px-4 py-3 text-sm font-medium ${
+        tone === 'error' ? 'border-danger-200 bg-danger-50 text-danger-700' : 'border-success-200 bg-success-50 text-success-700'
       }`}
     >
       {children}
@@ -319,20 +512,19 @@ export function ProviderButtons({
 }) {
   return (
     <div>
-      {/* Разделитель */}
-      <div className="relative flex items-center py-2">
-        <div className="flex-grow border-t border-gray-400/30" />
-        <span className="mx-4 flex-shrink text-xs uppercase tracking-widest text-gray-400">
+      <div className="relative flex items-center py-1">
+        <div className="flex-grow border-t border-ink-200" />
+        <span className="mx-4 flex-shrink text-xs font-semibold uppercase tracking-widest text-ink-400">
           {dividerLabel}
         </span>
-        <div className="flex-grow border-t border-gray-400/30" />
+        <div className="flex-grow border-t border-ink-200" />
       </div>
 
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <PressButton
           type="button"
           onClick={onGoogle}
-          className="flex h-11 items-center justify-center gap-2.5 rounded-lg bg-white/90 text-sm font-semibold text-gray-700 transition-all hover:bg-white"
+          className="flex h-11 items-center justify-center gap-2.5 rounded-[var(--radius-control)] border border-ink-200 bg-white text-sm font-semibold text-ink-700 transition-all hover:bg-ink-50"
         >
           <GoogleMark />
           Google
@@ -341,7 +533,7 @@ export function ProviderButtons({
         <PressButton
           type="button"
           onClick={onApple}
-          className="flex h-11 items-center justify-center gap-2.5 rounded-lg bg-gray-900/80 text-sm font-semibold text-white ring-1 ring-white/20 transition-all hover:bg-gray-800"
+          className="flex h-11 items-center justify-center gap-2.5 rounded-[var(--radius-control)] bg-ink-900 text-sm font-semibold text-white transition-all hover:bg-ink-800"
         >
           <AppleMark />
           Apple
@@ -353,7 +545,7 @@ export function ProviderButtons({
 
 export function AuthLink({ href, children }: { href: string; children: ReactNode }) {
   return (
-    <Link href={href} className="font-semibold text-brand-400 transition-colors hover:text-brand-300">
+    <Link href={href} className="font-semibold text-brand-600 transition-colors hover:text-brand-700">
       {children}
     </Link>
   );
@@ -362,7 +554,7 @@ export function AuthLink({ href, children }: { href: string; children: ReactNode
 /** Информационный баннер (для учителя) */
 export function InfoBanner({ children }: { children: ReactNode }) {
   return (
-    <div className="rounded-lg border border-accent-400/30 bg-accent-500/15 px-4 py-3 text-sm text-accent-200">
+    <div className="rounded-[var(--radius-control)] border border-accent-200 bg-accent-50 px-4 py-3 text-sm text-accent-700">
       {children}
     </div>
   );

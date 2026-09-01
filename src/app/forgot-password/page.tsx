@@ -17,24 +17,30 @@ export default function ForgotPasswordPage() {
 
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'sent'>('idle');
-  const [error, setError] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | undefined>();
+  const [formError, setFormError] = useState<string | null>(null);
+  const [shakeKey, setShakeKey] = useState(0);
 
   async function submit() {
+    setEmailError(undefined);
+    setFormError(null);
+    setShakeKey((k) => k + 1);
+
     if (!email.trim()) {
-      setError('Введите адрес почты.');
+      setEmailError('Введите адрес почты.');
       return;
     }
-    setError(null);
     setStatus('loading');
 
     const result = await sendPasswordReset(email.trim());
     if (!result.ok) {
       setStatus('idle');
-      setError(
+      setFormError(
         /rate limit|too many/i.test(result.error ?? '')
           ? 'Слишком много запросов. Подождите минуту.'
           : (result.error ?? 'Не удалось отправить письмо.'),
       );
+      setShakeKey((k) => k + 1);
       return;
     }
 
@@ -43,6 +49,8 @@ export default function ForgotPasswordPage() {
 
   return (
     <AuthShell
+      heroTitle="Бывает"
+      heroText="Укажите почту — пришлём ссылку для нового пароля через минуту."
       title="Восстановление пароля"
       subtitle="Пришлём ссылку для смены пароля на вашу почту."
       footer={
@@ -58,6 +66,7 @@ export default function ForgotPasswordPage() {
       ) : (
         <form
           className="space-y-5"
+          noValidate
           onSubmit={(event) => {
             event.preventDefault();
             submit();
@@ -69,10 +78,15 @@ export default function ForgotPasswordPage() {
             autoComplete="email"
             placeholder="name@binom.edu.kz"
             value={email}
-            onChange={(event) => setEmail(event.target.value)}
+            onChange={(event) => {
+              setEmail(event.target.value);
+              if (emailError) setEmailError(undefined);
+            }}
+            error={emailError}
+            shakeKey={shakeKey}
           />
 
-          {error && <FormMessage tone="error">{error}</FormMessage>}
+          {formError && <FormMessage tone="error">{formError}</FormMessage>}
 
           <SubmitButton loading={status === 'loading'}>Отправить ссылку</SubmitButton>
         </form>

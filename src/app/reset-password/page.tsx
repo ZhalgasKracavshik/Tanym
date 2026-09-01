@@ -20,7 +20,10 @@ export default function ResetPasswordPage() {
   const [password, setPassword] = useState('');
   const [repeat, setRepeat] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'success'>('idle');
-  const [error, setError] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | undefined>();
+  const [repeatError, setRepeatError] = useState<string | undefined>();
+  const [formError, setFormError] = useState<string | null>(null);
+  const [shakeKey, setShakeKey] = useState(0);
 
   // Перекидываем на дашборд после успеха, но не мгновенно: пользователь
   // должен успеть увидеть, что пароль действительно сменился.
@@ -31,21 +34,33 @@ export default function ResetPasswordPage() {
   }, [status, router]);
 
   async function submit() {
-    setError(null);
+    setPasswordError(undefined);
+    setRepeatError(undefined);
+    setFormError(null);
+    setShakeKey((k) => k + 1);
 
-    if (password.length < 6) return setError('Пароль должен быть не короче 6 символов.');
-    if (password !== repeat) return setError('Пароли не совпадают.');
+    let hasError = false;
+    if (password.length < 6) {
+      setPasswordError('Пароль должен быть не короче 6 символов.');
+      hasError = true;
+    }
+    if (password !== repeat) {
+      setRepeatError('Пароли не совпадают.');
+      hasError = true;
+    }
+    if (hasError) return;
 
     setStatus('loading');
     const result = await updatePassword(password);
 
     if (!result.ok) {
       setStatus('idle');
-      setError(
+      setFormError(
         /session|expired|invalid/i.test(result.error ?? '')
           ? 'Ссылка устарела. Запросите новое письмо.'
           : (result.error ?? 'Не удалось сменить пароль.'),
       );
+      setShakeKey((k) => k + 1);
       return;
     }
 
@@ -54,6 +69,8 @@ export default function ResetPasswordPage() {
 
   return (
     <AuthShell
+      heroTitle="Почти готово"
+      heroText="Придумайте пароль, который не используете больше нигде, и возвращайтесь к учёбе."
       title="Новый пароль"
       subtitle="Придумайте пароль, который не используете больше нигде."
       footer={
@@ -72,6 +89,7 @@ export default function ResetPasswordPage() {
       ) : (
         <form
           className="space-y-5"
+          noValidate
           onSubmit={(event) => {
             event.preventDefault();
             submit();
@@ -80,20 +98,31 @@ export default function ResetPasswordPage() {
           <PasswordField
             label="Новый пароль"
             autoComplete="new-password"
-            placeholder="Не меньше 6 символов"
+            placeholder="••••••••"
             value={password}
-            onChange={(event) => setPassword(event.target.value)}
+            onChange={(event) => {
+              setPassword(event.target.value);
+              if (passwordError) setPasswordError(undefined);
+            }}
+            hint="Не меньше 6 символов."
+            error={passwordError}
+            shakeKey={shakeKey}
           />
 
           <PasswordField
             label="Ещё раз"
             autoComplete="new-password"
-            placeholder="Повторите пароль"
+            placeholder="••••••••"
             value={repeat}
-            onChange={(event) => setRepeat(event.target.value)}
+            onChange={(event) => {
+              setRepeat(event.target.value);
+              if (repeatError) setRepeatError(undefined);
+            }}
+            error={repeatError}
+            shakeKey={shakeKey}
           />
 
-          {error && <FormMessage tone="error">{error}</FormMessage>}
+          {formError && <FormMessage tone="error">{formError}</FormMessage>}
           {status === 'success' && (
             <FormMessage tone="success">Пароль обновлён. Открываем кабинет…</FormMessage>
           )}

@@ -743,3 +743,101 @@ h1 {
     animation: none !important;
   }
 }
+
+/*
+ * Тряска поля с ошибкой.
+ *
+ * Цвет рамки задан прямо здесь, а не классами Tailwind (`border-danger-500`
+ * и так далее) — и это не стилистический выбор, а обход реального
+ * столкновения каскадов. У Tailwind v4 сброс Preflight (`* { border: 0px
+ * solid; }`) живёт в @layer base, утилиты — в @layer utilities, и слой
+ * utilities обязан побеждать по спецификации. Но правило вне @layer
+ * побеждает вообще любое слоистое правило независимо от слоя и
+ * специфичности — а именно так объявлен `.t-input` ниже: как обычный CSS,
+ * без обёртки @layer. Из-за этого Tailwind-класс `border-danger-500` на
+ * самом инпуте тихо проигрывал сбросу Preflight, и рамка оставалась
+ * нейтральной даже при добавленном классе `is-error` — проверено вживую:
+ * computed border-bottom-color оставался ink-200 при заведомо применённом
+ * `.border-danger-500`. Решение ровно то, для которого и написана эта
+ * заготовка: «цвет рамки задаёт ваш собственный CSS», а не Tailwind.
+ *
+ * `.is-shaking` запускает саму встряску: обработчик поля должен снять
+ * класс, вызвать reflow (`el.offsetWidth`) и добавить класс заново —
+ * иначе повторная ошибка на том же поле не переиграет анимацию,
+ * потому что класс формально не менялся.
+ *
+ * Сообщение не убирается вместе с классом мгновенно: `visibility`
+ * держит текст на месте, пока идёт исчезновение по `opacity`, поэтому
+ * оно тает, а не обрывается на середине.
+ */
+:root {
+  --shake-distance: 6px;
+  --shake-overshoot: 4px;
+  --shake-dur-a: 80ms;
+  --shake-dur-b: 60ms;
+  --shake-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --revert-dur: 220ms;
+}
+
+.t-input {
+  border-color: var(--color-ink-200);
+  transition:
+    border-color 150ms ease-out,
+    transform var(--revert-dur) ease-out;
+  will-change: transform;
+}
+.t-input:focus {
+  border-color: var(--color-brand-500);
+}
+.t-input.is-error,
+.t-input.is-error:focus {
+  border-color: var(--color-danger-500);
+  transition: border-color var(--revert-dur) ease-out;
+}
+
+.t-error-msg {
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity var(--revert-dur) ease-out,
+    visibility 0s linear var(--revert-dur);
+}
+.t-input-wrap.is-error .t-error-msg {
+  opacity: 1;
+  visibility: visible;
+  transition:
+    opacity var(--revert-dur) ease-out,
+    visibility 0s linear 0s;
+}
+
+.t-input.is-shaking {
+  animation: t-input-shake calc(var(--shake-dur-a) * 2 + var(--shake-dur-b) * 2) linear;
+}
+@keyframes t-input-shake {
+  0% {
+    transform: translateX(0);
+    animation-timing-function: var(--shake-ease);
+  }
+  28.57% {
+    transform: translateX(var(--shake-distance));
+    animation-timing-function: var(--shake-ease);
+  }
+  57.14% {
+    transform: translateX(calc(var(--shake-distance) * -1));
+    animation-timing-function: var(--shake-ease);
+  }
+  78.57% {
+    transform: translateX(var(--shake-overshoot));
+    animation-timing-function: var(--shake-ease);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-input {
+    animation: none !important;
+    transform: none !important;
+  }
+}

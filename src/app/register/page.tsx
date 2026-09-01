@@ -60,6 +60,12 @@ const CLASS_CODE_ERRORS: Record<string, string> = {
   class_code_required: 'Введите код класса.',
 };
 
+const HERO_FEATURES = [
+  { icon: 'compass' as const, text: 'Движок сам решает, что учить дальше' },
+  { icon: 'sparkles' as const, text: 'ИИ объясняет решение, не выдумывая ответ' },
+  { icon: 'trophy' as const, text: 'Достижения и рейтинг школы' },
+];
+
 export default function RegisterPage() {
   const router = useRouter();
   const { signUpWithPassword, chooseRole, signInWithProvider } = useSchoolAuth();
@@ -71,20 +77,48 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('');
 
   const [status, setStatus] = useState<'idle' | 'loading' | 'success'>('idle');
-  const [error, setError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
-  async function submit() {
-    setError(null);
+  /* Ошибки конкретных полей — см. пояснение в login/page.tsx. */
+  const [nameError, setNameError] = useState<string | undefined>();
+  const [classCodeError, setClassCodeError] = useState<string | undefined>();
+  const [emailError, setEmailError] = useState<string | undefined>();
+  const [passwordError, setPasswordError] = useState<string | undefined>();
+  const [shakeKey, setShakeKey] = useState(0);
+
+  function resetFieldErrors() {
+    setFormError(null);
     setNotice(null);
+    setNameError(undefined);
+    setClassCodeError(undefined);
+    setEmailError(undefined);
+    setPasswordError(undefined);
+  }
+
+  async function submit() {
+    resetFieldErrors();
+    setShakeKey((k) => k + 1);
 
     /*
       Имя видно одноклассникам в рейтинге, поэтому проверка строже, чем
       «поле не пустое»: раньше проходила одна буква или набор цифр.
     */
     const checkedName = checkPersonName(name);
-    if (!checkedName.ok) return setError(checkedName.reason);
-    if (!email.trim() || !password) return setError('Заполните почту и пароль.');
+    let hasError = false;
+    if (!checkedName.ok) {
+      setNameError(checkedName.reason);
+      hasError = true;
+    }
+    if (!email.trim()) {
+      setEmailError('Введите почту.');
+      hasError = true;
+    }
+    if (!password) {
+      setPasswordError('Введите пароль.');
+      hasError = true;
+    }
+    if (hasError || !checkedName.ok) return;
     /*
       Код класса больше не обязателен здесь: его спросят в онбординге, где
       от него можно отказаться кнопкой «Позже». Требовать код прямо на
@@ -108,7 +142,8 @@ export default function RegisterPage() {
     const allowedDomains = domainRows.map((row) => row.domain);
     if (!isEmailDomainAllowed(email, allowedDomains)) {
       setStatus('idle');
-      setError(domainRejectionMessage(allowedDomains));
+      setEmailError(domainRejectionMessage(allowedDomains));
+      setShakeKey((k) => k + 1);
       return;
     }
 
@@ -123,7 +158,8 @@ export default function RegisterPage() {
     */
     if (role === 'teacher' && !canBeTeacher(email, domainRows)) {
       setStatus('idle');
-      setError(teacherDomainMessage(domainRows));
+      setEmailError(teacherDomainMessage(domainRows));
+      setShakeKey((k) => k + 1);
       return;
     }
 
@@ -131,7 +167,16 @@ export default function RegisterPage() {
 
     if (!signUp.ok) {
       setStatus('idle');
-      setError(translateError(signUp.error ?? 'Не удалось зарегистрироваться.'));
+      const message = translateError(signUp.error ?? 'Не удалось зарегистрироваться.');
+      /*
+        Слабый пароль и занятая почта относятся к конкретным полям — но
+        распознать это можно только по тексту ошибки, а не по коду:
+        Supabase не различает их структурно в этом ответе.
+      */
+      if (/пароль/i.test(message)) setPasswordError(message);
+      else if (/почта/i.test(message)) setEmailError(message);
+      else setFormError(message);
+      setShakeKey((k) => k + 1);
       return;
     }
 
@@ -161,13 +206,17 @@ export default function RegisterPage() {
     if (!profile.ok) {
       setStatus('idle');
       if (profile.error === 'domain_not_allowed') {
-        setError(domainRejectionMessage(profile.domains ?? allowedDomains));
+        setEmailError(domainRejectionMessage(profile.domains ?? allowedDomains));
+        setShakeKey((k) => k + 1);
         return;
       }
-      setError(
-        CLASS_CODE_ERRORS[profile.error ?? ''] ??
-          translateError(profile.error ?? 'Не удалось создать профиль.'),
-      );
+      const classMessage = CLASS_CODE_ERRORS[profile.error ?? ''];
+      if (classMessage) {
+        setClassCodeError(classMessage);
+      } else {
+        setFormError(translateError(profile.error ?? 'Не удалось создать профиль.'));
+      }
+      setShakeKey((k) => k + 1);
       return;
     }
 
@@ -185,8 +234,11 @@ export default function RegisterPage() {
 
   return (
     <AuthShell
+      heroTitle="Готовы начать?"
+      heroText="Ученику — персональный план и рейтинг. Учителю — прогресс всего класса."
+      heroFeatures={HERO_FEATURES}
       title="Создать аккаунт"
-      subtitle="Ученику — персональный план и рейтинг. Учителю — прогресс всего класса."
+      subtitle="Заполните несколько полей — дальше система сделает остальное."
       footer={
         <>
           Уже есть аккаунт? <AuthLink href="/login">Войти</AuthLink>
@@ -195,6 +247,7 @@ export default function RegisterPage() {
     >
       <form
         className="space-y-5"
+        noValidate
         onSubmit={(event) => {
           event.preventDefault();
           submit();
@@ -205,8 +258,13 @@ export default function RegisterPage() {
           autoComplete="name"
           placeholder="Айсултан Жакыпов"
           value={name}
-          onChange={(event) => setName(event.target.value)}
+          onChange={(event) => {
+            setName(event.target.value);
+            if (nameError) setNameError(undefined);
+          }}
           hint="Настоящие имя и фамилия: так вас увидят одноклассники в рейтинге."
+          error={nameError}
+          shakeKey={shakeKey}
         />
 
         <Select
@@ -223,8 +281,13 @@ export default function RegisterPage() {
           <ClassCodeField
             label="Код класса"
             value={classCode}
-            onValueChange={setClassCode}
-            hint="Шесть символов, их даёт классный руководитель."
+            onValueChange={(value) => {
+              setClassCode(value);
+              if (classCodeError) setClassCodeError(undefined);
+            }}
+            hint="Шесть символов, их даёт классный руководитель. Можно оставить пустым и ввести позже."
+            error={classCodeError}
+            shakeKey={shakeKey}
           />
         )}
 
@@ -240,18 +303,29 @@ export default function RegisterPage() {
           autoComplete="email"
           placeholder="name@binom.edu.kz"
           value={email}
-          onChange={(event) => setEmail(event.target.value)}
+          onChange={(event) => {
+            setEmail(event.target.value);
+            if (emailError) setEmailError(undefined);
+          }}
+          error={emailError}
+          shakeKey={shakeKey}
         />
 
         <PasswordField
           label="Пароль"
           autoComplete="new-password"
-          placeholder="Не меньше 6 символов"
+          placeholder="••••••••"
           value={password}
-          onChange={(event) => setPassword(event.target.value)}
+          onChange={(event) => {
+            setPassword(event.target.value);
+            if (passwordError) setPasswordError(undefined);
+          }}
+          hint="Не меньше 6 символов."
+          error={passwordError}
+          shakeKey={shakeKey}
         />
 
-        {error && <FormMessage tone="error">{error}</FormMessage>}
+        {formError && <FormMessage tone="error">{formError}</FormMessage>}
         {notice && <FormMessage tone="success">{notice}</FormMessage>}
 
         <SubmitButton loading={status === 'loading'} success={status === 'success'}>
