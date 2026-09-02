@@ -1,10 +1,11 @@
 'use client';
 
 /**
- * Вход в аккаунт: почта с паролем, Google или Apple.
+ * Вход в аккаунт: почта с паролем или Google.
  *
- * Три способа рядом, а не только один: школьная почта на Google есть не
- * у каждой школы, а требовать пароль от того, у кого она есть, незачем.
+ * Apple убран: Sign in with Apple требует платного аккаунта разработчика,
+ * в проекте он не настроен, и кнопка была декорацией без единого
+ * успешного входа (проверено по базе — 0 записей против 5 через Google).
  */
 
 import { Suspense, useState } from 'react';
@@ -19,13 +20,85 @@ import {
   SubmitButton,
 } from '@/components/auth-ui';
 import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
+import { useLang, type Dict } from '@/lib/i18n';
 
-function translateError(message: string): string {
-  if (/invalid login credentials/i.test(message)) return 'Неверная почта или пароль.';
-  if (/email not confirmed/i.test(message)) return 'Почта не подтверждена - проверьте письмо.';
-  if (/rate limit|too many/i.test(message)) return 'Слишком много попыток. Подождите минуту.';
-  return message;
-}
+const TEXT: Dict<{
+  heroTitle: string;
+  heroText: string;
+  title: string;
+  subtitle: string;
+  email: string;
+  emailRequired: string;
+  password: string;
+  passwordRequired: string;
+  invalidCredentials: string;
+  emailNotConfirmed: string;
+  rateLimit: string;
+  genericError: string;
+  forgotPassword: string;
+  submit: string;
+  or: string;
+  noAccount: string;
+  register: string;
+}> = {
+  ru: {
+    heroTitle: 'С возвращением',
+    heroText: 'Прогресс сохранён — заходите и продолжайте с того же места.',
+    title: 'Вход',
+    subtitle: 'Войдите, чтобы продолжить с того места, где остановились.',
+    email: 'Почта',
+    emailRequired: 'Введите почту.',
+    password: 'Пароль',
+    passwordRequired: 'Введите пароль.',
+    invalidCredentials: 'Неверная почта или пароль.',
+    emailNotConfirmed: 'Почта не подтверждена — проверьте письмо.',
+    rateLimit: 'Слишком много попыток. Подождите минуту.',
+    genericError: 'Не удалось войти.',
+    forgotPassword: 'Забыли пароль?',
+    submit: 'Войти',
+    or: 'или',
+    noAccount: 'Ещё нет аккаунта?',
+    register: 'Зарегистрироваться',
+  },
+  kk: {
+    heroTitle: 'Қайта қош келдіңіз',
+    heroText: 'Үлгеріміңіз сақталды — кіріп, тоқтаған жерден жалғастырыңыз.',
+    title: 'Кіру',
+    subtitle: 'Тоқтаған жерден жалғастыру үшін кіріңіз.',
+    email: 'Электрондық пошта',
+    emailRequired: 'Поштаңызды енгізіңіз.',
+    password: 'Құпия сөз',
+    passwordRequired: 'Құпия сөзді енгізіңіз.',
+    invalidCredentials: 'Пошта немесе құпия сөз қате.',
+    emailNotConfirmed: 'Пошта расталмаған — хатты тексеріңіз.',
+    rateLimit: 'Тым көп әрекет. Бір минуттан кейін қайталаңыз.',
+    genericError: 'Кіру мүмкін болмады.',
+    forgotPassword: 'Құпия сөзді ұмыттыңыз ба?',
+    submit: 'Кіру',
+    or: 'немесе',
+    noAccount: 'Аккаунтыңыз жоқ па?',
+    register: 'Тіркелу',
+  },
+  en: {
+    heroTitle: 'Welcome back',
+    heroText: 'Your progress is saved — sign in and pick up where you left off.',
+    title: 'Log in',
+    subtitle: 'Sign in to continue where you left off.',
+    email: 'Email',
+    emailRequired: 'Enter your email.',
+    password: 'Password',
+    passwordRequired: 'Enter your password.',
+    invalidCredentials: 'Incorrect email or password.',
+    emailNotConfirmed: 'Email not confirmed — check your inbox.',
+    rateLimit: 'Too many attempts. Wait a minute.',
+    genericError: 'Could not log in.',
+    forgotPassword: 'Forgot password?',
+    submit: 'Log in',
+    or: 'or',
+    noAccount: "Don't have an account?",
+    register: 'Sign up',
+  },
+};
 
 /**
  * Обёртка ради useSearchParams: без Suspense Next.js отказывается
@@ -44,6 +117,8 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { signInWithPassword, signInWithProvider } = useSchoolAuth();
+  const lang = useLang();
+  const t = TEXT[lang];
 
   const nextParam = searchParams.get('next');
   const nextPath = nextParam && nextParam.startsWith('/') && !nextParam.startsWith('//')
@@ -66,6 +141,13 @@ function LoginForm() {
   const [passwordError, setPasswordError] = useState<string | undefined>();
   const [shakeKey, setShakeKey] = useState(0);
 
+  function translateError(message: string): string {
+    if (/invalid login credentials/i.test(message)) return t.invalidCredentials;
+    if (/email not confirmed/i.test(message)) return t.emailNotConfirmed;
+    if (/rate limit|too many/i.test(message)) return t.rateLimit;
+    return message;
+  }
+
   async function submit() {
     setFormError(null);
     setEmailError(undefined);
@@ -74,11 +156,11 @@ function LoginForm() {
 
     let hasError = false;
     if (!email.trim()) {
-      setEmailError('Введите почту.');
+      setEmailError(t.emailRequired);
       hasError = true;
     }
     if (!password) {
-      setPasswordError('Введите пароль.');
+      setPasswordError(t.passwordRequired);
       hasError = true;
     }
     if (hasError) return;
@@ -94,7 +176,7 @@ function LoginForm() {
         проверкой «зарегистрирована ли эта почта». Подсвечиваем пароль:
         это то поле, куда обычно смотрят первым при повторном вводе.
       */
-      const message = translateError(result.error ?? 'Не удалось войти.');
+      const message = translateError(result.error ?? t.genericError);
       setPasswordError(message);
       setShakeKey((k) => k + 1);
       return;
@@ -115,13 +197,13 @@ function LoginForm() {
 
   return (
     <AuthShell
-      heroTitle="С возвращением"
-      heroText="Персональный план, наставник и рейтинг никуда не делись — продолжите с того места, где остановились."
-      title="Вход"
-      subtitle="Войдите, чтобы продолжить с того места, где остановились."
+      heroTitle={t.heroTitle}
+      heroText={t.heroText}
+      title={t.title}
+      subtitle={t.subtitle}
       footer={
         <>
-          Ещё нет аккаунта? <AuthLink href="/register">Зарегистрироваться</AuthLink>
+          {t.noAccount} <AuthLink href="/register">{t.register}</AuthLink>
         </>
       }
     >
@@ -134,7 +216,7 @@ function LoginForm() {
         }}
       >
         <Field
-          label="Почта"
+          label={t.email}
           type="email"
           autoComplete="email"
           placeholder="name@binom.edu.kz"
@@ -149,7 +231,7 @@ function LoginForm() {
 
         <div>
           <PasswordField
-            label="Пароль"
+            label={t.password}
             autoComplete="current-password"
             placeholder="••••••••"
             value={password}
@@ -161,23 +243,19 @@ function LoginForm() {
             shakeKey={shakeKey}
           />
           <p className="mt-2 text-right text-sm">
-            <AuthLink href="/forgot-password">Забыли пароль?</AuthLink>
+            <AuthLink href="/forgot-password">{t.forgotPassword}</AuthLink>
           </p>
         </div>
 
         {formError && <FormMessage tone="error">{formError}</FormMessage>}
 
         <SubmitButton loading={status === 'loading'} success={status === 'success'}>
-          Войти
+          {t.submit}
         </SubmitButton>
       </form>
 
       <div className="mt-7">
-        <ProviderButtons
-          dividerLabel="или"
-          onGoogle={() => signInWithProvider('google', nextPath)}
-          onApple={() => signInWithProvider('apple', nextPath)}
-        />
+        <ProviderButtons dividerLabel={t.or} onGoogle={() => signInWithProvider('google', nextPath)} />
       </div>
     </AuthShell>
   );

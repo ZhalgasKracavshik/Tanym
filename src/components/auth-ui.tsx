@@ -20,6 +20,8 @@ import { Icon, type IconName } from './Icon';
 import { Logo, LogoMark } from './Logo';
 import { EASE_OUT, PressButton, Reveal, SuccessCheck, Spinner, motion } from './motion';
 import { SmokeyBackground } from './ui/smokey-background';
+import { useStore } from './StoreProvider';
+import { LANGUAGES } from '@/lib/i18n-shared';
 
 /* ------------------------------------------------------------------ */
 /*  Оболочка: тёплая колонка слева, белая карточка формы справа        */
@@ -47,6 +49,42 @@ const heroChild = {
   show: { opacity: 1, y: 0, transition: EASE_OUT },
 };
 
+/**
+ * Переключатель языка в углу экрана.
+ *
+ * Без него локализация формы бесполезна тому, кто попал на регистрацию
+ * впервые (по прямой ссылке из объявления, например): выбрать казахский
+ * или английский было бы негде — сайдбар с таким переключателем сюда не
+ * попадает, эти маршруты рендерятся без него намеренно. `fixed`, а не
+ * часть колонки: колонка с формой сама прокручивается, и переключатель
+ * внутри неё уезжал бы вместе с полями при скролле на невысоком экране.
+ */
+function LanguageCorner() {
+  const { state, setLanguage } = useStore();
+  return (
+    <div
+      role="group"
+      aria-label="RU / KZ / EN"
+      className="fixed right-3 top-3 z-30 flex rounded-lg border border-ink-200 bg-white/95 p-0.5 shadow-[var(--shadow-rest)] backdrop-blur lg:right-5 lg:top-5"
+    >
+      {LANGUAGES.map((item) => (
+        <button
+          key={item.id}
+          type="button"
+          onClick={() => setLanguage(item.id)}
+          title={item.title}
+          aria-pressed={state.language === item.id}
+          className={`rounded-md px-2 py-1 text-[11px] font-bold outline-none transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
+            state.language === item.id ? 'bg-brand-500 text-white shadow-sm' : 'text-ink-400 hover:text-ink-700'
+          }`}
+        >
+          {item.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function AuthShell({
   heroTitle,
   heroText,
@@ -57,7 +95,8 @@ export function AuthShell({
   footer,
 }: {
   heroTitle: string;
-  heroText: string;
+  /** Необязателен: список фактов о продукте иногда достаточен сам по себе. */
+  heroText?: string;
   heroFeatures?: HeroFeature[];
   title: string;
   subtitle: string;
@@ -68,7 +107,8 @@ export function AuthShell({
     // div, а не main: AppShell уже оборачивает бесшовные маршруты (в том
     // числе этот) в свой <main>, и два <main> на странице — не разметка,
     // а поломанная семантика документа.
-    <div className="flex min-h-screen w-full bg-[var(--gradient-warm)] p-2 lg:h-screen lg:overflow-hidden lg:p-4">
+    <div className="flex min-h-screen w-full bg-[var(--gradient-warm)] p-2 lg:h-screen lg:p-4">
+      <LanguageCorner />
       {/*
         Левая колонка: та же тёмная дымка в терракоту, что и раньше во всей
         оболочке, — но теперь как один акцентный блок среди светлой
@@ -91,36 +131,56 @@ export function AuthShell({
           variants={heroParent}
           initial="hidden"
           animate="show"
-          className="relative z-10 space-y-6 p-10 pb-12"
+          className="relative z-10 space-y-7 p-10 pb-12"
         >
           <motion.div variants={heroChild}>
             <h1 className="text-[2.35rem] font-semibold leading-[1.1] tracking-tight text-balance text-white">
               {heroTitle}
             </h1>
-            <p className="mt-3 max-w-xs text-[15px] leading-relaxed text-white/75">{heroText}</p>
+            {heroText && <p className="mt-3 max-w-xs text-[15px] leading-relaxed text-white/75">{heroText}</p>}
           </motion.div>
 
+          {/*
+            Список фактов — без карточек-«таблеток» со стеклом и размытием.
+            Такая плашка (полупрозрачный фон, тонкая рамка, backdrop-blur)
+            стала одним из самых узнаваемых штампов ИИ-сгенерированного
+            дизайна: три из них подряд читаются как типовой шаблон, а не
+            как решение для конкретного продукта. Значок и строка текста
+            прямо на дымке достаточно заметны сами по себе.
+          */}
           {heroFeatures && (
-            <div className="space-y-2.5">
+            <ul className="space-y-3.5">
               {heroFeatures.map((feature) => (
-                <motion.div
-                  key={feature.text}
-                  variants={heroChild}
-                  className="flex items-center gap-3 rounded-[var(--radius-control)] border border-white/15 bg-white/10 px-4 py-3 backdrop-blur-sm"
-                >
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/15 text-white">
-                    <Icon name={feature.icon} size={16} />
-                  </span>
-                  <span className="text-sm font-medium text-white/90">{feature.text}</span>
-                </motion.div>
+                <motion.li key={feature.text} variants={heroChild} className="flex items-start gap-3">
+                  <Icon name={feature.icon} size={17} className="mt-0.5 shrink-0 text-white/70" />
+                  <span className="text-[15px] leading-snug text-white/90">{feature.text}</span>
+                </motion.li>
               ))}
-            </div>
+            </ul>
           )}
         </motion.div>
       </div>
 
-      {/* Правая колонка: форма на обычной белой карточке — Card в остальном сайте выглядит так же */}
-      <div className="flex flex-1 items-center justify-center overflow-y-auto px-4 py-10 sm:px-8 lg:overflow-hidden lg:py-6">
+      {/*
+        Правая колонка: форма на обычной белой карточке — Card в остальном
+        сайте выглядит так же.
+
+        Прокрутка внутри колонки, а не запрет на неё: с фиксированной
+        высотой lg:h-screen форма регистрации (шесть полей плюс кнопки)
+        на невысоком экране ноутбука не помещалась целиком, а
+        lg:overflow-hidden просто обрезал нижнюю часть без какого-либо
+        способа до неё докрутить.
+      */}
+      {/*
+        items-center-safe, а не items-center: обычное центрирование по
+        кросс-оси не даёт долистать до начала содержимого, если оно выше
+        контейнера — браузер считает «начало» уже центрированным и не
+        пускает прокрутку в область над ним. safe откатывается на
+        выравнивание по краю ровно тогда, когда контент не помещается, и
+        именно так карточка регистрации (шесть полей) стала доскроллиться
+        до самого заголовка на невысоком экране ноутбука.
+      */}
+      <div className="flex flex-1 items-center-safe justify-center overflow-y-auto px-4 py-10 sm:px-8 lg:py-10">
         <Reveal immediate className="w-full max-w-sm">
           <div className="mb-6 flex justify-center lg:hidden">
             <Link href="/" className="rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-brand-500">
@@ -139,6 +199,58 @@ export function AuthShell({
             {footer && <p className="mt-6 text-center text-sm text-ink-500">{footer}</p>}
           </div>
         </Reveal>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Переключатель из двух вариантов вместо нативного `<select>`.
+ *
+ * Роль — не поле ввода, а решение из ровно двух вариантов, и нативный
+ * список с плавающей подписью выглядел как обычное текстовое поле: подпись
+ * «Я» из одной буквы зависала над значением почти без связи с ним, а сам
+ * факт выбора терялся за выпадающим списком. Две видимые кнопки читаются
+ * как переключатель сразу, без разворачивания.
+ */
+export function SegmentedToggle<T extends string>({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: T;
+  onChange: (value: T) => void;
+  options: { value: T; label: string; icon: IconName }[];
+}) {
+  const groupId = useId();
+  return (
+    <div>
+      <span id={groupId} className="text-sm font-medium text-ink-700">
+        {label}
+      </span>
+      <div role="radiogroup" aria-labelledby={groupId} className="mt-2 grid grid-cols-2 gap-2.5">
+        {options.map((option) => {
+          const active = option.value === value;
+          return (
+            <button
+              key={option.value}
+              type="button"
+              role="radio"
+              aria-checked={active}
+              onClick={() => onChange(option.value)}
+              className={`flex items-center justify-center gap-2 rounded-[var(--radius-control)] border-2 py-3 text-sm font-semibold outline-none transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
+                active
+                  ? 'border-brand-500 bg-brand-50 text-brand-700'
+                  : 'border-ink-200 text-ink-500 hover:border-ink-300'
+              }`}
+            >
+              <Icon name={option.icon} size={16} className={active ? 'text-brand-600' : 'text-ink-400'} />
+              {option.label}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
@@ -218,7 +330,7 @@ export function Field({ label, hint, error, shakeKey, id, className, ...props }:
         placeholder=" "
         aria-invalid={error ? 'true' : undefined}
         aria-describedby={error ? `${fieldId}-error` : undefined}
-        className={`t-input peer block w-full appearance-none border-0 border-b-2 bg-transparent px-0 py-2.5 text-[15px] text-ink-900 outline-none transition-colors focus:ring-0 ${
+        className={`t-input peer block w-full appearance-none border-0 border-b-2 bg-transparent px-0 pt-5 pb-1.5 text-[15px] text-ink-900 outline-none transition-colors focus:ring-0 ${
           error ? 'is-error' : ''
         } ${className ?? ''}`}
       />
@@ -233,7 +345,7 @@ export function Field({ label, hint, error, shakeKey, id, className, ...props }:
       */}
       <label
         htmlFor={fieldId}
-        className="absolute top-3 -z-10 origin-[0] -translate-y-0 scale-100 transform text-sm text-ink-400 duration-300 peer-focus:-translate-y-6 peer-focus:scale-75 peer-focus:text-brand-600 peer-[:not(:placeholder-shown)]:-translate-y-6 peer-[:not(:placeholder-shown)]:scale-75 peer-autofill:-translate-y-6 peer-autofill:scale-75"
+        className="absolute top-4 -z-10 origin-[0] -translate-y-0 scale-100 transform text-sm text-ink-400 duration-300 peer-focus:-translate-y-7 peer-focus:scale-75 peer-focus:text-brand-600 peer-[:not(:placeholder-shown)]:-translate-y-7 peer-[:not(:placeholder-shown)]:scale-75 peer-autofill:-translate-y-7 peer-autofill:scale-75"
       >
         {label}
       </label>
@@ -274,13 +386,13 @@ export function PasswordField({
         placeholder=" "
         aria-invalid={error ? 'true' : undefined}
         aria-describedby={error ? `${fieldId}-error` : undefined}
-        className={`t-input peer block w-full appearance-none border-0 border-b-2 bg-transparent px-0 py-2.5 pr-8 text-[15px] text-ink-900 outline-none transition-colors focus:ring-0 ${
+        className={`t-input peer block w-full appearance-none border-0 border-b-2 bg-transparent px-0 pt-5 pb-1.5 pr-8 text-[15px] text-ink-900 outline-none transition-colors focus:ring-0 ${
           error ? 'is-error' : ''
         } ${className ?? ''}`}
       />
       <label
         htmlFor={fieldId}
-        className="absolute top-3 -z-10 origin-[0] -translate-y-0 scale-100 transform text-sm text-ink-400 duration-300 peer-focus:-translate-y-6 peer-focus:scale-75 peer-focus:text-brand-600 peer-[:not(:placeholder-shown)]:-translate-y-6 peer-[:not(:placeholder-shown)]:scale-75 peer-autofill:-translate-y-6 peer-autofill:scale-75"
+        className="absolute top-4 -z-10 origin-[0] -translate-y-0 scale-100 transform text-sm text-ink-400 duration-300 peer-focus:-translate-y-7 peer-focus:scale-75 peer-focus:text-brand-600 peer-[:not(:placeholder-shown)]:-translate-y-7 peer-[:not(:placeholder-shown)]:scale-75 peer-autofill:-translate-y-7 peer-autofill:scale-75"
       >
         {label}
       </label>
@@ -288,7 +400,7 @@ export function PasswordField({
         type="button"
         onClick={() => setVisible((v) => !v)}
         aria-label={visible ? 'Скрыть пароль' : 'Показать пароль'}
-        className="absolute right-0 top-2 flex h-8 w-8 items-center justify-center text-ink-400 transition-colors hover:text-ink-700"
+        className="absolute right-0 top-4 flex h-8 w-8 items-center justify-center text-ink-400 transition-colors hover:text-ink-700"
       >
         <Icon name={visible ? 'eyeOff' : 'eye'} size={16} />
       </button>
@@ -296,40 +408,6 @@ export function PasswordField({
       <p id={`${fieldId}-error`} className="t-error-msg mt-1.5 text-xs font-medium text-danger-600" role="alert">
         {displayError}
       </p>
-    </div>
-  );
-}
-
-export function Select({
-  label,
-  id,
-  children,
-  ...props
-}: InputHTMLAttributes<HTMLSelectElement> & { label: string; children: ReactNode }) {
-  const autoId = useId();
-  const fieldId = id ?? autoId;
-  return (
-    <div className="relative z-0">
-      <select
-        {...(props as React.SelectHTMLAttributes<HTMLSelectElement>)}
-        id={fieldId}
-        className="peer block w-full appearance-none border-0 border-b-2 border-ink-200 bg-transparent py-2.5 pl-0 pr-6 text-[15px] text-ink-900 outline-none transition-colors focus:border-brand-500 focus:ring-0"
-      >
-        {children}
-      </select>
-      <label
-        htmlFor={fieldId}
-        className="absolute top-3 -z-10 origin-[0] -translate-y-6 scale-75 transform text-sm text-ink-400 duration-300"
-      >
-        {label}
-      </label>
-      {/* Нативный select с appearance-none теряет собственную стрелку — без
-          неё поле выглядит как обрубленный текстовый ввод, а не выбор. */}
-      <Icon
-        name="chevron-right"
-        size={14}
-        className="pointer-events-none absolute right-0 top-3.5 rotate-90 text-ink-400"
-      />
     </div>
   );
 }
@@ -370,13 +448,13 @@ export function ClassCodeField({
         spellCheck={false}
         aria-invalid={error ? 'true' : undefined}
         aria-describedby={error ? `${autoId}-error` : undefined}
-        className={`t-input peer block w-full appearance-none border-0 border-b-2 bg-transparent px-0 py-2.5 text-center font-mono text-lg font-bold tracking-[0.3em] text-ink-900 outline-none transition-colors focus:ring-0 ${
+        className={`t-input peer block w-full appearance-none border-0 border-b-2 bg-transparent px-0 pt-5 pb-1.5 text-center font-mono text-lg font-bold tracking-[0.3em] text-ink-900 outline-none transition-colors focus:ring-0 ${
           error ? 'is-error' : ''
         }`}
       />
       <label
         htmlFor={autoId}
-        className="absolute top-3 -z-10 origin-[0] -translate-y-0 scale-100 transform text-sm text-ink-400 duration-300 peer-focus:-translate-y-6 peer-focus:scale-75 peer-focus:text-brand-600 peer-[:not(:placeholder-shown)]:-translate-y-6 peer-[:not(:placeholder-shown)]:scale-75"
+        className="absolute top-4 -z-10 origin-[0] -translate-y-0 scale-100 transform text-sm text-ink-400 duration-300 peer-focus:-translate-y-7 peer-focus:scale-75 peer-focus:text-brand-600 peer-[:not(:placeholder-shown)]:-translate-y-7 peer-[:not(:placeholder-shown)]:scale-75"
       >
         {label}
       </label>
@@ -493,21 +571,22 @@ function GoogleMark() {
   );
 }
 
-function AppleMark() {
-  return (
-    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-      <path d="M17.05 12.54c.02-2.1 1.72-3.1 1.8-3.15-.98-1.44-2.5-1.63-3.05-1.65-1.3-.13-2.54.76-3.2.76-.66 0-1.68-.74-2.76-.72-1.42.02-2.73.82-3.46 2.09-1.47 2.56-.38 6.35 1.06 8.43.7 1.02 1.54 2.16 2.64 2.12 1.06-.04 1.46-.68 2.74-.68 1.28 0 1.64.68 2.76.66 1.14-.02 1.86-1.04 2.56-2.06.8-1.18 1.13-2.32 1.15-2.38-.03-.01-2.2-.85-2.24-3.36ZM14.96 5.4c.58-.71.97-1.7.86-2.68-.84.03-1.86.56-2.46 1.26-.53.63-1 1.63-.87 2.59.94.07 1.9-.47 2.47-1.17Z" />
-    </svg>
-  );
-}
-
+/**
+ * Только Google.
+ *
+ * Apple был на этих кнопках с самого начала оболочки, но Sign in with
+ * Apple требует платного аккаунта разработчика и отдельной настройки в
+ * консоли Apple — в проекте она не сделана. Кнопка была декорацией:
+ * ни один пользователь не вошёл через неё ни разу (проверено по базе:
+ * ноль записей auth.identities с provider = apple против пяти через
+ * Google), и после нажатия человек утыкался в ошибку. Рабочая кнопка
+ * лучше нерабочей, даже если их было две.
+ */
 export function ProviderButtons({
   onGoogle,
-  onApple,
   dividerLabel,
 }: {
   onGoogle: () => void;
-  onApple: () => void;
   dividerLabel: string;
 }) {
   return (
@@ -520,25 +599,14 @@ export function ProviderButtons({
         <div className="flex-grow border-t border-ink-200" />
       </div>
 
-      <div className="mt-3 grid gap-3 sm:grid-cols-2">
-        <PressButton
-          type="button"
-          onClick={onGoogle}
-          className="flex h-11 items-center justify-center gap-2.5 rounded-[var(--radius-control)] border border-ink-200 bg-white text-sm font-semibold text-ink-700 transition-all hover:bg-ink-50"
-        >
-          <GoogleMark />
-          Google
-        </PressButton>
-
-        <PressButton
-          type="button"
-          onClick={onApple}
-          className="flex h-11 items-center justify-center gap-2.5 rounded-[var(--radius-control)] bg-ink-900 text-sm font-semibold text-white transition-all hover:bg-ink-800"
-        >
-          <AppleMark />
-          Apple
-        </PressButton>
-      </div>
+      <PressButton
+        type="button"
+        onClick={onGoogle}
+        className="mt-3 flex h-11 w-full items-center justify-center gap-2.5 rounded-[var(--radius-control)] border border-ink-200 bg-white text-sm font-semibold text-ink-700 transition-all hover:bg-ink-50"
+      >
+        <GoogleMark />
+        Google
+      </PressButton>
     </div>
   );
 }

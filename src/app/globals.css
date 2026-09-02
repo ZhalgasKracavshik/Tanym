@@ -220,15 +220,15 @@ h1 {
   Огромная длительность transition — стандартный приём, который не даёт
   браузеру откатить это обратно на его цвет через секунду после ввода.
 */
-.auth-field:autofill,
-.auth-field:-webkit-autofill,
-.auth-field:-webkit-autofill:hover,
-.auth-field:-webkit-autofill:focus,
-.auth-field:-webkit-autofill:active {
-  -webkit-text-fill-color: white;
+.t-input:autofill,
+.t-input:-webkit-autofill,
+.t-input:-webkit-autofill:hover,
+.t-input:-webkit-autofill:focus,
+.t-input:-webkit-autofill:active {
+  -webkit-text-fill-color: var(--color-ink-900);
   -webkit-box-shadow: 0 0 0 1000px transparent inset;
   box-shadow: 0 0 0 1000px transparent inset;
-  caret-color: white;
+  caret-color: var(--color-ink-900);
   transition:
     background-color 600000s ease-in-out 0s,
     color 600000s ease-in-out 0s;
