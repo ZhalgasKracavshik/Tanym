@@ -8,9 +8,10 @@
  * подстраивается. Всё остальное в приложении обслуживает этот цикл.
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { getSubject, getTopic } from '@/data';
 import { computeSkillMastery, difficultyExplanation, selectTasks } from '@/lib/personalization';
+import { studentAnswerText } from '@/lib/grading';
 import type { Difficulty, Task } from '@/lib/types';
 import type { Dict } from '@/lib/i18n';
 import type { FeedbackRequest, FeedbackResponse } from '@/lib/ai/contracts';
@@ -21,10 +22,27 @@ import { Icon } from '@/components/Icon';
 import { MathText } from '@/components/MathText';
 
 /**
+ * Одна отвеченная задача за заход: условие, ответ ученика и вердикт сервера.
+ * Копится за весь заход, чтобы в конце было что разбирать.
+ */
+interface Review {
+  task: Task;
+  answer: string;
+  correct: boolean;
+}
+
+/**
+ * Состояние разбора по одному заданию: запрос в пути, готовый ответ сервера
+ * или неудача. Хранится отдельно от самого разбора, чтобы не путать
+ * «ещё не просили» с «просили, но не дошло».
+ */
+type ExplanationState = FeedbackResponse | 'loading' | 'failed';
+
+/**
  * Подписи страницы на трёх языках. Ключи одинаковые — за этим следит TypeScript.
  * Уровни сложности переведены здесь, а не в types.ts: там подписи общие для сервера.
  */
-const TEXT: Dict<{
+interface LearnText {
   notFoundTitle: string;
   notFoundText: string;
   backToPlan: string;
@@ -49,7 +67,18 @@ const TEXT: Dict<{
   finishTopic: string;
   answer: string;
   networkError: string;
-}> = {
+  explainNow: string;
+  reviewTitle: string;
+  reviewIntro: string;
+  explainMistakes: (n: number) => string;
+  showExplanation: string;
+  hideExplanation: string;
+  explaining: string;
+  yourAnswer: string;
+  allCorrect: string;
+}
+
+const TEXT: Dict<LearnText> = {
   ru: {
     notFoundTitle: 'Тема не найдена',
     notFoundText: 'Возможно, ссылка устарела или тему удалили.',
@@ -81,6 +110,15 @@ const TEXT: Dict<{
     finishTopic: 'Завершить тему',
     answer: 'Ответить',
     networkError: 'Не удалось связаться с сервером. Проверь интернет и попробуй ещё раз.',
+    explainNow: 'Разобрать это задание',
+    reviewTitle: 'Разбор',
+    reviewIntro: 'Разбор готовит ИИ, это занимает несколько секунд. Открывайте только те задания, которые хотите понять.',
+    explainMistakes: (n) => `Разобрать все ошибки (${n})`,
+    showExplanation: 'Показать разбор',
+    hideExplanation: 'Свернуть',
+    explaining: 'Готовим разбор…',
+    yourAnswer: 'Ваш ответ:',
+    allCorrect: 'Ошибок нет — разбирать нечего.',
   },
   kk: {
     notFoundTitle: 'Тақырып табылмады',
@@ -113,6 +151,15 @@ const TEXT: Dict<{
     finishTopic: 'Тақырыпты аяқтау',
     answer: 'Жауап беру',
     networkError: 'Сервермен байланысу мүмкін болмады. Интернетті тексеріп, қайта көр.',
+    explainNow: 'Осы тапсырманы талдау',
+    reviewTitle: 'Талдау',
+    reviewIntro: 'Талдауды ИИ дайындайды, бұл бірнеше секунд алады. Тек түсінгіңіз келетін тапсырмаларды ашыңыз.',
+    explainMistakes: (n) => `Барлық қатені талдау (${n})`,
+    showExplanation: 'Талдауды көрсету',
+    hideExplanation: 'Жию',
+    explaining: 'Талдау дайындалып жатыр…',
+    yourAnswer: 'Сіздің жауабыңыз:',
+    allCorrect: 'Қате жоқ — талдайтын ештеңе жоқ.',
   },
   en: {
     notFoundTitle: 'Topic not found',
@@ -145,6 +192,15 @@ const TEXT: Dict<{
     finishTopic: 'Finish topic',
     answer: 'Submit',
     networkError: 'Could not reach the server. Check your connection and try again.',
+    explainNow: 'Explain this task',
+    reviewTitle: 'Review',
+    reviewIntro: 'Explanations are written by AI and take a few seconds. Open only the tasks you want to understand.',
+    explainMistakes: (n) => `Explain all mistakes (${n})`,
+    showExplanation: 'Show explanation',
+    hideExplanation: 'Collapse',
+    explaining: 'Preparing the explanation…',
+    yourAnswer: 'Your answer:',
+    allCorrect: 'No mistakes — nothing to review.',
   },
 };
 
@@ -168,6 +224,20 @@ export function LearnClient({ topicId }: { topicId: string }) {
    * правильным, просто запрос не дошёл.
    */
   const [failed, setFailed] = useState(false);
+
+  /*
+    Что ученик прошёл за этот заход и что из этого разобрано.
+
+    Разбор больше не приходит вместе с вердиктом. Проверка ответа занимает
+    миллисекунды, а объяснение от модели — от трёх до десяти секунд, и
+    раньше ученик ждал второе, чтобы увидеть первое: после каждого задания
+    экран замирал, даже когда человек и так всё понял и хотел идти дальше.
+    Теперь вердикт мгновенный, а разбор запрашивается точечно — по кнопке,
+    на том задании, которое действительно захотелось понять.
+  */
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [explanations, setExplanations] = useState<Record<string, ExplanationState>>({});
+  const [openReview, setOpenReview] = useState<string[]>([]);
 
   /**
    * Подборка заданий фиксируется один раз за заход в тему.
@@ -236,6 +306,7 @@ export function LearnClient({ topicId }: { topicId: string }) {
 
   const tasks = sessionTasks;
   const task = tasks[index];
+  const mistakeCount = reviews.filter((item) => !item.correct).length;
 
   /** Отправляет ответ на проверку и получает разбор. */
   async function submit() {
@@ -256,6 +327,13 @@ export function LearnClient({ topicId }: { topicId: string }) {
       // Темы, созданные учителем, сервер не знает — они живут в браузере,
       // поэтому такое задание отправляем целиком.
       task: topic.custom ? task : undefined,
+      /*
+        Разбор здесь не просим. Нужен только вердикт, и он приходит за
+        миллисекунды: сервер сверяет ответ с эталоном, не обращаясь к
+        модели. Объяснение ученик запросит сам — по кнопке под ответом
+        или в конце захода, на тех заданиях, где оно нужно.
+      */
+      explain: false,
     };
 
     try {
@@ -274,6 +352,8 @@ export function LearnClient({ topicId }: { topicId: string }) {
 
       setFeedback(data);
       if (data.correct) setSolved((value) => value + 1);
+      // Копим заход целиком: в конце по нему собирается разбор.
+      setReviews((list) => [...list, { task, answer, correct: data.correct }]);
 
       // Источник истины о правильности — сервер, а не проверка на клиенте.
       recordAttempt(
@@ -296,6 +376,67 @@ export function LearnClient({ topicId }: { topicId: string }) {
     }
   }
 
+  /**
+   * Просит у сервера разбор по уже отвеченному заданию.
+   *
+   * Второй запрос по тому же ответу — намеренно. Попытка записывается
+   * только на проверке, поэтому повторное обращение ничего не удваивает в
+   * прогрессе, а модель зовётся ровно там, где разбор захотели увидеть.
+   */
+  async function askExplanation(item: Review) {
+    if (!topic || !subject) return;
+
+    const current = explanations[item.task.id];
+    // Готовый разбор не перезапрашиваем; неудачную попытку — можно.
+    if (current === 'loading' || (current && current !== 'failed')) return;
+
+    setExplanations((map) => ({ ...map, [item.task.id]: 'loading' }));
+
+    const body: FeedbackRequest = {
+      taskId: item.task.id,
+      topicId: topic.id,
+      language: state.language,
+      answer: item.answer,
+      profile: state.profile,
+      skillMastery: computeSkillMastery(state)[item.task.skillId]?.mastery ?? 0.5,
+      task: topic.custom ? item.task : undefined,
+      explain: true,
+    };
+
+    try {
+      const response = await fetch('/api/ai/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data: FeedbackResponse = await response.json();
+      setExplanations((map) => ({ ...map, [item.task.id]: data }));
+    } catch {
+      setExplanations((map) => ({ ...map, [item.task.id]: 'failed' }));
+    }
+  }
+
+  /**
+   * Разбирает все ошибки захода.
+   *
+   * Последовательно, а не пачкой: на роуте стоит ограничитель частоты, и
+   * пять одновременных запросов упёрлись бы в него, превратив разбор в
+   * набор ошибок сети.
+   */
+  async function explainAllMistakes() {
+    const mistakes = reviews.filter((item) => !item.correct);
+    // Раскрываем сразу все: иначе разбор придёт, а увидеть его будет негде.
+    setOpenReview(mistakes.map((item) => item.task.id));
+    for (const item of mistakes) await askExplanation(item);
+  }
+
+  function toggleReview(taskId: string) {
+    setOpenReview((list) =>
+      list.includes(taskId) ? list.filter((id) => id !== taskId) : [...list, taskId],
+    );
+  }
+
   function next() {
     setFeedback(null);
     setFailed(false);
@@ -310,6 +451,9 @@ export function LearnClient({ topicId }: { topicId: string }) {
     setAnswer('');
     setIndex(0);
     setSolved(0);
+    setReviews([]);
+    setExplanations({});
+    setOpenReview([]);
     // Новый заход — новая подборка, уже с учётом изменившейся сложности.
     setSession((value) => value + 1);
   }
@@ -435,6 +579,80 @@ export function LearnClient({ topicId }: { topicId: string }) {
                   {difficultyExplanation(subject.id, state)}
                 </p>
               )}
+              {/*
+                Разбор всего захода — здесь, а не после каждого задания.
+
+                Ученик решает подряд, не прерываясь на ожидание модели, и
+                только в конце решает, что именно ему непонятно. Обычно это
+                одно-два задания из пяти, а не все пять, — значит и ждать он
+                будет один раз вместо пяти, и дневная квота уходит на то,
+                что действительно спросили.
+              */}
+              {reviews.length > 0 && (
+                <div className="mt-12 border-t border-ink-200 pt-8">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <h3 className="text-lg font-semibold text-ink-900">{t.reviewTitle}</h3>
+                    {mistakeCount > 0 && (
+                      <Button variant="secondary" size="sm" onClick={explainAllMistakes}>
+                        <Icon name="sparkles" size={15} />
+                        {t.explainMistakes(mistakeCount)}
+                      </Button>
+                    )}
+                  </div>
+                  <p className="mt-2 text-sm text-ink-500">
+                    {mistakeCount === 0 ? t.allCorrect : t.reviewIntro}
+                  </p>
+
+                  <ul className="mt-6 border-t border-ink-200">
+                    {reviews.map((item) => {
+                      const open = openReview.includes(item.task.id);
+                      return (
+                        <li key={item.task.id} className="border-b border-ink-200 py-4">
+                          <button
+                            onClick={() => toggleReview(item.task.id)}
+                            aria-expanded={open}
+                            className="flex w-full items-start gap-3 text-left focus-visible:ring-2 focus-visible:ring-brand-500"
+                          >
+                            <span
+                              className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${
+                                item.correct
+                                  ? 'bg-success-50 text-success-700'
+                                  : 'bg-danger-50 text-danger-700'
+                              }`}
+                            >
+                              <Icon name={item.correct ? 'check' : 'close'} size={14} />
+                            </span>
+                            <span className="min-w-0 flex-1">
+                              <span className="block text-sm font-medium leading-snug text-ink-900">
+                                <MathText>{item.task.prompt}</MathText>
+                              </span>
+                              <span className="mt-1 block text-xs text-ink-400">
+                                {t.yourAnswer} {studentAnswerText(item.task, item.answer)}
+                              </span>
+                            </span>
+                            <Icon
+                              name={open ? 'chevron-up' : 'chevron-down'}
+                              size={16}
+                              className="mt-1 shrink-0 text-ink-400"
+                            />
+                          </button>
+
+                          {open && (
+                            <div className="mt-4 pl-9">
+                              <ExplanationBlock
+                                state={explanations[item.task.id]}
+                                t={t}
+                                onAsk={() => askExplanation(item)}
+                              />
+                            </div>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}
+
               <div className="mt-10 flex flex-wrap gap-3">
                 <ButtonLink href="/plan">{t.backToPlan}</ButtonLink>
                 <Button variant="secondary" onClick={restart}>
@@ -543,12 +761,19 @@ export function LearnClient({ topicId }: { topicId: string }) {
                     )}
                   </div>
 
+                  {/*
+                    Разбор здесь не показывается сам. Он стоит секунды
+                    ожидания, а после верного ответа их незачем тратить:
+                    ученик уже понял и хочет дальше. Кнопка оставляет выбор
+                    за ним, а в конце захода разбор доступен по всем
+                    заданиям сразу.
+                  */}
                   <div className="mt-4">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-ink-400">{t.explanation}</span>
-                      <AiBadge live={feedback.live} reason={feedback.fallbackReason} />
-                    </div>
-                    <p className="mt-2 whitespace-pre-line leading-relaxed text-ink-700"><MathText>{feedback.text}</MathText></p>
+                    <ExplanationBlock
+                      state={explanations[task.id]}
+                      t={t}
+                      onAsk={() => askExplanation({ task, answer, correct: feedback.correct })}
+                    />
                   </div>
                 </div>
               )}
@@ -568,6 +793,57 @@ export function LearnClient({ topicId }: { topicId: string }) {
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * Разбор одного задания: кнопка, ожидание, текст или неудача.
+ *
+ * Отдельный компонент, потому что одно и то же нужно в двух местах — под
+ * ответом на задание и в списке итогов. Раньше разметка разбора жила
+ * только в карточке задания, и вынести её в итоги значило бы скопировать.
+ */
+function ExplanationBlock({
+  state,
+  t,
+  onAsk,
+}: {
+  state: ExplanationState | undefined;
+  t: LearnText;
+  onAsk: () => void;
+}) {
+  if (state === undefined || state === 'failed') {
+    return (
+      <div>
+        <Button variant="secondary" size="sm" onClick={onAsk}>
+          <Icon name="sparkles" size={15} />
+          {state === 'failed' ? t.networkError : t.explainNow}
+        </Button>
+      </div>
+    );
+  }
+
+  if (state === 'loading') {
+    return (
+      <div className="space-y-2">
+        <p className="text-xs font-medium uppercase tracking-wide text-ink-400">{t.explaining}</p>
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-10/12" />
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-xs font-medium uppercase tracking-wide text-ink-400">{t.explanation}</span>
+        {/* live приходит только вместе с разбором, поэтому здесь оно есть всегда */}
+        <AiBadge live={state.live ?? false} reason={state.fallbackReason} />
+      </div>
+      <p className="mt-2 whitespace-pre-line leading-relaxed text-ink-700">
+        <MathText>{state.text ?? ''}</MathText>
+      </p>
     </div>
   );
 }

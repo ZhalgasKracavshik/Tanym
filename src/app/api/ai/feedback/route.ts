@@ -1,10 +1,16 @@
 /**
- * POST /api/ai/feedback — разбор ответа ученика на задание.
+ * POST /api/ai/feedback — проверка ответа ученика и, по запросу, разбор.
  *
  * Ключевое решение: правильность ответа определяет СЕРВЕР, а не клиент.
- * Клиент присылает только сам ответ; сервер находит задание в реестре,
- * сверяет и уже потом просит модель объяснить результат. Иначе достаточно
- * было бы подделать один флаг в запросе, чтобы получить «верно» на что угодно.
+ * Клиент присылает только сам ответ; сервер находит задание в реестре и
+ * сверяет сам. Иначе достаточно было бы подделать один флаг в запросе,
+ * чтобы получить «верно» на что угодно.
+ *
+ * Второе решение: проверка и разбор разъединены. Сверка с эталоном занимает
+ * миллисекунды, обращение к модели — секунды, и раньше они уходили одним
+ * запросом: ученик ждал объяснение после каждого задания, даже когда хотел
+ * лишь узнать «верно или нет». Теперь разбор приходит только по флагу
+ * explain, а вердикт и запись попытки — всегда.
  */
 
 import { NextResponse } from 'next/server';
@@ -79,13 +85,41 @@ export async function POST(request: Request): Promise<NextResponse<FeedbackRespo
 
     Ждать запись обязательно, а не отпускать промис: на Vercel функция
     засыпает сразу после ответа, и незавершённый insert потерялся бы.
+
+    Пишем только на проверке, не на разборе. Разбор — это второй запрос по
+    уже отвеченному заданию, и если бы он тоже писал попытку, каждое
+    разобранное задание считалось бы дважды. Ответ ученика проходит через
+    проверку всегда, поэтому одна попытка ровно один раз и записывается.
+
+    Обратная сторона известна: отправив сразу explain, можно не дать
+    записать свою неверную попытку. Баллы этим не поднять — их дают только
+    за первое верное решение, — так что в худшем случае человек скрывает
+    собственную ошибку от собственной статистики. Это несопоставимо
+    меньшая беда, чем удвоение попыток у всех честных.
   */
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (user) {
-    await recordTaskAttempt({ studentId: user.id, task, subjectId: subject?.id ?? null, correct });
+  if (!body.explain) {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (user) {
+      await recordTaskAttempt({ studentId: user.id, task, subjectId: subject?.id ?? null, correct });
+    }
+  }
+
+  const base = { correct, correctAnswer: correctAnswerText(task) };
+
+  /*
+    Быстрый выход: вердикт без разбора.
+
+    Попытка к этому моменту уже записана, то есть честность прогресса от
+    отказа от разбора не страдает. Модель здесь не вызывается вовсе —
+    ответ уходит за миллисекунды вместо секунд, и ученик не ждёт объяснения,
+    которого не просил. Заодно это единственный способ не жечь дневную
+    квоту на заданиях, где ученик и так всё понял.
+  */
+  if (!body.explain) {
+    return NextResponse.json({ ...base, explained: false });
   }
 
   const input: FeedbackInput = {
@@ -125,11 +159,10 @@ export async function POST(request: Request): Promise<NextResponse<FeedbackRespo
     skillMastery: clampNumber(body.skillMastery, 0, 1, 0.5),
   };
 
-  const base = { correct, correctAnswer: correctAnswerText(task) };
-
   if (!isAiConfigured()) {
     return NextResponse.json({
       ...base,
+      explained: true,
       text: feedbackFallback(input),
       live: false,
       fallbackReason: 'AI-ключ не настроен на сервере',
@@ -143,11 +176,14 @@ export async function POST(request: Request): Promise<NextResponse<FeedbackRespo
       temperature: 0.3,
       maxOutputTokens: 2500,
       timeoutMs: 15_000,
+      /* Разбор ученик ждёт глядя на экран, поэтому потолок ниже общего:
+         лучше заготовка через двадцать секунд, чем живой текст через минуту. */
+      budgetMs: 20_000,
     });
-    return NextResponse.json({ ...base, text: result.text, live: true, model: result.model });
+    return NextResponse.json({ ...base, explained: true, text: result.text, live: true, model: result.model });
   } catch (error) {
     const reason = error instanceof AiUnavailableError ? error.message : 'Неизвестная ошибка AI';
     // Ученик всё равно получает разбор — из эталонного решения задания.
-    return NextResponse.json({ ...base, text: feedbackFallback(input), live: false, fallbackReason: reason });
+    return NextResponse.json({ ...base, explained: true, text: feedbackFallback(input), live: false, fallbackReason: reason });
   }
 }

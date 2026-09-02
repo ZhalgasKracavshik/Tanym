@@ -31,9 +31,8 @@ export interface OpportunityCardProps {
   headline: string;
   excerpt: string;
   cover?: string | null;
-  /** Заглушка вместо фотографии: цвет плашки и иконка вида. */
+  /** Цвет плашки, когда фотографии нет. */
   fallbackClassName?: string;
-  fallbackIcon?: IconName;
   tag?: string;
   tagIcon?: IconName;
   /** Короткая строка под заголовком: цена, формат, места. */
@@ -53,7 +52,6 @@ export function OpportunityCard({
   excerpt,
   cover,
   fallbackClassName = 'bg-ink-500',
-  fallbackIcon,
   tag,
   tagIcon,
   meta,

@@ -300,7 +300,6 @@ export default function MarketplacePage() {
                   excerpt={listing.description}
                   cover={listing.coverUrl}
                   fallbackClassName={TYPE_BANNER[listing.type]}
-                  fallbackIcon={meta?.icon}
                   tag={meta?.title[state.language]}
                   tagIcon={meta?.icon}
                   meta={metaParts.join(' · ')}
