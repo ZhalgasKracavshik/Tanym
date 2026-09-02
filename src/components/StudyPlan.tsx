@@ -159,8 +159,20 @@ export function StudyPlan() {
   const profile = useEffectiveProfile();
   const { profile: schoolProfile } = useSchoolAuth();
 
-  const [subjectId, setSubjectId] = useState<string | null>(null);
-  const [plan, setPlan] = useState<PlanResponse | null>(null);
+  /*
+    Выбранный вручную предмет. null означает «ученик ещё не выбирал» —
+    тогда активным берётся первый предмет из профиля, см. subjectId ниже.
+  */
+  const [chosenSubjectId, setChosenSubjectId] = useState<string | null>(null);
+  /*
+    Загруженный план вместе с сигнатурой, для которой он получен.
+
+    Сигнатура хранится рядом не для порядка: без неё ответ, пришедший для
+    математики, продолжал бы висеть на экране после переключения на
+    физику — до тех пор, пока не приедет новый. Сравнение с текущей
+    сигнатурой делает такой показ невозможным по построению.
+  */
+  const [fetched, setFetched] = useState<{ signature: string; plan: PlanResponse } | null>(null);
   const [loading, setLoading] = useState(false);
 
   /**
@@ -168,10 +180,15 @@ export function StudyPlan() {
    * ответа: тогда приходят два ответа, и более медленный затирал более свежий. Ответ применяется, только если его номер всё ещё последний. */
   const requestRef = useRef(0);
 
-  // Первый выбранный предмет становится активным, как только загрузился профиль.
-  useEffect(() => {
-    if (profile && subjectId === null) setSubjectId(profile.subjectIds[0] ?? null);
-  }, [profile, subjectId]);
+  /*
+    Активный предмет вычисляется, а не досылается эффектом.
+
+    Раньше первый предмет профиля подставлялся эффектом после рендера:
+    первый кадр страницы рисовался вообще без предмета, и только
+    следующим проходом появлялся план. Здесь нечего «досылать» — это
+    ровно то же самое значение, выраженное как вычисление.
+  */
+  const subjectId = chosenSubjectId ?? profile?.subjectIds[0] ?? null;
 
   const subject = getSubject(subjectId);
   const ranked = subject ? rankTopics(subject, state, state.customTopics) : [];
@@ -192,20 +209,25 @@ export function StudyPlan() {
     .map((r) => r.topic.id)
     .join(',')}`;
 
-  useEffect(() => {
-    if (!subject || !subjectId) return;
+  /*
+    План из кэша — вычисление, а не результат эффекта.
 
-    const cached = state.plans[subjectId];
-    if (cached && cached.signature === signature) {
-      setPlan({ text: cached.text, live: cached.live });
-      return;
-    }
-
-    loadPlan();
-    // Намеренно следим только за сигнатурой: остальные поля состояния меняются
-    // часто, а план должен пересобираться лишь при значимых изменениях.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [signature]);
+    Раньше подходящий кэш всё равно проезжал через setState в эффекте:
+    страница показывала пустое место, и только следующим кадром — уже
+    сохранённый текст. Кэш известен во время рендера, доставать его
+    оттуда незачем.
+  */
+  const cachedEntry = subjectId ? state.plans[subjectId] : null;
+  /*
+    Тип указан явно: у сохранённого плана нет поля с причиной запасного
+    ответа (оно осмысленно только для свежего запроса), и без аннотации
+    вывод сузил бы тип всего plan до кэша, потеряв это поле.
+  */
+  const cachedPlan: PlanResponse | null =
+    cachedEntry && cachedEntry.signature === signature
+      ? { text: cachedEntry.text, live: cachedEntry.live }
+      : null;
+  const plan = fetched?.signature === signature ? fetched.plan : cachedPlan;
 
   async function loadPlan() {
     if (!subject || !subjectId) return;
@@ -250,7 +272,7 @@ export function StudyPlan() {
       // Пока ждали ответ, ученик мог переключить предмет такой ответ устарел.
       if (requestRef.current !== requestId) return;
 
-      setPlan(data);
+      setFetched({ signature, plan: data });
 
       // Кэшируем только живой ответ. Иначе разовый сбой модели «прилипал» бы
       // к ученику: запасной текст сохранился бы под текущей сигнатурой, и план
@@ -267,12 +289,44 @@ export function StudyPlan() {
     } catch {
       if (requestRef.current !== requestId) return;
       // Сеть недоступна страница остаётся рабочей, план просто не показывается.
-      setPlan({ text: t.planError, live: false });
+      setFetched({ signature, plan: { text: t.planError, live: false } });
     } finally {
       // Индикатор гасит только последний запрос, иначе он погаснет раньше времени.
       if (requestRef.current === requestId) setLoading(false);
     }
   }
+
+  /*
+    Запрос к модели — единственное, ради чего здесь остался эффект: это
+    обращение к сети, то есть настоящий побочный эффект, а не вычисление.
+
+    Объявлен ПОСЛЕ loadPlan намеренно. Объявление функции поднимается, и
+    вызов сработал бы и выше, но статический анализ справедливо считает
+    обращение к переменной до её объявления ошибкой — а спорить с ним
+    здесь не из-за чего.
+
+    Запрос не уходит, если план на эту же сигнатуру уже есть: либо в
+    кэше, либо только что загружен. Без этой проверки каждый заход на
+    страницу тратил бы квоту ключа заново.
+  */
+  useEffect(() => {
+    if (!subject || !subjectId) return;
+    if (cachedPlan) return;
+    if (fetched?.signature === signature) return;
+    /*
+      loadPlan синхронно зажигает индикатор загрузки перед обращением к
+      сети, и правило справедливо это замечает. Убрать его нельзя:
+      индикатор нужен при ручном обновлении плана, когда прежний текст
+      ещё на экране и по одному его наличию отличить «идёт запрос» от
+      «всё готово» невозможно. Это флаг настоящей асинхронной операции,
+      а не досылка вычислимого значения.
+    */
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadPlan();
+    // Намеренно следим только за сигнатурой: остальные поля состояния меняются
+    // часто, а план должен пересобираться лишь при значимых изменениях.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [signature]);
 
   /* Кабинет уже показал скелетон, проверил роль и наличие профиля. */
   if (!hydrated || !profile) return null;
@@ -310,7 +364,7 @@ export function StudyPlan() {
             return (
               <button
                 key={id}
-                onClick={() => setSubjectId(id)}
+                onClick={() => setChosenSubjectId(id)}
                 aria-pressed={active}
                 className={`-mb-px flex min-h-11 items-center gap-2 border-b-2 px-1 text-sm font-semibold transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
                   active

@@ -217,11 +217,22 @@ export function SiteSidebar() {
   const [open, setOpen] = useState(false);
   const [collapsed, toggleCollapsed] = useSidebarCollapsed();
 
-  // Закрываем drawer при переходе на другой маршрут, иначе следующая
-  // страница открылась бы с уже нажатым меню поверх себя.
-  useEffect(() => {
+  /*
+    Закрываем drawer при переходе на другой маршрут, иначе следующая
+    страница открылась бы с уже нажатым меню поверх себя.
+
+    Правка во время рендера, а не в эффекте. Эффект здесь означал бы
+    лишний кадр: страница успевала отрисоваться с открытым меню поверх
+    себя, и только следующим проходом оно закрывалось. React такую
+    правку поддерживает специально — увидев setState того же компонента
+    во время рендера, он перезапускает рендер до того, как что-либо
+    попадёт в DOM, и промежуточное состояние на экран не выходит.
+  */
+  const [renderedPath, setRenderedPath] = useState(pathname);
+  if (renderedPath !== pathname) {
+    setRenderedPath(pathname);
     setOpen(false);
-  }, [pathname]);
+  }
 
   useEffect(() => {
     if (!open) return;

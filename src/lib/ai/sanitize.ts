@@ -39,9 +39,18 @@ import type { ChatMessage, Grade, Profile } from '../types';
   собираться.
 */
 const GRADE_VALUES = [7, 8, 9, 10, 11, 12] as const;
+
+/*
+  Две проверки ниже существуют только для компилятора и намеренно никем
+  не используются: они и есть та самая сверка списка с типом Grade в обе
+  стороны. Первая не даст добавить в список класс, которого нет в типе;
+  вторая — забыть в списке класс, который в типе появился.
+*/
+/* eslint-disable @typescript-eslint/no-unused-vars */
 const _noExtraGrades: readonly Grade[] = GRADE_VALUES;
 type _NoMissingGrades = Exclude<Grade, (typeof GRADE_VALUES)[number]> extends never ? true : never;
 const _gradesComplete: _NoMissingGrades = true;
+/* eslint-enable @typescript-eslint/no-unused-vars */
 
 /** Пределы длины. Взяты с запасом к живому тексту: разбор задания укладывается в 2000. */
 export const LIMITS = {

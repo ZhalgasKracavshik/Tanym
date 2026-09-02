@@ -77,8 +77,10 @@ for (const [file, exportName] of FILES) {
   const url = pathToFileURL(join(root, 'src', 'data', 'subjects', `${file}.ts`)).href;
   let subject;
   try {
-    const module = await import(url);
-    subject = module[exportName];
+    /* Не `module`: это имя зарезервировано сборщиком, и присваивание ему
+       ломает бандл, даже когда переменная локальная. */
+    const loaded = await import(url);
+    subject = loaded[exportName];
   } catch (error) {
     complain(file, `файл не загрузился — ${error.message}`);
     continue;

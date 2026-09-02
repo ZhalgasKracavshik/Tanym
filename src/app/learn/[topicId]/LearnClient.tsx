@@ -8,7 +8,7 @@
  * подстраивается. Всё остальное в приложении обслуживает этот цикл.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { getSubject, getTopic } from '@/data';
 import { computeSkillMastery, difficultyExplanation, selectTasks } from '@/lib/personalization';
 import type { Difficulty, Task } from '@/lib/types';
@@ -181,19 +181,29 @@ export function LearnClient({ topicId }: { topicId: string }) {
    * Изменение сложности тоже применяется со следующего захода, а не посреди
    * темы: перетасовывать задания под пальцем у ученика — плохая идея.
    */
-  const [sessionTasks, setSessionTasks] = useState<Task[]>([]);
   const [session, setSession] = useState(0);
 
   const topic = getTopic(topicId, state.customTopics);
   const subject = getSubject(topic?.subjectId);
 
-  useEffect(() => {
-    if (!hydrated || !topic || !subject) return;
+  /*
+    Список заданий — вычисляемое значение, а не состояние.
+
+    Раньше он лежал в useState и заполнялся эффектом, то есть первый кадр
+    страницы рисовался с пустым списком, и только следующим проходом
+    появлялись задания. setSessionTasks при этом вызывался ровно в одном
+    месте — признак того, что состояние здесь и не требовалось.
+
+    Зависимости намеренно те же, что были у эффекта: только тема и номер
+    захода. Список не должен меняться от того, что ученик ответил на
+    задание внутри этого же захода, — иначе подбор пересобрался бы прямо
+    под ним после первого же ответа.
+  */
+  const sessionTasks = useMemo<Task[]>(() => {
+    if (!hydrated || !topic || !subject) return [];
     // Уровень сложности задаёт движок: он растёт и падает по результатам ученика.
     const difficulty = state.difficulty[subject.id] ?? 2;
-    setSessionTasks(selectTasks(topic, difficulty, state));
-    // Намеренно только по теме и номеру захода: список не должен меняться
-    // от того, что ученик ответил на задание внутри этого же захода.
+    return selectTasks(topic, difficulty, state);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hydrated, topicId, session]);
 

@@ -146,13 +146,20 @@ export function useSchoolLeaderboard(excludeStudentId: string | null) {
  * запроса собственное место считалось бы по другим правилам, чем чужие.
  */
 export function useOwnStreakPoints(studentId: string | null): number {
-  const [points, setPoints] = useState(0);
+  /*
+    Сумма хранится вместе с учеником, которому принадлежит.
+
+    Раньше сброс на ноль делался присваиванием прямо в теле эффекта, и
+    это давало лишний проход рендера на каждый выход из аккаунта. Хуже
+    того, до этого прохода на экране оставалась сумма ПРЕДЫДУЩЕГО
+    ученика: между сменой studentId и срабатыванием эффекта проходил
+    целый кадр. Сравнение с текущим studentId убирает и то, и другое —
+    чужая сумма не может быть показана по построению.
+  */
+  const [loaded, setLoaded] = useState<{ studentId: string; points: number } | null>(null);
 
   useEffect(() => {
-    if (!studentId) {
-      setPoints(0);
-      return;
-    }
+    if (!studentId) return;
     const supabase = createClient();
     let cancelled = false;
 
@@ -162,7 +169,8 @@ export function useOwnStreakPoints(studentId: string | null): number {
       .eq('student_id', studentId)
       .then(({ data }) => {
         if (cancelled) return;
-        setPoints(((data as { points: number }[] | null) ?? []).reduce((sum, r) => sum + r.points, 0));
+        const points = ((data as { points: number }[] | null) ?? []).reduce((sum, r) => sum + r.points, 0);
+        setLoaded({ studentId, points });
       });
 
     return () => {
@@ -170,5 +178,5 @@ export function useOwnStreakPoints(studentId: string | null): number {
     };
   }, [studentId]);
 
-  return points;
+  return loaded?.studentId === studentId ? loaded.points : 0;
 }

@@ -142,11 +142,23 @@ function ProfileContent() {
       : 'personal',
   );
 
-  useEffect(() => {
+  /*
+    Вкладка следует за адресом страницы: на «?tab=settings» ведёт
+    шестерёнка в боковом меню, и переход по ней обязан открыть именно
+    настройки.
+
+    Правка во время рендера, а не в эффекте: эффект означал бы лишний
+    кадр со старой вкладкой перед нужной. React такую правку
+    поддерживает специально — увидев setState того же компонента во
+    время рендера, он перезапускает рендер до попадания чего-либо в DOM.
+  */
+  const [syncedTab, setSyncedTab] = useState(tabParam);
+  if (syncedTab !== tabParam) {
+    setSyncedTab(tabParam);
     if (tabParam && ['personal', 'study', 'activity', 'settings'].includes(tabParam)) {
       setActiveTab(tabParam);
     }
-  }, [tabParam]);
+  }
 
   const [refreshKey, setRefreshKey] = useState(0);
   const [savedAlert, setSavedAlert] = useState(false);
