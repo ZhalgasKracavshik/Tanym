@@ -101,6 +101,7 @@ const TEXT: Dict<{
   perLesson: string;
   verified: string;
   unverified: string;
+  whoRuns: string;
   unverifiedHint: string;
   more: string;
   spots: (n: number) => string;
@@ -122,6 +123,7 @@ const TEXT: Dict<{
     perLesson: 'тг',
     verified: 'Проверено школой',
     unverified: 'Без проверки школы',
+    whoRuns: 'Кто ведёт',
     unverifiedHint: 'Школа не проверяла это предложение. Обсуди с родителями, прежде чем платить.',
     more: 'Подробнее',
     spots: (n) => (n === 1 ? 'осталось 1 место' : n < 5 ? `осталось ${n} места` : `осталось ${n} мест`),
@@ -143,6 +145,7 @@ const TEXT: Dict<{
     perLesson: 'тг',
     verified: 'Мектеп тексерген',
     unverified: 'Мектеп тексермеген',
+    whoRuns: 'Кім жүргізеді',
     unverifiedHint: 'Мектеп бұл ұсынысты тексерген жоқ. Төлемес бұрын ата-анаңмен ақылдас.',
     more: 'Толығырақ',
     spots: (n) => `${n} орын қалды`,
@@ -164,6 +167,7 @@ const TEXT: Dict<{
     perLesson: 'KZT',
     verified: 'Verified by school',
     unverified: 'Not verified by school',
+    whoRuns: 'Who runs it',
     unverifiedHint: 'The school has not vetted this offer. Talk to your parents before paying.',
     more: 'Details',
     spots: (n) => (n === 1 ? '1 spot left' : `${n} spots left`),
@@ -289,7 +293,7 @@ export default function MarketplacePage() {
               <Link
                 key={listing.id}
                 href={`/marketplace/${listing.id}`}
-                className="group block h-full rounded-3xl outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                className="group block h-full rounded-[var(--radius-card)] outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
               >
                 <OpportunityCard
                   headline={listing.title}
@@ -302,14 +306,21 @@ export default function MarketplacePage() {
                   meta={metaParts.join(' · ')}
                   writer={listing.authorName}
                   writerRole={listing.authorRole}
+                  writerLabel={t.whoRuns}
                   action={t.more}
-                  footerNote={
+                  /*
+                    Проверка школой переехала из подвала в правый верхний
+                    угол шапки — туда же, где в афише стоит статус записи.
+                    Это первое, о чём спрашивают про чужое объявление, и
+                    внизу мелким шрифтом оно терялось.
+                  */
+                  badge={
                     <span
-                      className={`inline-flex items-center gap-1.5 text-xs ${
-                        listing.verified ? 'font-semibold text-success-700' : 'text-ink-400'
+                      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-[var(--radius-pill)] bg-white/85 px-2.5 py-1 text-xs font-bold backdrop-blur-sm ${
+                        listing.verified ? 'text-success-700' : 'text-ink-500'
                       }`}
                     >
-                      <Icon name={listing.verified ? 'check' : 'close'} size={14} />
+                      <Icon name={listing.verified ? 'check' : 'close'} size={13} />
                       {listing.verified ? t.verified : t.unverified}
                     </span>
                   }
