@@ -343,7 +343,7 @@ export default function MarketplacePage() {
 }
 
 function chip(active: boolean): string {
-  return `inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
+  return `inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 [@media(pointer:coarse)]:min-h-11 ${
     active
       ? 'border-brand-500 bg-brand-50 text-brand-700'
       : 'border-ink-200 bg-white text-ink-600 hover:border-brand-300 hover:shadow-[var(--shadow-lift)]'

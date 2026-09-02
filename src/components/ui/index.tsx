@@ -43,7 +43,13 @@ const BUTTON_VARIANTS: Record<ButtonVariant, string> = {
  * карточки, где промах не стоит ученику ничего.
  */
 const BUTTON_SIZES: Record<ButtonSize, string> = {
-  sm: 'px-3 py-1.5 text-sm',
+  /*
+    У sm нет своей высоты — она набирается из текста и полей, и на пальце
+    это около 32–38 пикселей вместо положенных 44. Поднимаем минимум только
+    там, где указатель грубый: на мыши компактная кнопка уместна и менять
+    её вид незачем.
+  */
+  sm: 'px-3 py-1.5 text-sm [@media(pointer:coarse)]:min-h-11',
   md: 'min-h-11 px-4 py-2.5 text-sm',
   lg: 'min-h-12 px-6 py-3 text-base',
 };
