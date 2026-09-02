@@ -250,8 +250,18 @@ export function SchoolAuthProvider({
 
     async function sendPasswordReset(emailValue: string) {
       const supabase = createClient();
+      /*
+        Письмо ведёт на /auth/callback, а не сразу на /reset-password.
+
+        Сессия живёт в куках, а ставит их сервер. Ссылка, ведущая прямо на
+        страницу, приводила туда с кодом, который ещё никто не обменял: на
+        сервере сессии нет, значит первый же кадр показывал «ссылка
+        устарела», хотя ссылка была совершенно рабочей. Обмен на сервере
+        убирает эту гонку целиком — на страницу человек попадает уже
+        вошедшим.
+      */
       const { error } = await supabase.auth.resetPasswordForEmail(emailValue, {
-        redirectTo: `${window.location.origin}/reset-password`,
+        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent('/reset-password')}`,
       });
       if (error) return { ok: false, error: error.message };
       return { ok: true };

@@ -8,8 +8,8 @@
  * пароль» здесь нет: доступ к почте и есть подтверждение.
  */
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { AuthLink, AuthShell, FormMessage, PasswordField, SubmitButton } from '@/components/auth-ui';
 import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
 import { useLang, type Dict } from '@/lib/i18n';
@@ -22,6 +22,9 @@ const TEXT: Dict<{
   linkBroken: string;
   requestNew: string;
   expiredNotice: string;
+  checking: string;
+  linkUsed: string;
+  notFromEmail: string;
   newPassword: string;
   repeatPassword: string;
   passwordHint: string;
@@ -40,6 +43,9 @@ const TEXT: Dict<{
     linkBroken: 'Ссылка не работает?',
     requestNew: 'Запросить новую',
     expiredNotice: 'Похоже, ссылка устарела или открыта не из письма. Запросите новое письмо для сброса.',
+    checking: 'Проверяем ссылку…',
+    linkUsed: 'Ссылка уже использована или устарела. Код из письма одноразовый и сгорает при первом переходе — иногда его успевает открыть почтовый сканер. Запросите новое письмо.',
+    notFromEmail: 'Эта страница открывается только по ссылке из письма. Запросите письмо для сброса пароля.',
     newPassword: 'Новый пароль',
     repeatPassword: 'Ещё раз',
     passwordHint: 'Не меньше 6 символов.',
@@ -58,6 +64,9 @@ const TEXT: Dict<{
     linkBroken: 'Сілтеме жұмыс істемей тұр ма?',
     requestNew: 'Жаңасын сұрау',
     expiredNotice: 'Сілтеменің мерзімі өтіп кеткен сияқты немесе ол хаттан ашылмаған. Қалпына келтіру үшін жаңа хат сұраңыз.',
+    checking: 'Сілтемені тексеріп жатырмыз…',
+    linkUsed: 'Сілтеме бұрын пайдаланылған немесе мерзімі өткен. Хаттағы код бір реттік және алғаш ашылғанда жойылады — кейде оны пошта сканері ашып үлгереді. Жаңа хат сұраңыз.',
+    notFromEmail: 'Бұл бет тек хаттағы сілтеме арқылы ашылады. Құпия сөзді қалпына келтіру үшін хат сұраңыз.',
     newPassword: 'Жаңа құпия сөз',
     repeatPassword: 'Тағы бір рет',
     passwordHint: '6 таңбадан кем емес.',
@@ -76,6 +85,9 @@ const TEXT: Dict<{
     linkBroken: "Link not working?",
     requestNew: 'Request a new one',
     expiredNotice: "This link looks expired or wasn't opened from the email. Request a new reset email.",
+    checking: 'Checking the link…',
+    linkUsed: 'This link has already been used or has expired. The code in the email is single-use and burns on the first visit — sometimes a mail scanner opens it first. Request a new email.',
+    notFromEmail: 'This page only opens from the link in the email. Request a password reset email.',
     newPassword: 'New password',
     repeatPassword: 'Repeat it',
     passwordHint: 'At least 6 characters.',
@@ -88,8 +100,9 @@ const TEXT: Dict<{
   },
 };
 
-export default function ResetPasswordPage() {
+function ResetPasswordForm() {
   const router = useRouter();
+  const params = useSearchParams();
   const { updatePassword, isSignedIn, loading } = useSchoolAuth();
   const lang = useLang();
   const t = TEXT[lang];
@@ -101,6 +114,24 @@ export default function ResetPasswordPage() {
   const [repeatError, setRepeatError] = useState<string | undefined>();
   const [formError, setFormError] = useState<string | null>(null);
   const [shakeKey, setShakeKey] = useState(0);
+
+  /*
+    Старые письма ведут прямо сюда, с необменянным кодом в адресе. Для них
+    сессия появится только после того, как браузерный клиент сам сходит за
+    ней, — и до этого момента выносить вердикт «ссылка не работает» нельзя.
+    Новые письма проходят через /auth/callback и попадают сюда уже с
+    сессией, так что это состояние их не касается.
+  */
+  const authError = params.get('authError');
+  const hasRawCode = params.has('code') || params.has('token_hash');
+  const [waitedForCode, setWaitedForCode] = useState(false);
+
+  useEffect(() => {
+    if (!hasRawCode || isSignedIn) return;
+    // Если за это время сессия не появилась, обмен не состоится уже никогда.
+    const timer = setTimeout(() => setWaitedForCode(true), 6000);
+    return () => clearTimeout(timer);
+  }, [hasRawCode, isSignedIn]);
 
   // Перекидываем на дашборд после успеха, но не мгновенно: пользователь
   // должен успеть увидеть, что пароль действительно сменился.
@@ -140,6 +171,23 @@ export default function ResetPasswordPage() {
     setStatus('success');
   }
 
+  /*
+    Обмен кода мог не состояться по разным причинам, и человеку важно
+    понимать, по какой: сгоревшая ссылка чинится новым письмом, а зайти
+    на страницу напрямую нельзя вообще.
+  */
+  const blocker: string | null = authError
+    ? /expired|access_denied|otp|exchange_failed/i.test(authError)
+      ? t.linkUsed
+      : t.expiredNotice
+    : !loading && !isSignedIn && !hasRawCode
+      ? t.notFromEmail
+      : !loading && !isSignedIn && waitedForCode
+        ? t.linkUsed
+        : null;
+
+  const checking = !blocker && !isSignedIn;
+
   return (
     <AuthShell
       heroTitle={t.heroTitle}
@@ -152,11 +200,18 @@ export default function ResetPasswordPage() {
         </>
       }
     >
-      {/* Сессии нет и загрузка кончилась — значит по ссылке не пришли
-          или она просрочена. Показать форму было бы обманом: сохранить
-          пароль всё равно не выйдет. */}
-      {!loading && !isSignedIn ? (
-        <FormMessage tone="error">{t.expiredNotice}</FormMessage>
+      {/*
+        Сообщение подбирается по тому, что реально произошло, а не одно на
+        все случаи. Раньше здесь была единственная фраза «устарела или
+        открыта не из письма», и она показывалась в том числе на совершенно
+        рабочей ссылке — просто потому, что сессия к первому кадру ещё не
+        успела появиться. Человек читал, что ссылка сломана, и шёл
+        запрашивать новую, которая ломалась точно так же.
+      */}
+      {blocker ? (
+        <FormMessage tone="error">{blocker}</FormMessage>
+      ) : checking ? (
+        <FormMessage tone="info">{t.checking}</FormMessage>
       ) : (
         <form
           className="space-y-5"
@@ -202,5 +257,17 @@ export default function ResetPasswordPage() {
         </form>
       )}
     </AuthShell>
+  );
+}
+
+/*
+ * useSearchParams обязан быть под Suspense, иначе сборка не может отрисовать
+ * страницу заранее и падает на пререндере.
+ */
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={null}>
+      <ResetPasswordForm />
+    </Suspense>
   );
 }

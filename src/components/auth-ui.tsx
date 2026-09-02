@@ -540,16 +540,28 @@ export function SubmitButton({
   );
 }
 
-/** Сообщение об ошибке или успехе, не привязанное к конкретному полю. */
-export function FormMessage({ tone, children }: { tone: 'error' | 'success'; children: ReactNode }) {
+/** Сообщение о ходе дела, ошибке или успехе, не привязанное к полю. */
+const MESSAGE_TONES = {
+  error: 'border-danger-200 bg-danger-50 text-danger-700',
+  success: 'border-success-200 bg-success-50 text-success-700',
+  // Нейтральный тон: «проверяем ссылку» — не ошибка и не успех, и красным
+  // это писать нельзя, иначе человек читает промежуточное состояние как отказ.
+  info: 'border-ink-200 bg-ink-50 text-ink-600',
+} as const;
+
+export function FormMessage({
+  tone,
+  children,
+}: {
+  tone: keyof typeof MESSAGE_TONES;
+  children: ReactNode;
+}) {
   return (
     <motion.p
       initial={{ opacity: 0, y: -6 }}
       animate={{ opacity: 1, y: 0 }}
       role={tone === 'error' ? 'alert' : 'status'}
-      className={`rounded-[var(--radius-control)] border px-4 py-3 text-sm font-medium ${
-        tone === 'error' ? 'border-danger-200 bg-danger-50 text-danger-700' : 'border-success-200 bg-success-50 text-success-700'
-      }`}
+      className={`rounded-[var(--radius-control)] border px-4 py-3 text-sm font-medium ${MESSAGE_TONES[tone]}`}
     >
       {children}
     </motion.p>
