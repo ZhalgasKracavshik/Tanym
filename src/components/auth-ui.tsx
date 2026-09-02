@@ -17,7 +17,7 @@ import type { InputHTMLAttributes, ReactNode } from 'react';
 import Link from 'next/link';
 import { AnimatePresence } from 'framer-motion';
 import { Icon, type IconName } from './Icon';
-import { Logo, LogoMark } from './Logo';
+import { Logo } from './Logo';
 import { EASE_OUT, PressButton, Reveal, SuccessCheck, Spinner, motion } from './motion';
 import { SmokeyBackground } from './ui/smokey-background';
 import { useStore } from './StoreProvider';
@@ -123,8 +123,8 @@ export function AuthShell({
           href="/"
           className="relative z-10 flex w-fit items-center gap-2 p-8 outline-none focus-visible:ring-2 focus-visible:ring-white/60"
         >
-          <LogoMark size={30} />
-          <span className="text-lg font-black tracking-wider text-white">TANÝM</span>
+          {/* Цвет задан здесь, а не внутри знака: на тёмной дымке нужен белый. */}
+          <Logo size={30} className="text-white" />
         </Link>
 
         <motion.div

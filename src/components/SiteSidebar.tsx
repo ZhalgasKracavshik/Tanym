@@ -22,7 +22,7 @@ import { LANGUAGES } from '@/lib/i18n-shared';
 import type { Dict } from '@/lib/i18n';
 import type { IconName } from './Icon';
 import { Icon } from './Icon';
-import { Logo, LogoMark } from './Logo';
+import { Logo } from './Logo';
 import { Avatar } from './Avatar';
 import { useSidebarCollapsed } from '@/lib/localSetting';
 import { MobileTabBar } from './MobileTabBar';
@@ -367,12 +367,10 @@ export function SiteSidebar() {
       */}
       <div className="sticky top-0 z-40 flex h-14 items-center gap-3 border-b border-ink-200 bg-white/90 px-4 backdrop-blur md:hidden">
         <Link href="/dashboard" className="flex min-w-0 flex-1 items-center gap-2 outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded-lg">
-          <LogoMark size={26} className="text-accent-500 shrink-0" />
-          {/* Тот же шрифт, регистр и разрядка, что и в Logo.tsx — иначе
-              словесный знак на телефоне выглядит другим брендом. */}
-          <span className="truncate text-base font-black tracking-wider text-brand-600">
-            TANÝM
-          </span>
+          {/* Общий компонент, а не своя копия словесного знака: две копии
+              уже расходились по регистру и разрядке, и на телефоне бренд
+              выглядел другим. */}
+          <Logo size={26} className="min-w-0 text-ink-900" />
         </Link>
 
         {displayName && (

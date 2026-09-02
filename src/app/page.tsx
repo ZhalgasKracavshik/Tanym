@@ -312,19 +312,19 @@ export default function HomePage() {
   return (
     <div className="overflow-x-hidden">
       {/* Первый экран */}
-      <section className="relative isolate overflow-hidden border-b border-ink-200/70 bg-white">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 -top-40 -z-10 h-[36rem] opacity-70 blur-3xl"
-          style={{
-            background:
-              'radial-gradient(42% 52% at 50% 40%, rgb(229 117 69 / 0.28) 0%, rgb(253 243 238 / 0.55) 45%, transparent 72%)',
-          }}
-        />
+      {/*
+        Первый экран — чистое белое полотно, без подсветки за заголовком.
 
-        <div className="mx-auto max-w-6xl px-6 py-20 text-center sm:py-28">
+        Раньше здесь лежало размытое радиальное пятно в терракоту. Такая
+        подсветка («mesh», «aurora») — первое, что выдаёт типовой
+        SaaS-шаблон: она есть у всех и не говорит ничего о продукте.
+        Заголовок в тишине белого поля держит внимание сам, а фирменный
+        цвет приходит ниже — целыми полосами, а не дымкой под текстом.
+      */}
+      <section className="border-b border-ink-200/70 bg-white">
+        <div className="mx-auto max-w-6xl px-6 py-24 text-center sm:py-28">
           <Reveal immediate>
-            <h1 className="mx-auto max-w-4xl text-[2.6rem] font-semibold leading-[1.05] tracking-tight text-ink-900 sm:text-6xl">
+            <h1 className="mx-auto max-w-4xl text-[2.6rem] font-medium leading-[1.05] tracking-tight text-balance text-ink-900 sm:text-6xl">
               {t.heroTitle}
             </h1>
           </Reveal>
@@ -337,8 +337,11 @@ export default function HomePage() {
             <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
               <PressLink
                 href="/register"
-                className="inline-flex h-14 items-center gap-2 rounded-[var(--radius-control)] px-8 text-base font-bold text-white shadow-[var(--shadow-glow)] transition-shadow duration-200 hover:shadow-[0_12px_32px_-8px_rgb(216_95_46_/_0.65)]"
-                style={{ background: 'var(--gradient-brand)' }}
+                /* Сплошной цвет, а не градиент со свечением: главное
+                   действие должно читаться как решённое, а не как
+                   украшение. Свечение под кнопкой — тот же типовой приём,
+                   что и подсветка за заголовком. */
+                className="inline-flex h-14 items-center gap-2 rounded-[var(--radius-control)] bg-brand-600 px-8 text-base font-semibold text-white transition-colors duration-200 hover:bg-brand-700"
               >
                 {t.ctaStart}
                 <Icon name="arrowRight" size={18} />
@@ -346,7 +349,7 @@ export default function HomePage() {
 
               <PressLink
                 href="/register"
-                className="inline-flex h-14 items-center gap-2 rounded-[var(--radius-control)] border border-ink-200 bg-white px-8 text-base font-bold text-ink-700 shadow-[var(--shadow-rest)] transition-colors duration-200 hover:border-brand-300 hover:text-brand-700"
+                className="inline-flex h-14 items-center gap-2 rounded-[var(--radius-control)] border border-ink-200 bg-white px-8 text-base font-semibold text-ink-800 transition-colors duration-200 hover:border-ink-300"
               >
                 {t.ctaDiagnostics}
               </PressLink>
@@ -388,8 +391,7 @@ export default function HomePage() {
                         статичная полоса читается как картинка, едущая — как данные */}
                     <div className="mt-3 h-2 overflow-hidden rounded-full bg-ink-100">
                       <motion.div
-                        className="h-full rounded-full"
-                        style={{ background: 'var(--gradient-brand)' }}
+                        className="h-full rounded-full bg-brand-500"
                         initial={{ width: 0 }}
                         whileInView={{ width: '34%' }}
                         viewport={{ once: true }}
@@ -405,26 +407,32 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Проблемы: ради чего продукт существует */}
-      <section className="border-b border-ink-200/70 bg-ink-50/60">
-        <div className="mx-auto max-w-6xl px-6 py-20 sm:py-24">
+      {/*
+        Проблемы — цветная полоса во всю ширину, а не белые карточки на сером.
+
+        Это единственное место, где страница повышает голос, и повышает его
+        цветом целой полосы, а не мелкими акцентами. Раньше фирменный цвет
+        appearance-ом присутствовал только в значках и кнопках — то есть нигде:
+        страница читалась как ряд одинаковых белых карточек на сером фоне.
+        Карточек внутри полосы нет намеренно: карточка на цветном поле
+        возвращает ту же белую сетку, от которой полоса и уходит.
+      */}
+      <section className="bg-brand-700">
+        <div className="mx-auto max-w-6xl px-6 py-24">
           <Reveal>
-            <h2 className="text-center text-3xl font-semibold text-ink-900 sm:text-4xl">{t.problemsTitle}</h2>
+            <h2 className="max-w-2xl text-3xl font-medium leading-tight text-balance text-white sm:text-4xl">
+              {t.problemsTitle}
+            </h2>
           </Reveal>
 
-          <StaggerGroup className="mt-12 grid gap-5 md:grid-cols-3">
+          <StaggerGroup className="mt-14 grid gap-10 md:grid-cols-3 md:gap-8">
             {t.problems.map((problem) => (
               <StaggerItem key={problem.title}>
-                <LiftCard className="h-full rounded-[var(--radius-card)] border border-ink-200/80 bg-white p-7 shadow-[var(--shadow-rest)]">
-                  <span
-                    className="flex h-12 w-12 items-center justify-center rounded-[var(--radius-control)] text-white"
-                    style={{ background: 'var(--gradient-brand)' }}
-                  >
-                    <Icon name={problem.icon} size={22} />
-                  </span>
-                  <h3 className="mt-5 font-bold text-ink-900">{problem.title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-ink-500">{problem.text}</p>
-                </LiftCard>
+                <div className="border-t border-white/25 pt-6">
+                  <Icon name={problem.icon} size={22} className="text-white/70" />
+                  <h3 className="mt-4 text-lg font-medium text-white">{problem.title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-white/70">{problem.text}</p>
+                </div>
               </StaggerItem>
             ))}
           </StaggerGroup>
@@ -433,21 +441,28 @@ export default function HomePage() {
 
       {/* Как это работает: четыре шага */}
       <section className="border-b border-ink-200/70 bg-white">
-        <div className="mx-auto max-w-6xl px-6 py-20 sm:py-24">
+        <div className="mx-auto max-w-6xl px-6 py-24">
           <Reveal>
-            <h2 className="text-center text-3xl font-semibold text-ink-900 sm:text-4xl">{t.stepsTitle}</h2>
+            <h2 className="max-w-2xl text-3xl font-medium leading-tight text-balance text-ink-900 sm:text-4xl">
+              {t.stepsTitle}
+            </h2>
           </Reveal>
 
           <StaggerGroup className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {t.steps.map((step, index) => (
               <StaggerItem key={step.title}>
-                <LiftCard className="h-full rounded-[var(--radius-card)] border border-ink-200/80 bg-white p-6 shadow-[var(--shadow-rest)]">
-                  <span className="text-4xl font-semibold tabular-nums text-brand-200">
+                {/*
+                  Нумерация здесь не украшение: шаги идут строго по порядку,
+                  и номер — единственное, что показывает этот порядок, когда
+                  карточки перестраиваются в столбец на телефоне.
+                */}
+                <div className="h-full border-t border-ink-200 pt-5">
+                  <span className="text-sm font-semibold tabular-nums text-brand-600">
                     {String(index + 1).padStart(2, '0')}
                   </span>
-                  <h3 className="mt-3 font-bold text-ink-900">{step.title}</h3>
+                  <h3 className="mt-3 text-lg font-medium text-ink-900">{step.title}</h3>
                   <p className="mt-2 text-sm leading-relaxed text-ink-500">{step.text}</p>
-                </LiftCard>
+                </div>
               </StaggerItem>
             ))}
           </StaggerGroup>
@@ -455,10 +470,14 @@ export default function HomePage() {
       </section>
 
       {/* Предметы */}
-      <section className="border-b border-ink-200/70 bg-ink-50/60">
-        <div className="mx-auto max-w-6xl px-6 py-20 sm:py-24">
+      {/* Кремовая полоса, а не серая: после терракотовой она держит тепло
+          страницы, тогда как серый рядом с ней читается как выцветший. */}
+      <section className="border-b border-brand-100 bg-brand-50">
+        <div className="mx-auto max-w-6xl px-6 py-24">
           <Reveal>
-            <h2 className="text-center text-3xl font-semibold text-ink-900 sm:text-4xl">{t.subjectsTitle}</h2>
+            <h2 className="max-w-2xl text-3xl font-medium leading-tight text-balance text-ink-900 sm:text-4xl">
+              {t.subjectsTitle}
+            </h2>
           </Reveal>
 
           <StaggerGroup className="mt-12 grid gap-5 md:grid-cols-3">
@@ -493,19 +512,17 @@ export default function HomePage() {
 
       {/* Учителю */}
       <section className="border-b border-ink-200/70 bg-white">
-        <div className="mx-auto max-w-6xl px-6 py-20 sm:py-24">
+        <div className="mx-auto max-w-6xl px-6 py-24">
           <Reveal>
             <div
-              className="relative overflow-hidden rounded-[var(--radius-card)] p-10 text-white shadow-[var(--shadow-float)] sm:p-14"
+              className="relative overflow-hidden rounded-[var(--radius-card)] p-10 text-white sm:p-14"
               style={{ background: 'var(--gradient-ink)' }}
             >
-              <div
-                aria-hidden
-                className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full opacity-25 blur-3xl"
-                style={{ background: 'var(--gradient-brand)' }}
-              />
+              {/* Размытое цветное пятно в углу убрано: тёмная карточка на
+                  белой странице и так самый заметный объект экрана, а пятно
+                  добавляло ей только сходство с типовым шаблоном. */}
               <div className="relative max-w-2xl">
-                <h2 className="text-3xl font-semibold sm:text-4xl">{t.teacherTitle}</h2>
+                <h2 className="text-3xl font-medium leading-tight text-balance sm:text-4xl">{t.teacherTitle}</h2>
                 <p className="mt-4 text-base leading-relaxed text-white/70">{t.teacherText}</p>
                 <div className="mt-8">
                   <PressLink
@@ -531,15 +548,15 @@ export default function HomePage() {
         страницы, открытые без регистрации: директор не станет заводить
         аккаунт, чтобы прочитать предложение.
       */}
-      <section className="border-b border-ink-200/70 bg-white">
-        <div className="mx-auto max-w-6xl px-6 py-20 sm:py-24">
+      {/* Серая полоса, а не белая: предыдущая секция тоже белая, и две
+          белые подряд склеиваются в одну — ритм страницы теряется. */}
+      <section className="border-b border-ink-200/70 bg-ink-50">
+        <div className="mx-auto max-w-6xl px-6 py-24">
           <Reveal>
-            <h2 className="text-center text-3xl font-semibold text-ink-900 sm:text-4xl">
+            <h2 className="max-w-2xl text-3xl font-medium leading-tight text-balance text-ink-900 sm:text-4xl">
               {t.partnersTitle}
             </h2>
-            <p className="mx-auto mt-3 max-w-2xl text-center text-sm text-ink-500">
-              {t.partnersText}
-            </p>
+            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-ink-500">{t.partnersText}</p>
           </Reveal>
 
           <StaggerGroup className="mt-12 grid gap-5 md:grid-cols-2">
@@ -556,11 +573,6 @@ export default function HomePage() {
                     className="group relative h-full overflow-hidden rounded-[var(--radius-card)] border p-8 shadow-[var(--shadow-rest)]"
                     style={{ background: partner.tint, borderColor: partner.border }}
                   >
-                    <span
-                      aria-hidden
-                      className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full opacity-60 blur-2xl"
-                      style={{ background: partner.glow }}
-                    />
                     <span className="relative flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-ink-500">
                       <span className="h-1.5 w-1.5 rounded-full" style={{ background: partner.glow }} />
                       {partner.badge}
@@ -586,16 +598,17 @@ export default function HomePage() {
       </section>
 
       {/* Финальный призыв */}
-      <section className="bg-ink-50/60">
-        <div className="mx-auto max-w-3xl px-6 py-20 text-center sm:py-28">
+      <section className="bg-white">
+        <div className="mx-auto max-w-3xl px-6 py-24 text-center sm:py-28">
           <Reveal>
-            <h2 className="text-3xl font-semibold text-ink-900 sm:text-5xl">{t.finalTitle}</h2>
-            <p className="mt-4 text-lg text-ink-500">{t.finalText}</p>
+            <h2 className="text-3xl font-medium leading-tight text-balance text-ink-900 sm:text-5xl">
+              {t.finalTitle}
+            </h2>
+            <p className="mt-4 text-lg leading-relaxed text-ink-500">{t.finalText}</p>
             <div className="mt-9 flex justify-center">
               <PressLink
                 href="/register"
-                className="inline-flex h-14 items-center gap-2 rounded-[var(--radius-control)] px-9 text-base font-bold text-white shadow-[var(--shadow-glow)]"
-                style={{ background: 'var(--gradient-brand)' }}
+                className="inline-flex h-14 items-center gap-2 rounded-[var(--radius-control)] bg-brand-600 px-9 text-base font-semibold text-white transition-colors duration-200 hover:bg-brand-700"
               >
                 {t.ctaStart}
                 <Icon name="arrowRight" size={18} />
