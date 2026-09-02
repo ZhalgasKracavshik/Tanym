@@ -14,6 +14,8 @@ import { AiUnavailableError, generateText, isAiConfigured } from '@/lib/ai/gemin
 import { feedbackPrompt, feedbackSystem, type FeedbackInput } from '@/lib/ai/prompts';
 import { feedbackFallback } from '@/lib/ai/fallback';
 import { checkRateLimit, clientKeyFromRequest } from '@/lib/ai/rate-limit';
+import { createClient } from '@/lib/supabase/server';
+import { recordTaskAttempt } from '@/lib/supabase/attempts';
 import type { FeedbackRequest, FeedbackResponse } from '@/lib/ai/contracts';
 import { LIMITS, clampNumber, clampText, clampTextList, sanitizeProfile } from '@/lib/ai/sanitize';
 
@@ -69,6 +71,22 @@ export async function POST(request: Request): Promise<NextResponse<FeedbackRespo
   const topic = getTopic(body.topicId ?? task.topicId);
   const subject = getSubject(topic?.subjectId);
   const correct = checkAnswer(task, body.answer);
+
+  /*
+    Вердикт сохраняется здесь — в единственном месте, где он получен
+    честно. Ученика берём из сессии, а не из тела запроса: иначе можно
+    было бы записывать успехи на чужое имя.
+
+    Ждать запись обязательно, а не отпускать промис: на Vercel функция
+    засыпает сразу после ответа, и незавершённый insert потерялся бы.
+  */
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user) {
+    await recordTaskAttempt({ studentId: user.id, task, subjectId: subject?.id ?? null, correct });
+  }
 
   const input: FeedbackInput = {
     task,

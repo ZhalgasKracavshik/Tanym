@@ -12,11 +12,10 @@
 import { useState } from 'react';
 import { pseudonym, rankEntries } from '@/lib/leaderboard';
 import type { LeaderboardEntry } from '@/lib/leaderboard';
-import { summarize } from '@/lib/personalization';
 import type { Dict } from '@/lib/i18n';
 import { useStore } from '@/components/StoreProvider';
 import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
-import { useOwnStreakPoints, useSchoolLeaderboard } from '@/lib/supabase/leaderboard';
+import { useOwnStreakPoints, useSchoolLeaderboard, useVerifiedProgress } from '@/lib/supabase/leaderboard';
 import { portfolioPoints, usePortfolio } from '@/components/Portfolio';
 import { Icon } from '@/components/Icon';
 import { Avatar } from '@/components/Avatar';
@@ -126,6 +125,7 @@ export default function LeaderboardPage() {
   const myAchievements = usePortfolio(schoolProfile?.id ?? null);
   const myAchievementPoints = portfolioPoints(myAchievements);
   const myStreakPoints = useOwnStreakPoints(schoolProfile?.id ?? null);
+  const myVerified = useVerifiedProgress(schoolProfile?.id ?? null);
   const t = TEXT[state.language];
 
   if (!hydrated || realEntries === null) {
@@ -146,7 +146,6 @@ export default function LeaderboardPage() {
   */
   const profile = state.profile;
   const isStudent = schoolProfile?.role === 'student';
-  const summary = summarize(state);
 
   // Строка текущего пользователя собирается из его реального прогресса,
   // а не хранится в данных: очки и темы считает движок персонализации.
@@ -168,9 +167,9 @@ export default function LeaderboardPage() {
           // остальных строк (задания + подтверждённые достижения + бонусы
           // за серии), иначе собственное место считалось бы по другим
           // правилам, чем чужие.
-          points: summary.points + myAchievementPoints + myStreakPoints,
-          topicsMastered: summary.topicsMastered,
-          streak: state.streak.current,
+          points: myVerified.points + myAchievementPoints + myStreakPoints,
+          topicsMastered: myVerified.topicsMastered,
+          streak: myVerified.streak,
           isCurrentUser: true,
           anonymous: schoolProfile.leaderboard_anonymous,
         }
