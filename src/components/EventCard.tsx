@@ -214,7 +214,7 @@ export function EventCard({
 
       {/* --- Содержание --- */}
       <div className="flex flex-1 flex-col p-5">
-        <h2 className="text-lg font-bold leading-snug text-ink-900">{event.title}</h2>
+        <h2 className="text-lg font-bold leading-snug break-words text-ink-900">{event.title}</h2>
 
         <p className="mt-1.5 text-sm text-ink-400">
           {deadlineLabel} · {event.organizer}
@@ -225,7 +225,7 @@ export function EventCard({
           mt-auto, и у самой высокой карточки в ряду это «авто» равно нулю —
           линия подвала прилипла бы к последней строке текста.
         */}
-        <p className="mt-3 mb-4 line-clamp-3 text-sm leading-relaxed text-ink-600">{event.description}</p>
+        <p className="mt-3 mb-4 line-clamp-3 break-words text-sm leading-relaxed text-ink-600">{event.description}</p>
 
         {/* --- Низ: цена, срок и переход на страницу события --- */}
         <div className="mt-auto flex flex-wrap items-center justify-between gap-3 border-t border-ink-200 pt-4">

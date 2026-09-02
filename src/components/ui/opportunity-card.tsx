@@ -124,17 +124,26 @@ export function OpportunityCard({
 
       {/* --- Содержание --- */}
       <div className="flex flex-1 flex-col p-5">
-        <h2 className="text-lg font-bold leading-snug text-ink-900">{headline}</h2>
+        <h2 className="text-lg font-bold leading-snug break-words text-ink-900">{headline}</h2>
 
-        {meta && <p className="mt-1.5 text-sm text-ink-400">{meta}</p>}
+        {meta && <p className="mt-1.5 break-words text-sm text-ink-400">{meta}</p>}
 
         {/*
+          break-words у текстовых полей — не украшение.
+
+          Объявления пишут люди, и в базе уже лежит описание, где текст
+          слипся в одно слово длиной в строку: «Отсутствиеаналитики.
+          Нетобратнойсвязи.Студентытратятвремявпустую». Без переноса такое
+          слово рисуется во всю свою длину — замер дал 648 пикселей в блоке
+          шириной 301 — и его молча срезает край карточки, без многоточия.
+          Человек видит обрубок и не понимает, что текст продолжался.
+
           mb-4 у описания, а не mt у подвала: подвал прижат книзу через
           mt-auto, и у самой высокой карточки в ряду это «авто» равно нулю —
           линия подвала прилипла бы к последней строке текста.
         */}
         <p
-          className="mt-3 mb-4 text-sm leading-relaxed text-ink-600"
+          className="mt-3 mb-4 break-words text-sm leading-relaxed text-ink-600"
           style={
             clampLines > 0
               ? {
