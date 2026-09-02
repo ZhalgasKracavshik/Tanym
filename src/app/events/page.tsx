@@ -300,7 +300,16 @@ export default function EventsPage() {
           <EmptyState title={filter === 'mine' ? t.emptyMine : t.empty} description="" />
         </div>
       ) : (
-        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-4 grid auto-rows-fr gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {/*
+            auto-rows-fr держит все карточки одной высоты.
+
+            Без него строки сетки считают высоту независимо друг от друга: в
+            полной строке карточка тянется до самой высокой соседки, а в
+            неполной последней — сжимается по своему содержимому. Замер на
+            четырёх объявлениях: 501, 501, 501 и 479 — последняя ниже на 22
+            пикселя просто потому, что осталась одна в строке.
+          */}
           {sorted.map((event) => {
             const status = eventStatus(event);
             const meta = EVENT_TYPES.find((type) => type.id === event.type);
