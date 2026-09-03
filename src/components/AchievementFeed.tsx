@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react';
 import { ACHIEVEMENTS } from '@/lib/achievements';
 import type { Language } from '@/lib/types';
 import { createClient } from '@/lib/supabase/client';
+import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
 import { AchievementCard } from './AchievementCard';
 
 interface Post {
@@ -21,14 +22,54 @@ interface Post {
 }
 
 const TEXT = {
-  ru: { empty: 'Пока никто не поделился достижением. Будь первым.' },
-  kk: { empty: 'Әзірге ешкім жетістігімен бөліскен жоқ. Бірінші бол.' },
-  en: { empty: 'No one has shared an achievement yet. Be the first.' },
+  ru: {
+    empty: 'Пока никто не поделился достижением. Будь первым.',
+    remove: 'Убрать',
+    confirm: 'Убрать этот пост из ленты?',
+  },
+  kk: {
+    empty: 'Әзірге ешкім жетістігімен бөліскен жоқ. Бірінші бол.',
+    remove: 'Өшіру',
+    confirm: 'Бұл жазбаны таспадан өшіру керек пе?',
+  },
+  en: {
+    empty: 'No one has shared an achievement yet. Be the first.',
+    remove: 'Remove',
+    confirm: 'Remove this post from the feed?',
+  },
 } as const;
 
 export function AchievementFeed({ language, refreshKey }: { language: Language; refreshKey: number }) {
   const [posts, setPosts] = useState<Post[] | null>(null);
   const [names, setNames] = useState<Record<string, string>>({});
+  const { profile } = useSchoolAuth();
+  const t = TEXT[language];
+
+  /*
+    Кто может убрать пост. Автор — свой, администрация — любой.
+
+    Это единственный канал, куда пишет ученик и что видит вся школа, и до
+    сих пор снять пост не мог никто: права на удаление в базе были только
+    у автора, а кнопки не было вообще ни у кого. Достаточно одного
+    оскорбительного поста, чтобы отвечала школа, а убрать его было бы
+    нечем.
+
+    Показ кнопки — только удобство. Настоящее разрешение стоит в политике
+    доступа таблицы: спрятанная кнопка ничего не защищает, потому что
+    запрос можно отправить и без неё.
+  */
+  function canRemove(post: Post): boolean {
+    if (!profile) return false;
+    return profile.role === 'admin' || profile.id === post.student_id;
+  }
+
+  async function remove(post: Post) {
+    if (!window.confirm(t.confirm)) return;
+    const { error } = await createClient().from('achievement_posts').delete().eq('id', post.id);
+    // Убираем из списка только после успеха: иначе пост исчезнет с экрана,
+    // но останется в базе, и человек решит, что удалил.
+    if (!error) setPosts((current) => (current ?? []).filter((item) => item.id !== post.id));
+  }
 
   useEffect(() => {
     const supabase = createClient();
@@ -62,7 +103,7 @@ export function AchievementFeed({ language, refreshKey }: { language: Language; 
   if (posts === null) return null;
 
   if (posts.length === 0) {
-    return <p className="text-sm text-ink-500">{TEXT[language].empty}</p>;
+    return <p className="text-sm text-ink-500">{t.empty}</p>;
   }
 
   const supabase = createClient();
@@ -94,6 +135,17 @@ export function AchievementFeed({ language, refreshKey }: { language: Language; 
             photoUrl={photoUrl}
             tone="brand"
             icon={def?.icon}
+            actions={
+              canRemove(post) ? (
+                <button
+                  type="button"
+                  onClick={() => remove(post)}
+                  className="min-h-11 rounded-[var(--radius-control)] px-3 text-sm font-semibold text-danger-600 transition-colors hover:bg-danger-50"
+                >
+                  {t.remove}
+                </button>
+              ) : undefined
+            }
           />
         );
       })}
