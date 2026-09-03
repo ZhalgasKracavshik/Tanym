@@ -32,7 +32,7 @@ import { PasswordField, SubmitButton } from '@/components/auth-ui';
 import { COVER_TYPES, coverError } from '@/components/ImageField';
 import { avatarPhotoUrl } from '@/lib/supabase/avatarPhoto';
 import { createClient } from '@/lib/supabase/client';
-import { GRADES, LEARNING_GOALS } from '@/lib/types';
+import { CUSTOM_GOAL_MAX, GRADES, LEARNING_GOALS } from '@/lib/types';
 import type { Grade, LearningGoal } from '@/lib/types';
 import { SUBJECTS } from '@/data';
 import {
@@ -63,6 +63,7 @@ type ProfileTab = 'personal' | 'study' | 'activity' | 'settings';
 interface StudyDraft {
   grade?: Grade;
   goal?: LearningGoal;
+  goalCustom?: string;
   knowledgeLevel?: string | null;
   interests?: string[];
   subjectIds?: string[];
@@ -270,6 +271,8 @@ function ProfileContent() {
   const currentSubjects =
     studyDraft.subjectIds ?? schoolProfile?.subject_ids ?? state.profile?.subjectIds ?? ['math'];
   const currentGoal = (studyDraft.goal ?? schoolProfile?.goal ?? state.profile?.goal ?? 'ent') as LearningGoal;
+  const currentGoalCustom =
+    studyDraft.goalCustom ?? schoolProfile?.goal_custom ?? state.profile?.goalCustom ?? '';
   const currentInterests = studyDraft.interests ?? schoolProfile?.interests ?? [];
   /*
     Уровень подготовки проверяется через «есть ли ключ», а не через ??:
@@ -515,6 +518,7 @@ function ProfileContent() {
     const local: Parameters<typeof updateProfile>[0] = {};
     if (studyDraft.grade !== undefined) local.grade = studyDraft.grade;
     if (studyDraft.goal !== undefined) local.goal = studyDraft.goal;
+    if (studyDraft.goalCustom !== undefined) local.goalCustom = studyDraft.goalCustom;
     if (studyDraft.subjectIds !== undefined) local.subjectIds = studyDraft.subjectIds;
 
     const ok = await save(local, studyDraft as Record<string, unknown>);
@@ -975,6 +979,29 @@ function ProfileContent() {
                   );
                 })}
               </div>
+
+              {/* Поле открывается только под выбранной «Своей целью». */}
+              {currentGoal === 'custom' && (
+                <div className="mt-4">
+                  <label className="block text-sm font-semibold text-ink-800" htmlFor="own-goal-profile">
+                    К чему готовитесь?
+                  </label>
+                  <input
+                    id="own-goal-profile"
+                    type="text"
+                    value={currentGoalCustom}
+                    maxLength={CUSTOM_GOAL_MAX}
+                    onChange={(event) =>
+                      setStudyDraft((prev) => ({ ...prev, goalCustom: event.target.value }))
+                    }
+                    placeholder="Например: пересдать геометрию за 9 класс"
+                    className="t-input mt-2 w-full"
+                  />
+                  <p className="mt-2 text-xs text-ink-400">
+                    Наставник будет опираться на эту формулировку.
+                  </p>
+                </div>
+              )}
             </Card>
 
             {/* Предметы */}

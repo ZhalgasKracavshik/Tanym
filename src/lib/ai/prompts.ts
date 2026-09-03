@@ -49,6 +49,15 @@ const persona = (language: Language) => `Ты — Tanym, AI-наставник �
 
 function goalTitle(profile: Profile | null): string {
   if (!profile) return 'обучение';
+  /*
+    Своя цель идёт в промпт вместо подписи «Своя цель»: наставнику нужна
+    сама формулировка ученика, а не название пункта меню. Текст уже
+    ограничен по длине в базе и в форме — здесь только подстановка.
+  */
+  if (profile.goal === 'custom') {
+    const own = profile.goalCustom?.trim();
+    if (own) return own;
+  }
   return LEARNING_GOALS.find((g) => g.id === profile.goal)?.title ?? 'обучение';
 }
 

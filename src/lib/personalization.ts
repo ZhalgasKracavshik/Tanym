@@ -158,9 +158,23 @@ export function weakestSkills(subject: Subject, state: AppState, limit = 4): Ski
 function goalFit(topic: Topic, goal: LearningGoal): number {
   const preferred: Record<LearningGoal, Difficulty[]> = {
     ent: [2, 3, 4],
+    // Суммативная работа проверяет пройденный раздел, а не потолок: середина.
+    tzhb: [2, 3],
     olympiad: [4, 5],
+    // SAT опирается на прочную базу и аккуратность, а не на олимпиадные приёмы.
+    sat: [3, 4],
+    // Отбор в специализированную школу — заметно выше школьного уровня.
+    nis: [3, 4, 5],
     review: [2, 3],
     catchup: [1, 2],
+    // «Для себя» — без экзамена и срока: широкая середина без крайностей.
+    interest: [2, 3, 4],
+    /*
+      Своя цель. Формулировку читает наставник, но движок разобрать её не
+      может, и угадывать сложность по тексту он не должен. Берём тот же
+      диапазон, что у ЕНТ, — самый частый и самый нейтральный.
+    */
+    custom: [2, 3, 4],
   };
   const target = preferred[goal];
   if (target.includes(topic.difficulty)) return 1;
@@ -280,9 +294,14 @@ function buildReasons(input: {
   if (fit >= 1 && profile) {
     const goalTitle: Record<LearningGoal, string> = {
       ent: 'подготовки к ЕНТ',
+      tzhb: 'суммативной работы',
       olympiad: 'олимпиады',
+      sat: 'подготовки к SAT',
+      nis: 'отбора в НИШ или БИЛ',
       review: 'повторения',
       catchup: 'закрытия пробелов',
+      interest: 'изучения предмета',
+      custom: 'вашей цели',
     };
     reasons.push(`Уровень сложности подходит для ${goalTitle[profile.goal]}`);
   }

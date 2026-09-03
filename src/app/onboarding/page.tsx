@@ -27,7 +27,7 @@ import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
 import { createClient } from '@/lib/supabase/client';
 import { useStore } from '@/components/StoreProvider';
 import { SUBJECTS } from '@/data';
-import { GRADES, LEARNING_GOALS } from '@/lib/types';
+import { CUSTOM_GOAL_MAX, GRADES, LEARNING_GOALS } from '@/lib/types';
 import type { Grade, LearningGoal, SubjectId } from '@/lib/types';
 import { Icon } from '@/components/Icon';
 import { Spinner } from '@/components/motion';
@@ -84,6 +84,7 @@ export default function OnboardingPage() {
   const [grade, setGrade] = useState<Grade | null>(null);
   const [subjectIds, setSubjectIds] = useState<SubjectId[]>([]);
   const [goal, setGoal] = useState<LearningGoal | null>(null);
+  const [goalCustom, setGoalCustom] = useState('');
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -161,6 +162,7 @@ export default function OnboardingPage() {
     if (profile.grade != null) setGrade(profile.grade as Grade);
     if (profile.subject_ids?.length) setSubjectIds(profile.subject_ids as SubjectId[]);
     if (profile.goal) setGoal(profile.goal as LearningGoal);
+    if (profile.goal_custom) setGoalCustom(profile.goal_custom);
   }
 
   /*
@@ -180,8 +182,11 @@ export default function OnboardingPage() {
     if (step === 'classname') return className.trim().length > 0;
     if (step === 'grade') return grade !== null;
     if (step === 'subjects' || step === 'teachsubjects') return subjectIds.length > 0;
+    // Выбрать «Свою цель» и не написать её — то же самое, что не выбрать
+    // ничего: в промпт наставника ушла бы пустая строка.
+    if (goal === 'custom') return goalCustom.trim().length > 0;
     return goal !== null;
-  }, [step, classCode, className, grade, subjectIds, goal]);
+  }, [step, classCode, className, grade, subjectIds, goal, goalCustom]);
 
   /**
    * Присоединение к классу по коду.
@@ -287,12 +292,14 @@ export default function OnboardingPage() {
     if (grade !== null) patch.grade = grade;
     if (subjectIds.length > 0) patch.subjectIds = subjectIds;
     if (goal !== null) patch.goal = goal;
+    if (goal === 'custom') patch.goalCustom = goalCustom.trim();
 
     // Локальная копия — на ней держится движок персонализации.
     updateProfile({
       ...(grade !== null ? { grade } : {}),
       ...(subjectIds.length > 0 ? { subjectIds } : {}),
       ...(goal !== null ? { goal } : {}),
+      ...(goal === 'custom' ? { goalCustom: goalCustom.trim() } : {}),
     });
 
     if (Object.keys(patch).length === 0) return true;
@@ -609,6 +616,34 @@ export default function OnboardingPage() {
                 </button>
               );
             })}
+          </div>
+        )}
+
+        {/*
+          Поле появляется только под выбранной «Своей целью» — не рядом с
+          остальными и не всегда. Постоянно висящее поле ввода читается как
+          обязательное, и ученик, выбравший ЕНТ, начинает гадать, что туда
+          писать.
+        */}
+        {step === 'goal' && goal === 'custom' && (
+          <div className="mt-4">
+            <label className="block text-sm font-semibold text-ink-800" htmlFor="own-goal">
+              К чему готовитесь?
+            </label>
+            <input
+              id="own-goal"
+              type="text"
+              value={goalCustom}
+              maxLength={CUSTOM_GOAL_MAX}
+              autoFocus
+              onChange={(event) => setGoalCustom(event.target.value)}
+              placeholder="Например: пересдать геометрию за 9 класс"
+              className="t-input mt-2 w-full"
+            />
+            <p className="mt-2 text-xs text-ink-400">
+              Наставник будет опираться на эту формулировку. Осталось{' '}
+              {CUSTOM_GOAL_MAX - goalCustom.length} символов.
+            </p>
           </div>
         )}
       </div>

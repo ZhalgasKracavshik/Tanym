@@ -22,7 +22,7 @@ import {
   normalizePhone,
 } from '@/lib/profileFields';
 import { getServerProfile } from '@/lib/supabase/serverProfile';
-import { GRADES, LEARNING_GOALS } from '@/lib/types';
+import { CUSTOM_GOAL_MAX, GRADES, LEARNING_GOALS } from '@/lib/types';
 import type { Grade } from '@/lib/types';
 import { checkPersonName } from '@/lib/personName';
 import { SUBJECTS } from '@/data';
@@ -145,6 +145,21 @@ export async function PATCH(request: Request) {
 
   if (typeof body.goal === 'string' && LEARNING_GOALS.some((item) => item.id === body.goal)) {
     patch.goal = body.goal;
+    /*
+      Своя формулировка хранится только вместе с целью 'custom'. Если
+      ученик передумал и выбрал готовый вариант, старый текст стирается:
+      иначе он остался бы в базе и продолжал уходить в промпт наставника,
+      противореча выбранной цели.
+
+      Обрезаем по той же длине, что стоит в CHECK базы, — иначе вставка
+      просто упала бы ошибкой вместо понятного поведения.
+    */
+    if (body.goal === 'custom') {
+      const own = typeof body.goalCustom === 'string' ? body.goalCustom.trim() : '';
+      patch.goal_custom = own ? own.slice(0, CUSTOM_GOAL_MAX) : null;
+    } else {
+      patch.goal_custom = null;
+    }
   }
   if (typeof body.targetDate === 'string' || body.targetDate === null) patch.target_date = body.targetDate;
   /*

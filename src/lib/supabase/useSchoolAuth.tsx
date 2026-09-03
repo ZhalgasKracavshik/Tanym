@@ -57,6 +57,7 @@ export interface SchoolProfile {
   social_links: unknown;
   subject_ids: string[] | null;
   goal: string | null;
+  goal_custom: string | null;
   target_date: string | null;
   target_label: string | null;
 }

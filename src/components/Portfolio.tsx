@@ -106,6 +106,59 @@ export function usePortfolio(studentId: string | null, refreshKey = 0) {
 }
 
 /**
+ * Подтверждённые достижения всей школы — для учителя и администрации.
+ *
+ * Своего портфолио у них нет и быть не может: олимпиады сдают ученики.
+ * Но страница достижений до сих пор показывала им только ленту и чужие
+ * значки тренажёра, то есть ровно то, что их не касается. Учителю нужно
+ * видеть, чего добились его ученики, — иначе раздел для него пустой.
+ *
+ * Берутся только подтверждённые: заявка на проверке — это ещё не
+ * достижение, и показывать её всей школе рано.
+ */
+export function useSchoolPortfolio(enabled: boolean, refreshKey = 0) {
+  const [items, setItems] = useState<{ achievement: PortfolioAchievement; author: string }[] | null>(
+    null,
+  );
+
+  useEffect(() => {
+    if (!enabled) return;
+    const supabase = createClient();
+    let cancelled = false;
+
+    async function load() {
+      const { data } = await supabase
+        .from('portfolio_achievements')
+        .select('*')
+        .eq('status', 'approved')
+        .order('happened_on', { ascending: false });
+      if (cancelled) return;
+
+      const rows = (data as Row[] | null) ?? [];
+      const ids = [...new Set(rows.map((row) => row.student_id))];
+      // Имена отдельным запросом и пачкой: во вложенном select они пришли
+      // бы через связь, которой у таблицы нет.
+      const names: Record<string, string> = {};
+      if (ids.length > 0) {
+        const { data: profiles } = await supabase.from('profiles').select('id, name').in('id', ids);
+        for (const profile of (profiles ?? []) as { id: string; name: string }[]) {
+          names[profile.id] = profile.name;
+        }
+      }
+      if (cancelled) return;
+      setItems(rows.map((row) => ({ achievement: rowToAchievement(row), author: names[row.student_id] ?? '—' })));
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [enabled, refreshKey]);
+
+  return items;
+}
+
+/**
  * Медальный оттенок места — в заливку карточки, когда фото нет.
  *
  * Второе место и участие делят один тёмно-синий: придумывать им отдельные

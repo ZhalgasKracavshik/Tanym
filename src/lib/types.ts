@@ -20,8 +20,25 @@ export type Grade = 7 | 8 | 9 | 10 | 11 | 12;
 
 export const GRADES: Grade[] = [7, 8, 9, 10, 11, 12];
 
-/** Цель обучения, которую ученик выбирает при онбординге. */
-export type LearningGoal = 'ent' | 'olympiad' | 'review' | 'catchup';
+/**
+ * Цель обучения, которую ученик выбирает при онбординге.
+ *
+ * Список намеренно кончается на 'custom'. Четырёх готовых вариантов не
+ * хватало: школьник, который готовится к ТЖБ или поступает в НИШ, не
+ * узнавал себя ни в одном и выбирал «догнать программу» — а движок
+ * получал неверное представление о том, зачем человек пришёл. Своя
+ * формулировка закрывает хвост, который перечислением не покрыть.
+ */
+export type LearningGoal =
+  | 'ent'
+  | 'tzhb'
+  | 'olympiad'
+  | 'sat'
+  | 'nis'
+  | 'review'
+  | 'catchup'
+  | 'interest'
+  | 'custom';
 
 export const LEARNING_GOALS: { id: LearningGoal; title: string; description: string; icon: IconName }[] = [
   {
@@ -48,7 +65,40 @@ export const LEARNING_GOALS: { id: LearningGoal; title: string; description: str
     description: 'Закрыть пробелы по темам, которые остались непонятыми',
     icon: 'steps',
   },
+  {
+    id: 'tzhb',
+    title: 'ТЖБ и БЖБ',
+    description: 'Подготовиться к суммативным работам за раздел и за четверть',
+    icon: 'clipboard',
+  },
+  {
+    id: 'sat',
+    title: 'Подготовка к SAT',
+    description: 'Разделы школьной программы, на которые опирается экзамен',
+    icon: 'globe',
+  },
+  {
+    id: 'nis',
+    title: 'Поступление в НИШ или БИЛ',
+    description: 'Отбор в специализированную школу: задачи выше школьного уровня',
+    icon: 'school',
+  },
+  {
+    id: 'interest',
+    title: 'Для себя',
+    description: 'Разобраться в предмете без экзамена и срока — из интереса',
+    icon: 'sparkles',
+  },
+  {
+    id: 'custom',
+    title: 'Своя цель',
+    description: 'Опишите своими словами, к чему готовитесь',
+    icon: 'pencil',
+  },
 ];
+
+/** Ограничение длины своей цели: она уходит в промпт наставника. */
+export const CUSTOM_GOAL_MAX = 120;
 
 /** Уровень сложности задания и темы: от 1 (базовый) до 5 (олимпиадный). */
 export type Difficulty = 1 | 2 | 3 | 4 | 5;
@@ -187,6 +237,8 @@ export interface Profile {
   /** Предметы, выбранные учеником при онбординге. */
   subjectIds: SubjectId[];
   goal: LearningGoal;
+  /** Формулировка своими словами. Заполняется, только когда goal === 'custom'. */
+  goalCustom?: string;
   /** ISO-дата цели (например, дата ЕНТ). Нужна для обратного отсчёта в кабинете. */
   targetDate?: string;
   createdAt: string;
