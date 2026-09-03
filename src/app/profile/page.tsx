@@ -574,13 +574,8 @@ function ProfileContent() {
       <Reveal immediate>
         <div
           className="relative overflow-hidden rounded-[var(--radius-card)] p-6 text-white shadow-[var(--shadow-float)] sm:p-8"
-          style={{ background: 'var(--gradient-ink)' }}
+          style={{ background: 'var(--color-ink-900)' }}
         >
-          <div
-            aria-hidden
-            className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full opacity-30 blur-3xl"
-            style={{ background: 'var(--gradient-brand)' }}
-          />
 
           <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center">
             {/* Аватар с возможностью мгновенной загрузки */}

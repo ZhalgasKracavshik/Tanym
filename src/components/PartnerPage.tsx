@@ -69,14 +69,6 @@ export function PartnerPage({
 
       {/* Первый экран */}
       <section className="relative isolate overflow-hidden border-b border-ink-200/70 bg-white">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 -top-40 -z-10 h-[32rem] opacity-70 blur-3xl"
-          style={{
-            background:
-              'radial-gradient(40% 50% at 50% 40%, rgb(229 117 69 / 0.24) 0%, rgb(253 243 238 / 0.5) 45%, transparent 72%)',
-          }}
-        />
         <div className="mx-auto max-w-4xl px-6 py-20 text-center sm:py-24">
           <Reveal immediate>
             <span className="inline-flex items-center gap-2 rounded-[var(--radius-pill)] border border-brand-200 bg-brand-50/80 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-brand-700">
@@ -185,13 +177,8 @@ export function PartnerPage({
           <Reveal>
             <div
               className="relative overflow-hidden rounded-[var(--radius-card)] p-10 text-white shadow-[var(--shadow-float)] sm:p-14"
-              style={{ background: 'var(--gradient-ink)' }}
+              style={{ background: 'var(--color-ink-900)' }}
             >
-              <div
-                aria-hidden
-                className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full opacity-25 blur-3xl"
-                style={{ background: 'var(--gradient-brand)' }}
-              />
               <div className="relative">
                 <h2 className="text-3xl font-semibold sm:text-4xl">{ctaTitle}</h2>
                 <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-white/70">{ctaText}</p>

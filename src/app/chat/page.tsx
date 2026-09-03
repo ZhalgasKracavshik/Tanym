@@ -318,20 +318,6 @@ export default function ChatPage() {
 
   return (
     <div className="relative isolate min-h-[calc(100vh-3.5rem)]">
-      {/*
-        Тёплое свечение за диалогом — то же, что на первом экране лендинга.
-        Разговор с наставником должен ощущаться отдельным местом, а не
-        очередной страницей со списком. Пятно уводится под контент
-        и не перехватывает клики.
-      */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[28rem] opacity-70 blur-3xl"
-        style={{
-          background:
-            'radial-gradient(45% 50% at 50% 25%, rgb(229 117 69 / 0.22) 0%, rgb(253 243 238 / 0.5) 45%, transparent 75%)',
-        }}
-      />
 
       <div className="mx-auto flex w-full max-w-6xl gap-6 px-4 py-10 sm:px-6">
       {/*

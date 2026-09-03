@@ -116,13 +116,8 @@ export default function AchievementsPage() {
       <Reveal immediate>
         <div
           className="relative overflow-hidden rounded-[var(--radius-card)] p-8 text-white shadow-[var(--shadow-float)] sm:p-10"
-          style={{ background: 'var(--gradient-ink)' }}
+          style={{ background: 'var(--color-ink-900)' }}
         >
-          <div
-            aria-hidden
-            className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full opacity-30 blur-3xl"
-            style={{ background: 'var(--gradient-brand)' }}
-          />
           <div className="relative">
             <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/50">Достижения</p>
             <h1 className="mt-2 text-3xl font-semibold sm:text-4xl">

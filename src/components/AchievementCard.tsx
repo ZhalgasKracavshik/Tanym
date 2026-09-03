@@ -267,10 +267,23 @@ export function AchievementCard({
         />
       ) : (
         <div aria-hidden className="absolute inset-0" style={{ background: TONE_FILL[tone] }}>
-          {/* Два размытых пятна: свет сверху, тень снизу — заливка перестаёт
-              выглядеть как невыгруженная картинка. */}
-          <span className="absolute -right-16 -top-20 h-56 w-56 rounded-full bg-white/20 blur-3xl" />
-          <span className="absolute -bottom-24 -left-12 h-56 w-56 rounded-full bg-black/25 blur-3xl" />
+          {/*
+            Свет сверху и тень снизу — чтобы сплошная заливка не выглядела
+            как невыгруженная картинка.
+
+            Раньше это делали два размытых круга. Линейный переход даёт тот
+            же результат ровнее и дешевле: круги приходилось выносить далеко
+            за края, а на узкой карточке их края всё равно проступали
+            заметными пятнами.
+          */}
+          <span
+            aria-hidden
+            className="absolute inset-0"
+            style={{
+              background:
+                'linear-gradient(160deg, rgb(255 255 255 / 0.18) 0%, transparent 45%, rgb(0 0 0 / 0.22) 100%)',
+            }}
+          />
         </div>
       )}
 

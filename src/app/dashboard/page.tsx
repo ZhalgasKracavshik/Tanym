@@ -303,13 +303,8 @@ export default function DashboardPage() {
       <Reveal immediate>
         <div
           className="relative overflow-hidden rounded-[var(--radius-card)] p-8 text-white shadow-[var(--shadow-float)] sm:p-10"
-          style={{ background: 'var(--gradient-ink)' }}
+          style={{ background: 'var(--color-ink-900)' }}
         >
-          <div
-            aria-hidden
-            className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full opacity-30 blur-3xl"
-            style={{ background: 'var(--gradient-brand)' }}
-          />
           <div className="relative flex flex-wrap items-end justify-between gap-6">
             <div>
               <h1 className="text-3xl font-semibold sm:text-4xl">
