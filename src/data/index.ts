@@ -15,9 +15,12 @@ import type { Subject, SubjectId, Task, TaskId, Topic, TopicId } from '@/lib/typ
 import { math } from './subjects/math';
 import { physics } from './subjects/physics';
 import { kazakhHistory } from './subjects/kazakh-history';
+import { chemistry } from './subjects/chemistry';
+import { biology } from './subjects/biology';
+import { english } from './subjects/english';
 
 /** Все предметы платформы. Порядок влияет на порядок вывода в интерфейсе. */
-export const SUBJECTS: Subject[] = [math, physics, kazakhHistory];
+export const SUBJECTS: Subject[] = [math, physics, chemistry, biology, english, kazakhHistory];
 
 export function getSubject(id: SubjectId | undefined | null): Subject | undefined {
   if (!id) return undefined;

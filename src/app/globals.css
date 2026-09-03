@@ -76,6 +76,11 @@
   --color-subject-math: #b34a1f;
   --color-subject-physics: #6d4aa8;
   --color-subject-history: #1f6f5c;
+  /* Новые предметы держат ту же логику: насыщенный, но не кричащий тон,
+     различимый рядом с уже занятыми терракотовым, фиолетовым и зелёным. */
+  --color-subject-chemistry: #0f6f86;
+  --color-subject-biology: #4d7c1a;
+  --color-subject-english: #9a3b6b;
 
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 
