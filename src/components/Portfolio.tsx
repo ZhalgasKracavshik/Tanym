@@ -455,7 +455,7 @@ export function AchievementForm({
             setStatus('idle');
             setOpen(true);
           }}
-          className="flex h-12 items-center gap-2 rounded-[var(--radius-control)] px-6 text-sm font-bold text-white shadow-[var(--shadow-glow)]"
+          className="flex h-12 items-center gap-2 rounded-[var(--radius-control)] px-6 text-sm font-medium text-white shadow-[var(--shadow-rest)]"
           style={{ background: 'var(--gradient-brand)' }}
         >
           <Icon name="plus" size={17} />
@@ -467,7 +467,7 @@ export function AchievementForm({
 
   return (
     <div className="space-y-4 rounded-[var(--radius-card)] border border-ink-200 bg-white p-6 shadow-[var(--shadow-rest)]">
-      <h3 className="font-bold text-ink-900">Новое достижение</h3>
+      <h3 className="font-medium text-ink-900">Новое достижение</h3>
 
       <input
         value={title}
@@ -537,7 +537,7 @@ export function AchievementForm({
         <PressButton
           onClick={submit}
           disabled={status === 'sending'}
-          className="flex h-12 items-center gap-2 rounded-[var(--radius-control)] px-6 text-sm font-bold text-white shadow-[var(--shadow-glow)] disabled:opacity-60"
+          className="flex h-12 items-center gap-2 rounded-[var(--radius-control)] px-6 text-sm font-medium text-white shadow-[var(--shadow-rest)] disabled:opacity-60"
           style={{ background: 'var(--gradient-brand)' }}
         >
           {status === 'sending' ? <Spinner /> : null}
@@ -545,7 +545,7 @@ export function AchievementForm({
         </PressButton>
         <PressButton
           onClick={() => setOpen(false)}
-          className="h-12 rounded-[var(--radius-control)] border border-ink-200 px-6 text-sm font-bold text-ink-700"
+          className="h-12 rounded-[var(--radius-control)] border border-ink-200 px-6 text-sm font-medium text-ink-700"
         >
           Отмена
         </PressButton>

@@ -96,7 +96,7 @@ export function ArchiveMaterialFeed({ language, refreshKey }: { language: Langua
                       </span>
                     )}
                   </div>
-                  <h3 className="mt-2 font-bold text-ink-900">{item.title}</h3>
+                  <h3 className="mt-2 font-medium text-ink-900">{item.title}</h3>
                   {item.description && <p className="mt-2 text-sm text-ink-500">{item.description}</p>}
                   <p className="mt-2 text-xs text-ink-400">
                     {names[item.teacher_id] ?? '…'} · {TEXT[language].tasks(item.tasks.length)}

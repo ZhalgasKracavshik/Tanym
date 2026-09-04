@@ -58,7 +58,7 @@ export function CreatePageShell({
       <Reveal immediate>
         <div className="mt-5">
           <Kicker>{kicker}</Kicker>
-          <h1 className="mt-2 text-3xl font-semibold text-ink-900 sm:text-4xl">{title}</h1>
+          <h1 className="mt-2 text-3xl font-medium text-ink-900 sm:text-4xl">{title}</h1>
           {description && <p className="mt-2 max-w-2xl text-sm text-ink-500">{description}</p>}
         </div>
       </Reveal>

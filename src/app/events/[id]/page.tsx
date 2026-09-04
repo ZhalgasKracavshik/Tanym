@@ -448,7 +448,7 @@ function EventBody({
     return (
       <div className="mt-6">
         <Kicker>{t.editTitle}</Kicker>
-        <h1 className="mt-2 mb-8 text-2xl font-semibold text-ink-900 sm:text-3xl">{event.title}</h1>
+        <h1 className="mt-2 mb-8 text-2xl font-medium text-ink-900 sm:text-3xl">{event.title}</h1>
         <EventEditForm
           eventId={row.id}
           language={language}
@@ -466,7 +466,7 @@ function EventBody({
         <div className="mt-6 flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
             <Kicker>{meta?.title[language]}</Kicker>
-            <h1 className="mt-2 text-3xl font-semibold text-ink-900 sm:text-4xl">{event.title}</h1>
+            <h1 className="mt-2 text-3xl font-medium text-ink-900 sm:text-4xl">{event.title}</h1>
             <p className="mt-2 text-sm text-ink-500">
               {t.organizer}: {event.organizer || t.unknown}
             </p>
@@ -500,7 +500,7 @@ function EventBody({
           <div
             className={`flex aspect-[16/9] items-end rounded-[var(--radius-card)] p-6 sm:p-8 ${TYPE_BANNER[event.type]}`}
           >
-            <span className="text-3xl font-semibold leading-tight text-white/90 sm:text-4xl">
+            <span className="text-3xl font-medium leading-tight text-white/90 sm:text-4xl">
               {meta?.title[language]}
             </span>
           </div>
@@ -533,7 +533,7 @@ function EventBody({
 
           {registrationRuns ? (
             <>
-              <p className="mt-2 flex items-baseline gap-2 text-5xl font-semibold tabular-nums text-ink-900 sm:text-6xl">
+              <p className="mt-2 flex items-baseline gap-2 text-5xl font-medium tabular-nums text-ink-900 sm:text-6xl">
                 {daysLeft}
                 <span className="text-base font-medium text-ink-400">{t.daysWord(daysLeft)}</span>
               </p>
@@ -544,7 +544,7 @@ function EventBody({
             </>
           ) : (
             <>
-              <p className="mt-2 text-3xl font-semibold tabular-nums text-ink-500 sm:text-4xl">
+              <p className="mt-2 text-3xl font-medium tabular-nums text-ink-500 sm:text-4xl">
                 {formatEventDate(event.registrationDeadline, language)}
               </p>
               <p className="mt-2 text-sm text-ink-400">{status === 'past' ? t.pastNote : t.closedNote}</p>
@@ -609,7 +609,7 @@ function EventBody({
 
       {event.description && (
         <section className="mt-8">
-          <h2 className="text-lg font-bold text-ink-900">{t.about}</h2>
+          <h2 className="text-lg font-medium text-ink-900">{t.about}</h2>
           {/* whitespace-pre-line: абзацы организатора остаются абзацами, а не
               сливаются в один кирпич текста. Обрезки здесь нет намеренно —
               страница затем и нужна, чтобы описание было целиком. */}

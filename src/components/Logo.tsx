@@ -66,7 +66,7 @@ export function Logo({ size = 32, className = '', showText = true }: LogoProps) 
       <LogoMark size={size} />
       {showText && (
         <span
-          className="select-none text-[1.35rem] font-black leading-none tracking-[-0.02em]"
+          className="select-none text-[1.35rem] font-medium leading-none tracking-[-0.02em]"
           style={{ fontSize: size * 0.72 }}
         >
           Taným

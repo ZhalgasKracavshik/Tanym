@@ -212,7 +212,7 @@ export function ArchiveMaterialPublishForm({
           {tasks.map((task, index) => (
             <div key={task.id} className="rounded-xl border border-ink-200 p-4">
               <div className="mb-2 flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wide text-ink-400">#{index + 1}</span>
+                <span className="text-xs font-semibold uppercase tracking-wide text-ink-400">#{index + 1}</span>
                 {tasks.length > 1 && (
                   <button
                     onClick={() => setTasks((current) => current.filter((item) => item.id !== task.id))}

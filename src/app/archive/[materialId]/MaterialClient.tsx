@@ -225,18 +225,18 @@ export function MaterialClient({ materialId }: { materialId: string }) {
         <Badge>{t.difficulty[material.difficulty]}</Badge>
       </div>
 
-      <h1 className="mt-2 text-xl font-semibold text-ink-900 sm:text-3xl">{material.title}</h1>
+      <h1 className="mt-2 text-xl font-medium text-ink-900 sm:text-3xl">{material.title}</h1>
       <p className="mt-2 text-xs text-ink-400">{material.source}</p>
 
       {/* Переключатель заданий */}
       <div className="mt-10">
-        <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-ink-400">{t.chooseTask}</p>
+        <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-ink-400">{t.chooseTask}</p>
         <div className="mt-2 flex flex-wrap gap-2">
           {material.tasks.map((item, index) => (
             <button
               key={item.id}
               onClick={() => openTask(index)}
-              className={`h-11 w-11 rounded-xl border-2 font-bold tabular-nums transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
+              className={`h-11 w-11 rounded-xl border-2 font-medium tabular-nums transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
                 index === taskIndex
                   ? 'border-brand-500 bg-brand-50 text-brand-700'
                   : 'border-ink-200 bg-white text-ink-600 hover:border-brand-300 hover:shadow-[var(--shadow-lift)]'
@@ -261,7 +261,7 @@ export function MaterialClient({ materialId }: { materialId: string }) {
         </p>
         {/* whitespace-pre-line сохраняет переносы: у заданий IELTS отрывок
             и утверждение должны стоять разными абзацами */}
-        <p className="mt-2 whitespace-pre-line text-2xl font-semibold leading-snug text-ink-900 sm:text-4xl">
+        <p className="mt-2 whitespace-pre-line text-2xl font-medium leading-snug text-ink-900 sm:text-4xl">
           <MathText>{task.prompt}</MathText>
         </p>
       </div>
@@ -271,7 +271,7 @@ export function MaterialClient({ materialId }: { materialId: string }) {
         {/* Первый вопрос заготовлен в контенте: он не требует обращения к модели
             и задаёт разговору верный тон с первой секунды */}
         <div className="rounded-2xl border border-ink-200 bg-white px-4 py-3">
-          <p className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-brand-600">
+          <p className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-brand-600">
             <Icon name="columns" size={14} />
             {t.mentor}
           </p>
@@ -319,7 +319,7 @@ export function MaterialClient({ materialId }: { materialId: string }) {
       {solved && (
         <div className="mt-10">
           <RailRow tone="success">
-            <p className="flex items-center gap-2 font-bold text-success-700">
+            <p className="flex items-center gap-2 font-medium text-success-700">
               <Icon name="check" size={18} />
               {t.solved}
             </p>
@@ -369,7 +369,7 @@ export function MaterialClient({ materialId }: { materialId: string }) {
           /* Разбор это плотный текст, а не самодостаточная единица: панель
              без тени, чтобы он не спорил по весу с условием задачи. */
           <Panel className="p-5">
-            <h2 className="text-lg font-bold text-ink-900">{t.solution}</h2>
+            <h2 className="text-lg font-medium text-ink-900">{t.solution}</h2>
             <p className="mt-2 leading-relaxed text-ink-700"><MathText>{task.explanation}</MathText></p>
           </Panel>
         ) : (

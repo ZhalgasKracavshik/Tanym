@@ -74,7 +74,7 @@ function LanguageCorner() {
           onClick={() => setLanguage(item.id)}
           title={item.title}
           aria-pressed={state.language === item.id}
-          className={`rounded-md px-2 py-1 text-[11px] font-bold outline-none transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
+          className={`rounded-md px-2 py-1 text-[11px] font-medium outline-none transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
             state.language === item.id ? 'bg-brand-500 text-white shadow-sm' : 'text-ink-400 hover:text-ink-700'
           }`}
         >
@@ -134,7 +134,7 @@ export function AuthShell({
           className="relative z-10 space-y-7 p-10 pb-12"
         >
           <motion.div variants={heroChild}>
-            <h1 className="text-[2.35rem] font-semibold leading-[1.1] tracking-tight text-balance text-white">
+            <h1 className="text-[2.35rem] font-medium leading-[1.1] tracking-tight text-balance text-white">
               {heroTitle}
             </h1>
             {heroText && <p className="mt-3 max-w-xs text-[15px] leading-relaxed text-white/75">{heroText}</p>}
@@ -190,7 +190,7 @@ export function AuthShell({
 
           <div className="rounded-[var(--radius-card)] border border-ink-200 bg-white p-7 shadow-[var(--shadow-rest)] sm:p-8">
             <div className="mb-6 text-center lg:text-left">
-              <h2 className="text-2xl font-semibold tracking-tight text-ink-900">{title}</h2>
+              <h2 className="text-2xl font-medium tracking-tight text-ink-900">{title}</h2>
               <p className="mt-1.5 text-sm text-ink-500">{subtitle}</p>
             </div>
 
@@ -448,7 +448,7 @@ export function ClassCodeField({
         spellCheck={false}
         aria-invalid={error ? 'true' : undefined}
         aria-describedby={error ? `${autoId}-error` : undefined}
-        className={`t-input peer block w-full appearance-none border-0 border-b-2 bg-transparent px-0 pt-5 pb-1.5 text-center font-mono text-lg font-bold tracking-[0.3em] text-ink-900 outline-none transition-colors focus:ring-0 ${
+        className={`t-input peer block w-full appearance-none border-0 border-b-2 bg-transparent px-0 pt-5 pb-1.5 text-center font-mono text-lg font-medium tracking-[0.3em] text-ink-900 outline-none transition-colors focus:ring-0 ${
           error ? 'is-error' : ''
         }`}
       />
@@ -490,7 +490,7 @@ export function SubmitButton({
       type={type}
       onClick={onClick}
       disabled={disabled || loading || success}
-      className="group flex h-12 w-full items-center justify-center gap-2 rounded-[var(--radius-control)] text-[15px] font-semibold text-white shadow-[var(--shadow-glow)] transition-all duration-300 hover:brightness-105 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:ring-offset-2 focus:ring-offset-white disabled:opacity-60"
+      className="group flex h-12 w-full items-center justify-center gap-2 rounded-[var(--radius-control)] text-[15px] font-semibold text-white shadow-[var(--shadow-rest)] transition-all duration-300 hover:brightness-105 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:ring-offset-2 focus:ring-offset-white disabled:opacity-60"
       style={{ background: 'var(--gradient-brand)' }}
     >
       <AnimatePresence mode="wait" initial={false}>

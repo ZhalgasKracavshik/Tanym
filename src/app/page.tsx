@@ -341,7 +341,7 @@ export default function HomePage() {
                    действие должно читаться как решённое, а не как
                    украшение. Свечение под кнопкой — тот же типовой приём,
                    что и подсветка за заголовком. */
-                className="inline-flex h-14 items-center gap-2 rounded-[var(--radius-control)] bg-brand-600 px-8 text-base font-semibold text-white transition-colors duration-200 hover:bg-brand-700"
+                className="inline-flex h-14 items-center gap-2 rounded-[var(--radius-pill)] bg-ink-900 px-8 text-base font-medium text-white transition-colors duration-200 hover:bg-ink-800"
               >
                 {t.ctaStart}
                 <Icon name="arrowRight" size={18} />
@@ -349,7 +349,7 @@ export default function HomePage() {
 
               <PressLink
                 href="/register"
-                className="inline-flex h-14 items-center gap-2 rounded-[var(--radius-control)] border border-ink-200 bg-white px-8 text-base font-semibold text-ink-800 transition-colors duration-200 hover:border-ink-300"
+                className="inline-flex h-14 items-center gap-2 rounded-[var(--radius-pill)] border border-ink-300 bg-white px-8 text-base font-medium text-ink-900 transition-colors duration-200 hover:border-ink-500"
               >
                 {t.ctaDiagnostics}
               </PressLink>
@@ -366,14 +366,14 @@ export default function HomePage() {
               <div className="rounded-[var(--radius-card)] border border-ink-200/80 bg-white p-2 shadow-[var(--shadow-float)]">
                 <div className="rounded-[18px] bg-ink-50/70 p-6 text-left sm:p-8">
                   <div className="flex items-center justify-between">
-                    <p className="text-sm font-bold text-ink-900">{t.mockPlanTitle}</p>
-                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 text-xs font-bold text-brand-700">
+                    <p className="text-sm font-medium text-ink-900">{t.mockPlanTitle}</p>
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 text-xs font-semibold text-brand-700">
                       А
                     </span>
                   </div>
 
                   <div className="mt-6 rounded-[var(--radius-control)] border border-ink-200 bg-white p-4">
-                    <p className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-brand-600">
+                    <p className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.16em] text-brand-600">
                       <Icon name="columns" size={13} />
                       {t.mockMentor}
                     </p>
@@ -383,7 +383,7 @@ export default function HomePage() {
                   <div className="mt-4 rounded-[var(--radius-control)] border border-ink-200 bg-white p-4">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <p className="font-semibold text-ink-900">Линейные уравнения и неравенства</p>
-                      <span className="rounded-[var(--radius-pill)] bg-danger-50 px-3 py-1 text-xs font-bold text-danger-700">
+                      <span className="rounded-[var(--radius-pill)] bg-danger-50 px-3 py-1 text-xs font-semibold text-danger-700">
                         {t.mockWeak}
                       </span>
                     </div>
@@ -496,7 +496,7 @@ export default function HomePage() {
                       >
                         <Icon name={subject.icon} size={22} />
                       </span>
-                      <h3 className="mt-5 font-bold text-ink-900">{subject.title}</h3>
+                      <h3 className="mt-5 font-medium text-ink-900">{subject.title}</h3>
                       <p className="mt-2 text-sm leading-relaxed text-ink-500">{subject.description}</p>
                       <p className="mt-4 text-xs font-semibold tabular-nums text-ink-400">
                         {t.counts(subject.topics.length, tasks)}
@@ -527,7 +527,7 @@ export default function HomePage() {
                 <div className="mt-8">
                   <PressLink
                     href="/teacher"
-                    className="inline-flex h-13 items-center gap-2 rounded-[var(--radius-control)] bg-white px-7 py-3.5 text-sm font-bold text-ink-900 shadow-[var(--shadow-lift)]"
+                    className="inline-flex h-13 items-center gap-2 rounded-[var(--radius-pill)] bg-white px-7 py-3.5 text-sm font-medium text-ink-900 shadow-[var(--shadow-rest)]"
                   >
                     {t.teacherCta}
                     <Icon name="arrowRight" size={17} />
@@ -573,7 +573,7 @@ export default function HomePage() {
                     className="group relative h-full overflow-hidden rounded-[var(--radius-card)] border p-8 shadow-[var(--shadow-rest)]"
                     style={{ background: partner.tint, borderColor: partner.border }}
                   >
-                    <span className="relative flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-ink-500">
+                    <span className="relative flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.16em] text-ink-500">
                       <span className="h-1.5 w-1.5 rounded-full" style={{ background: partner.glow }} />
                       {partner.badge}
                     </span>
@@ -583,9 +583,9 @@ export default function HomePage() {
                     >
                       <Icon name={partner.icon} size={22} />
                     </span>
-                    <h3 className="relative mt-5 text-xl font-bold text-ink-900">{partner.title}</h3>
+                    <h3 className="relative mt-5 text-xl font-medium text-ink-900">{partner.title}</h3>
                     <p className="relative mt-2 text-sm leading-relaxed text-ink-600">{partner.text}</p>
-                    <span className="relative mt-6 inline-flex items-center gap-2 text-sm font-bold text-ink-900">
+                    <span className="relative mt-6 inline-flex items-center gap-2 text-sm font-medium text-ink-900">
                       {partner.cta}
                       <Icon name="arrowRight" size={16} />
                     </span>
@@ -608,7 +608,7 @@ export default function HomePage() {
             <div className="mt-9 flex justify-center">
               <PressLink
                 href="/register"
-                className="inline-flex h-14 items-center gap-2 rounded-[var(--radius-control)] bg-brand-600 px-9 text-base font-semibold text-white transition-colors duration-200 hover:bg-brand-700"
+                className="inline-flex h-14 items-center gap-2 rounded-[var(--radius-pill)] bg-ink-900 px-9 text-base font-medium text-white transition-colors duration-200 hover:bg-ink-800"
               >
                 {t.ctaStart}
                 <Icon name="arrowRight" size={18} />

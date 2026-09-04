@@ -341,7 +341,7 @@ export function StudyPlan() {
       {/* Заголовок раздела внутри кабинета, а не страницы: сама страница
           уже представилась выше своим заголовком. */}
       <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-        <h2 className="text-2xl font-semibold text-ink-900">{t.title}</h2>
+        <h2 className="text-2xl font-medium text-ink-900">{t.title}</h2>
         <p className="text-sm text-ink-400">
           {subject.title}
           {daysLeft !== null && daysLeft >= 0 && ` · ${daysLeft} ${t.daysLeft(daysLeft)}`}
@@ -430,13 +430,13 @@ export function StudyPlan() {
         стоит справа в шапке строки, поэтому смысл не держится на одном цвете.
       */}
       <section className="mt-16">
-        <h2 className="text-lg font-bold text-ink-900">{t.recommendedTopics}</h2>
+        <h2 className="text-lg font-medium text-ink-900">{t.recommendedTopics}</h2>
         <ul className="mt-4 space-y-2">
           {ranked.slice(0, 5).map((item) => (
             <li key={item.topic.id}>
               <RailRow tone={STATUS[item.status].tone} interactive>
                 <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                  <h3 className="font-bold text-ink-900">{item.topic.title}</h3>
+                  <h3 className="font-medium text-ink-900">{item.topic.title}</h3>
                   <span className="text-xs font-semibold uppercase tracking-wide text-ink-500">
                     {t.status[item.status]}
                   </span>
@@ -474,7 +474,7 @@ export function StudyPlan() {
         без тени, строки разделены волосяными линиями.
       */}
       <section className="mt-16">
-        <h2 className="text-lg font-bold text-ink-900">{t.weakSpots}</h2>
+        <h2 className="text-lg font-medium text-ink-900">{t.weakSpots}</h2>
         {weak.length === 0 ? (
           <p className="mt-4 max-w-2xl text-sm text-ink-500">{t.weakEmpty}</p>
         ) : (

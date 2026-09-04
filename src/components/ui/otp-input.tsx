@@ -459,7 +459,7 @@ export function OtpInput({
                           : { opacity: 0, scale: 0.98, y: -6, filter: 'blur(3px)' }
                       }
                       transition={enter}
-                      className="col-start-1 row-start-1 font-mono text-[15px] font-bold tabular-nums text-ink-800"
+                      className="col-start-1 row-start-1 font-mono text-[15px] font-medium tabular-nums text-ink-800"
                     >
                       {char}
                     </motion.span>

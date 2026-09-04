@@ -332,7 +332,7 @@ export function EventEditForm({
                   {/* eslint-disable-next-line @next/next/no-img-element -- публичная ссылка из бакета */}
                   <img src={keptUrls[index]} alt="" className="h-full w-full object-cover" />
                   {index === 0 && (
-                    <span className="absolute left-2 top-2 rounded-[var(--radius-pill)] bg-white/90 px-2 py-0.5 text-[11px] font-bold text-ink-800">
+                    <span className="absolute left-2 top-2 rounded-[var(--radius-pill)] bg-white/90 px-2 py-0.5 text-[11px] font-medium text-ink-800">
                       {t.cover}
                     </span>
                   )}

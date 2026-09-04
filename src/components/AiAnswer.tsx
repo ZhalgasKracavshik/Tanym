@@ -111,7 +111,7 @@ function renderInline(spans: Inline[], keyPrefix: string, codeClass: string) {
     const key = keyPrefix + '-' + index;
     if (span.kind === 'bold') {
       return (
-        <strong key={key} className="font-bold text-ink-900">
+        <strong key={key} className="font-medium text-ink-900">
           <MathText>{span.text}</MathText>
         </strong>
       );
@@ -145,11 +145,11 @@ function renderBlock(block: Block, index: number, scale: AiTextScale) {
 
   if (block.kind === 'heading') {
     return block.level === 2 ? (
-      <h3 key={key} className={'mt-4 mb-1.5 font-bold text-ink-900 first:mt-0 ' + s.h2}>
+      <h3 key={key} className={'mt-4 mb-1.5 font-medium text-ink-900 first:mt-0 ' + s.h2}>
         {renderInline(block.spans, key, s.code)}
       </h3>
     ) : (
-      <h4 key={key} className={'mt-3 mb-1 font-bold text-ink-800 first:mt-0 ' + s.h3}>
+      <h4 key={key} className={'mt-3 mb-1 font-medium text-ink-800 first:mt-0 ' + s.h3}>
         {renderInline(block.spans, key, s.code)}
       </h4>
     );
@@ -175,7 +175,7 @@ function renderBlock(block: Block, index: number, scale: AiTextScale) {
           <li key={key + '-' + i} className="flex gap-2.5">
             <span
               aria-hidden
-              className="mt-[0.1em] flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-100 text-[11px] font-bold tabular-nums text-brand-700"
+              className="mt-[0.1em] flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-100 text-[11px] font-medium tabular-nums text-brand-700"
             >
               {i + 1}
             </span>
@@ -247,7 +247,7 @@ export function AiTextScaleControl({
           aria-label={SCALE_LABEL[option]}
           title={SCALE_LABEL[option]}
           className={
-            'rounded-[var(--radius-pill)] px-2 py-0.5 font-bold transition-colors ' +
+            'rounded-[var(--radius-pill)] px-2 py-0.5 font-medium transition-colors ' +
             (option === 's' ? 'text-[11px] ' : option === 'm' ? 'text-[13px] ' : 'text-[15px] ') +
             (scale === option ? 'bg-brand-500 text-white' : 'text-ink-400 hover:bg-ink-50 hover:text-ink-700')
           }

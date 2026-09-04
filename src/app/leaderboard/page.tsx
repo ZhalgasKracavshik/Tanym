@@ -201,7 +201,7 @@ export default function LeaderboardPage() {
         Заголовок без описания: ученик приходит сюда за своим местом, а не
         за объяснением, что такое рейтинг. Сразу под заголовком идут цифры.
       */}
-      <h1 className="text-3xl font-semibold text-ink-900 sm:text-4xl">{t.title}</h1>
+      <h1 className="text-3xl font-medium text-ink-900 sm:text-4xl">{t.title}</h1>
 
       {/*
         Показатели лежат на голом фоне между волосяными линиями. Место набрано
@@ -212,19 +212,19 @@ export default function LeaderboardPage() {
           <>
             <div className="sm:pr-8">
               <p className="text-xs font-medium uppercase tracking-wide text-ink-400">{t.myPlace}</p>
-              <p className="mt-2 text-5xl font-semibold tabular-nums text-ink-900">{myRow.rank}</p>
+              <p className="mt-2 text-5xl font-medium tabular-nums text-ink-900">{myRow.rank}</p>
             </div>
             <div className="sm:px-8">
               <p className="text-xs font-medium uppercase tracking-wide text-ink-400">{t.colPoints}</p>
-              <p className="mt-2 text-2xl font-semibold tabular-nums text-ink-900">{myRow.points}</p>
+              <p className="mt-2 text-2xl font-medium tabular-nums text-ink-900">{myRow.points}</p>
             </div>
             <div className="sm:px-8">
               <p className="text-xs font-medium uppercase tracking-wide text-ink-400">{t.colTopics}</p>
-              <p className="mt-2 text-2xl font-semibold tabular-nums text-ink-900">{myRow.topicsMastered}</p>
+              <p className="mt-2 text-2xl font-medium tabular-nums text-ink-900">{myRow.topicsMastered}</p>
             </div>
             <div className="sm:px-8">
               <p className="text-xs font-medium uppercase tracking-wide text-ink-400">{t.colStreak}</p>
-              <p className="mt-2 flex items-center gap-1.5 text-2xl font-semibold tabular-nums text-ink-900">
+              <p className="mt-2 flex items-center gap-1.5 text-2xl font-medium tabular-nums text-ink-900">
                 <Icon
                   name="flame"
                   size={20}
@@ -238,11 +238,11 @@ export default function LeaderboardPage() {
           <>
             <div className="sm:pr-8">
               <p className="text-xs font-medium uppercase tracking-wide text-ink-400">{t.participants}</p>
-              <p className="mt-2 text-5xl font-semibold tabular-nums text-ink-900">{rows.length}</p>
+              <p className="mt-2 text-5xl font-medium tabular-nums text-ink-900">{rows.length}</p>
             </div>
             <div className="sm:px-8">
               <p className="text-xs font-medium uppercase tracking-wide text-ink-400">{t.topScore}</p>
-              <p className="mt-2 text-2xl font-semibold tabular-nums text-ink-900">{rows[0]?.points ?? 0}</p>
+              <p className="mt-2 text-2xl font-medium tabular-nums text-ink-900">{rows[0]?.points ?? 0}</p>
             </div>
           </>
         )}
@@ -287,7 +287,7 @@ export default function LeaderboardPage() {
                   size={isWinner ? 64 : 52}
                   className={isWinner ? 'ring-2 ring-accent-400 ring-offset-2' : ''}
                 />
-                <p className="mt-2 line-clamp-1 max-w-full text-center text-xs font-bold text-ink-900 sm:text-sm">
+                <p className="mt-2 line-clamp-1 max-w-full text-center text-xs font-semibold text-ink-900 sm:text-sm">
                   {visibleName(entry)}
                 </p>
                 <p className="text-xs font-semibold tabular-nums text-brand-600">{entry.points}</p>
@@ -296,7 +296,7 @@ export default function LeaderboardPage() {
                   className={`mt-2 flex w-full items-start justify-center rounded-t-[var(--radius-control)] pt-3 ${height}`}
                   style={{ background: tone }}
                 >
-                  <span className="text-lg font-bold tabular-nums text-white drop-shadow">
+                  <span className="text-lg font-medium tabular-nums text-white drop-shadow">
                     {entry.rank}
                   </span>
                 </div>
@@ -350,8 +350,8 @@ export default function LeaderboardPage() {
                     <span
                       className={`flex items-center gap-2 tabular-nums ${
                         entry.isCurrentUser
-                          ? 'text-xl font-semibold text-brand-700'
-                          : 'font-bold text-ink-900'
+                          ? 'text-xl font-medium text-brand-700'
+                          : 'font-medium text-ink-900'
                       }`}
                     >
                       {/* У первого места корона, у второго и третьего медаль:
@@ -397,7 +397,7 @@ export default function LeaderboardPage() {
                         </span>
                         <span className="mt-1 flex flex-wrap items-center gap-2">
                           <span
-                            className={`rounded-[var(--radius-pill)] px-2 py-0.5 text-[11px] font-bold ${
+                            className={`rounded-[var(--radius-pill)] px-2 py-0.5 text-[11px] font-medium ${
                               TIER_STYLE[levelFromPoints(entry.points).tier]
                             }`}
                           >
@@ -423,7 +423,7 @@ export default function LeaderboardPage() {
                   </td>
                   <td
                     className={`px-4 py-3 text-right tabular-nums ${
-                      entry.isCurrentUser ? 'text-xl font-semibold text-brand-700' : 'font-bold text-ink-900'
+                      entry.isCurrentUser ? 'text-xl font-medium text-brand-700' : 'font-medium text-ink-900'
                     }`}
                   >
                     {entry.points}

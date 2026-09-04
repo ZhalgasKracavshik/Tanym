@@ -99,7 +99,7 @@ export function ProgressRing({
       </svg>
 
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-        <span className="text-2xl font-semibold tabular-nums leading-none text-ink-900">
+        <span className="text-2xl font-medium tabular-nums leading-none text-ink-900">
           {label ?? `${percent}%`}
         </span>
         {caption && <span className="mt-1 px-2 text-[11px] font-medium text-ink-400">{caption}</span>}

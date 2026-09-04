@@ -208,7 +208,7 @@ export default function TeacherPage() {
         Заголовок без описания: учитель открывает панель, чтобы увидеть цифры
         класса, а не прочитать, зачем эта панель нужна.
       */}
-      <h1 className="text-3xl font-semibold text-ink-900 sm:text-4xl">{t.title}</h1>
+      <h1 className="text-3xl font-medium text-ink-900 sm:text-4xl">{t.title}</h1>
 
       {/*
         Настоящий класс — те, кто реально ввёл код учителя, а не выдуманные
@@ -252,7 +252,7 @@ export default function TeacherPage() {
       <div className="mt-10 grid grid-cols-2 gap-x-8 gap-y-6 border-y border-ink-200 py-6 lg:grid-cols-4 lg:divide-x lg:divide-ink-200">
         <div className="lg:pr-8">
           <p className="text-xs font-medium uppercase tracking-wide text-ink-400">{t.statAtRisk}</p>
-          <p className="mt-2 flex items-center gap-2 text-5xl font-semibold tabular-nums text-ink-900">
+          <p className="mt-2 flex items-center gap-2 text-5xl font-medium tabular-nums text-ink-900">
             <Icon name="alert" size={28} className={atRisk > 0 ? 'text-danger-500' : 'text-ink-300'} />
             {atRisk}
           </p>
@@ -263,12 +263,12 @@ export default function TeacherPage() {
 
         <div className="lg:px-8">
           <p className="text-xs font-medium uppercase tracking-wide text-ink-400">{t.statStudents}</p>
-          <p className="mt-2 text-2xl font-semibold tabular-nums text-ink-900">{rows.length}</p>
+          <p className="mt-2 text-2xl font-medium tabular-nums text-ink-900">{rows.length}</p>
         </div>
 
         <div className="lg:px-8">
           <p className="text-xs font-medium uppercase tracking-wide text-ink-400">{t.statAverage}</p>
-          <p className="mt-2 text-2xl font-semibold tabular-nums text-ink-900">
+          <p className="mt-2 text-2xl font-medium tabular-nums text-ink-900">
             {Math.round(classAverage * 100)}
             <span className="text-lg text-ink-300">%</span>
           </p>

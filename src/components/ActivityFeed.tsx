@@ -205,7 +205,7 @@ export function ActivityFeedItem({ item, footer }: { item: FeedItem; footer?: Re
               <span className="text-ink-300"> · {relativeTime(item.created_at)}</span>
             </p>
 
-            <p className="mt-1 flex items-center gap-2 font-bold text-ink-900">
+            <p className="mt-1 flex items-center gap-2 font-medium text-ink-900">
               {/*
                 Значок 16px в кружке 28px, а не 13 в 24.
 

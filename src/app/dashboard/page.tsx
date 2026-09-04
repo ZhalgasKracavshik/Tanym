@@ -208,7 +208,7 @@ function Metric({
   return (
     <div className="lg:px-8">
       <p className="text-xs font-medium uppercase tracking-wide text-ink-400">{label}</p>
-      <p className="mt-1 flex items-center gap-1.5 text-2xl font-semibold tabular-nums text-ink-900">
+      <p className="mt-1 flex items-center gap-1.5 text-2xl font-medium tabular-nums text-ink-900">
         {icon && <Icon name={icon} size={20} className={accent ? 'text-accent-500' : 'text-ink-300'} />}
         {value}
       </p>
@@ -307,7 +307,7 @@ export default function DashboardPage() {
         >
           <div className="relative flex flex-wrap items-end justify-between gap-6">
             <div>
-              <h1 className="text-3xl font-semibold sm:text-4xl">
+              <h1 className="text-3xl font-medium sm:text-4xl">
                 {t.greeting(profile.name.split(' ')[0])}
               </h1>
               <p className="mt-2 text-sm text-white/60">{t.gradeLabel(profile.grade)}</p>
@@ -315,10 +315,10 @@ export default function DashboardPage() {
 
             {daysLeft !== null && daysLeft >= 0 && (
               <div className="rounded-[var(--radius-control)] border border-white/15 bg-white/10 px-5 py-3 backdrop-blur">
-                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/50">
+                <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-white/50">
                   {t.daysLeftLabel}
                 </p>
-                <p className="mt-1 text-3xl font-semibold tabular-nums">{daysLeft}</p>
+                <p className="mt-1 text-3xl font-medium tabular-nums">{daysLeft}</p>
               </div>
             )}
           </div>
@@ -341,7 +341,7 @@ export default function DashboardPage() {
             <div className="flex flex-wrap items-center justify-between gap-6">
               <div className="min-w-[16rem] flex-1">
                 <Kicker>{t.todayKicker}</Kicker>
-                <h2 className="mt-2 text-2xl font-semibold text-ink-900">
+                <h2 className="mt-2 text-2xl font-medium text-ink-900">
                   {nextTopics[0].topic.title}
                 </h2>
                 <p className="mt-1 text-sm text-ink-500">{nextTopics[0].reasons[0]}</p>
@@ -392,7 +392,7 @@ export default function DashboardPage() {
           <div className="mt-8 grid grid-cols-2 gap-x-8 gap-y-6 border-y border-ink-200 py-6 sm:grid-cols-3 lg:grid-cols-5 lg:divide-x lg:divide-ink-200">
             <div className="lg:pr-8">
               <p className="text-xs font-medium uppercase tracking-wide text-ink-400">{t.statAccuracy}</p>
-              <p className="mt-1 text-4xl font-semibold tabular-nums text-ink-900">
+              <p className="mt-1 text-4xl font-medium tabular-nums text-ink-900">
                 {Math.round(stats.accuracy * 100)}
                 <span className="text-2xl text-ink-300">%</span>
               </p>
@@ -434,7 +434,7 @@ export default function DashboardPage() {
                         className="transition-all duration-150 hover:border-brand-300 hover:shadow-[var(--shadow-lift)]"
                       >
                         <div className="flex flex-wrap items-start justify-between gap-2">
-                          <h3 className="font-bold text-ink-900">{topic.title}</h3>
+                          <h3 className="font-medium text-ink-900">{topic.title}</h3>
                           <span className="text-sm tabular-nums text-ink-400">
                             {t.solved(progress.correct, topic.tasks.length)}
                           </span>
@@ -455,7 +455,7 @@ export default function DashboardPage() {
             <div className="space-y-4">
               {/* Слабые места по всем предметам ученика */}
               <Card>
-                <h2 className="flex items-center gap-2 text-lg font-bold text-ink-900">
+                <h2 className="flex items-center gap-2 text-lg font-medium text-ink-900">
                   <Icon name="target" size={20} className="text-brand-500" />
                   {t.weakTitle}
                 </h2>
@@ -484,7 +484,7 @@ export default function DashboardPage() {
 
               {/* Что делать дальше */}
               <Card>
-                <h2 className="flex items-center gap-2 text-lg font-bold text-ink-900">
+                <h2 className="flex items-center gap-2 text-lg font-medium text-ink-900">
                   <Icon name="compass" size={20} className="text-brand-500" />
                   {t.nextTitle}
                 </h2>
@@ -505,7 +505,7 @@ export default function DashboardPage() {
 
               {upcomingEvent && (
                 <Card>
-                  <h2 className="flex items-center gap-2 text-lg font-bold text-ink-900">
+                  <h2 className="flex items-center gap-2 text-lg font-medium text-ink-900">
                     <Icon name="calendar" size={20} className="text-brand-500" />
                     {t.eventTitle}
                   </h2>

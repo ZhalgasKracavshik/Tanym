@@ -210,7 +210,7 @@ export function AddTopicForm({ subject }: { subject: Subject }) {
 
   return (
     <Card className="space-y-5">
-      <h3 className="flex items-center gap-2 font-bold text-ink-900">
+      <h3 className="flex items-center gap-2 font-medium text-ink-900">
         <Icon name="pencil" size={18} className="text-brand-600" />
         {t.formTitle(subject.title)}
       </h3>
@@ -273,7 +273,7 @@ export function AddTopicForm({ subject }: { subject: Subject }) {
       </div>
 
       <div className="border-t border-ink-200 pt-5">
-        <h4 className="flex items-center gap-2 font-bold text-ink-900">
+        <h4 className="flex items-center gap-2 font-medium text-ink-900">
           <Icon name="clipboard" size={18} className="text-ink-400" />
           {t.taskTitle}
         </h4>

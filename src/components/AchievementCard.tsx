@@ -325,7 +325,7 @@ export function AchievementCard({
 
           {statusMeta && (
             <span
-              className={`inline-flex items-center gap-1.5 rounded-[var(--radius-pill)] border px-2.5 py-1 text-[11px] font-bold backdrop-blur-sm ${statusMeta.className}`}
+              className={`inline-flex items-center gap-1.5 rounded-[var(--radius-pill)] border px-2.5 py-1 text-[11px] font-medium backdrop-blur-sm ${statusMeta.className}`}
             >
               <Icon name={statusMeta.icon} size={12} />
               {statusMeta.label[language]}
@@ -334,7 +334,7 @@ export function AchievementCard({
         </div>
 
         {/* Место надписи LIVE из образца — здесь стоит дата события. */}
-        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-[var(--radius-pill)] border border-white/25 bg-ink-900/50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-white backdrop-blur-sm">
+        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-[var(--radius-pill)] border border-white/25 bg-ink-900/50 px-3 py-1.5 text-[10px] font-medium uppercase tracking-[0.14em] text-white backdrop-blur-sm">
           <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-accent-400" />
           {formatAchievementDate(date, language)}
         </span>
@@ -350,13 +350,13 @@ export function AchievementCard({
           {/* Три строки, а не две: длинное название олимпиады — это не
               украшение, а сама суть записи в портфолио, и обрывать его на
               середине без нужды нельзя. */}
-          <h3 className="line-clamp-3 min-w-0 flex-1 text-lg font-semibold leading-snug text-white sm:text-xl">
+          <h3 className="line-clamp-3 min-w-0 flex-1 text-lg font-medium leading-snug text-white sm:text-xl">
             {title}
           </h3>
 
           {showPoints && (
             <span
-              className={`shrink-0 text-2xl font-semibold leading-tight tabular-nums ${
+              className={`shrink-0 text-2xl font-medium leading-tight tabular-nums ${
                 /* На жёлто-оранжевой заливке светлый акцент сливается с фоном,
                    поэтому там число белое. */
                 !photo && tone === 'accent' ? 'text-white' : 'text-accent-300'

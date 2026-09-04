@@ -239,7 +239,7 @@ export default function EventsPage() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <Kicker>{t.kicker}</Kicker>
-          <h1 className="mt-2 text-3xl font-semibold text-ink-900 sm:text-4xl">{t.title}</h1>
+          <h1 className="mt-2 text-3xl font-medium text-ink-900 sm:text-4xl">{t.title}</h1>
         </div>
         <PublishAction href="/events/new" label="Добавить событие" requireRole="admin" />
       </div>
@@ -257,7 +257,7 @@ export default function EventsPage() {
         <div className="mt-10 flex flex-wrap items-end gap-x-10 gap-y-4 border-y border-ink-200 py-6">
           <div>
             <p className="text-xs font-medium uppercase tracking-wide text-ink-400">{t.nearestDeadline}</p>
-            <p className="mt-2 flex items-baseline gap-2 text-5xl font-semibold tabular-nums text-ink-900 sm:text-6xl">
+            <p className="mt-2 flex items-baseline gap-2 text-5xl font-medium tabular-nums text-ink-900 sm:text-6xl">
               {nearestDays}
               <span className="text-base font-medium text-ink-400">{t.daysWord(nearestDays)}</span>
             </p>

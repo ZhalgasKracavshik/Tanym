@@ -180,7 +180,7 @@ export function AdminShell({ title, description, children }: { title: string; de
   return (
     <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
       <Kicker>Администрирование</Kicker>
-      <h1 className="mt-2 text-3xl font-semibold text-ink-900 sm:text-4xl">{title}</h1>
+      <h1 className="mt-2 text-3xl font-medium text-ink-900 sm:text-4xl">{title}</h1>
       {description && <p className="mt-2 max-w-2xl text-sm text-ink-500">{description}</p>}
       <AdminTabs />
       <div className="mt-8">{children}</div>

@@ -207,7 +207,7 @@ export function DiagnosticsClient({ subjectId }: { subjectId: string }) {
           <Icon name={subject.icon} size={14} />
           {subject.title}
         </Badge>
-        <h1 className="mt-2 text-3xl font-semibold text-ink-900 sm:text-4xl">{t.title}</h1>
+        <h1 className="mt-2 text-3xl font-medium text-ink-900 sm:text-4xl">{t.title}</h1>
         <p className="mt-4 text-ink-500">{t.introText(questions.length)}</p>
 
         <Button size="lg" className="mt-10" onClick={() => setStage('quiz')}>
@@ -237,7 +237,7 @@ export function DiagnosticsClient({ subjectId }: { subjectId: string }) {
           />
         </div>
 
-        <p className="mt-10 text-3xl font-semibold leading-snug text-ink-900 sm:text-4xl"><MathText>{task.prompt}</MathText></p>
+        <p className="mt-10 text-3xl font-medium leading-snug text-ink-900 sm:text-4xl"><MathText>{task.prompt}</MathText></p>
 
         {task.kind === 'single' && task.options && (
           <div className="mt-4 grid gap-2">
@@ -299,7 +299,7 @@ export function DiagnosticsClient({ subjectId }: { subjectId: string }) {
           в строку подробностей под ним.
         */}
         <Kicker>{t.done}</Kicker>
-        <p className="mt-2 text-6xl font-semibold tabular-nums text-ink-900">
+        <p className="mt-2 text-6xl font-medium tabular-nums text-ink-900">
           {Math.round(result.score * 100)}
           <span className="text-3xl text-ink-300">%</span>
         </p>
@@ -314,7 +314,7 @@ export function DiagnosticsClient({ subjectId }: { subjectId: string }) {
           с волосяными линиями вместо карточки.
         */}
         <section className="mt-10">
-          <h2 className="text-lg font-bold text-ink-900">{t.skillMap}</h2>
+          <h2 className="text-lg font-medium text-ink-900">{t.skillMap}</h2>
           <p className="mt-2 text-sm text-ink-500">{t.skillMapHint}</p>
           <div className="mt-4 divide-y divide-ink-200 border-y border-ink-200">
             {testedSkills.map((skillId) => (

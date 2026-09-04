@@ -40,7 +40,7 @@ export function PublishAction({
   return (
     <Link
       href={href}
-      className="inline-flex shrink-0 items-center gap-2 rounded-[var(--radius-control)] px-4 py-2.5 text-sm font-semibold text-white shadow-[var(--shadow-lift)] transition-all duration-150 hover:shadow-[var(--shadow-glow)] focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
+      className="inline-flex shrink-0 items-center gap-2 rounded-[var(--radius-control)] px-4 py-2.5 text-sm font-semibold text-white shadow-[var(--shadow-lift)] transition-all duration-150 hover:shadow-[var(--shadow-lift)] focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
       style={{ background: 'var(--gradient-brand)' }}
     >
       <Icon name="plus" size={17} />

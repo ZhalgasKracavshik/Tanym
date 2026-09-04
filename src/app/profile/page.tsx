@@ -85,7 +85,7 @@ const ROLE_TITLE: Record<string, string> = {
 function StatCard({ icon, value, label }: { icon: IconName; value: number | string; label: string }) {
   return (
     <div className="rounded-[var(--radius-control)] border border-white/15 bg-white/10 px-4 py-3.5 backdrop-blur transition-all hover:bg-white/15">
-      <p className="flex items-center gap-2 text-xl font-bold tabular-nums text-white">
+      <p className="flex items-center gap-2 text-xl font-medium tabular-nums text-white">
         <Icon name={icon} size={18} className="text-white/70" />
         {value}
       </p>
@@ -616,7 +616,7 @@ function ProfileContent() {
                     placeholder="Ваше имя или никнейм"
                     maxLength={60}
                     autoFocus
-                    className="rounded-lg border border-white/30 bg-white/10 px-3 py-1.5 text-xl font-bold text-white outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-400/40"
+                    className="rounded-lg border border-white/30 bg-white/10 px-3 py-1.5 text-xl font-medium text-white outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-400/40"
                   />
                   <Button size="sm" onClick={saveName}>
                     Сохранить
@@ -627,7 +627,7 @@ function ProfileContent() {
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
-                  <h1 className="truncate text-2xl font-bold text-white sm:text-3xl">{displayName}</h1>
+                  <h1 className="truncate text-2xl font-medium text-white sm:text-3xl">{displayName}</h1>
                   <button
                     onClick={() => {
                       setNameDraft(displayName);
@@ -707,7 +707,7 @@ function ProfileContent() {
               {/* Уровень и прогресс */}
               <div className="relative mt-4 rounded-[var(--radius-control)] border border-white/15 bg-white/5 px-4 py-3">
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <p className="text-xs font-bold text-white">
+                  <p className="text-xs font-semibold text-white">
                     Уровень {level.level}
                     <span className="ml-2 font-medium text-white/60">{TIER_LABEL[level.tier]}</span>
                   </p>
@@ -815,7 +815,7 @@ function ProfileContent() {
           <div className="space-y-6">
             {/* О себе / Биография */}
             <Card>
-              <h2 className="text-base font-bold text-ink-900">О себе</h2>
+              <h2 className="text-base font-medium text-ink-900">О себе</h2>
               <p className="mt-1 text-xs text-ink-500">
                 Расскажите о своих целях, любимых предметах или увлечениях.
               </p>
@@ -842,7 +842,7 @@ function ProfileContent() {
 
             {/* Контакты и связь */}
             <Card className="space-y-4">
-              <h2 className="text-base font-bold text-ink-900">Контакты</h2>
+              <h2 className="text-base font-medium text-ink-900">Контакты</h2>
 
               <div className="grid gap-4 sm:grid-cols-2">
                 {/* Почта */}
@@ -851,7 +851,7 @@ function ProfileContent() {
                   <div className="mt-1.5 flex items-center justify-between rounded-xl border border-ink-200 bg-ink-50/70 px-3.5 py-2.5 text-sm">
                     <span className="truncate text-ink-700 font-medium">{email ?? 'Без почты'}</span>
                     {emailConfirmed ? (
-                      <span className="flex items-center gap-1 text-xs font-bold text-success-600">
+                      <span className="flex items-center gap-1 text-xs font-semibold text-success-600">
                         <Icon name="check" size={14} /> Подтверждена
                       </span>
                     ) : (
@@ -897,7 +897,7 @@ function ProfileContent() {
             {isStudent && (
               <Card className="space-y-6">
                 <div>
-                  <h2 className="text-base font-bold text-ink-900">Уровень подготовки</h2>
+                  <h2 className="text-base font-medium text-ink-900">Уровень подготовки</h2>
                   <p className="mt-1 text-xs text-ink-500">Ваша текущая самооценка владения школьной программой.</p>
                   <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
                     {KNOWLEDGE_LEVELS.map((lvl) => {
@@ -914,7 +914,7 @@ function ProfileContent() {
                               : 'border-ink-200 bg-white hover:border-ink-300'
                           }`}
                         >
-                          <span className="block text-sm font-bold">{lvl.title}</span>
+                          <span className="block text-sm font-medium">{lvl.title}</span>
                           <span className="mt-0.5 block text-xs text-ink-500">{lvl.hint}</span>
                         </button>
                       );
@@ -923,7 +923,7 @@ function ProfileContent() {
                 </div>
 
                 <div className="border-t border-ink-100 pt-5">
-                  <h2 className="text-base font-bold text-ink-900">Интересы</h2>
+                  <h2 className="text-base font-medium text-ink-900">Интересы</h2>
                   <p className="mt-1 text-xs text-ink-500">По ним подбираются конкурсы, кружки и дополнительные темы.</p>
                   <div className="mt-3 flex flex-wrap gap-2">
                     {INTERESTS.map((interest) => {
@@ -934,7 +934,7 @@ function ProfileContent() {
                           onClick={() => toggleInterest(interest.id)}
                           className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-all ${
                             active
-                              ? 'border-brand-400 bg-brand-50 text-brand-700 font-bold'
+                              ? 'border-brand-400 bg-brand-50 text-brand-700 font-medium'
                               : 'border-ink-200 bg-white text-ink-600 hover:border-brand-200'
                           }`}
                         >
@@ -954,7 +954,7 @@ function ProfileContent() {
           <div className="space-y-6">
             {/* Класс */}
             <Card>
-              <h2 className="text-base font-bold text-ink-900">Класс обучения</h2>
+              <h2 className="text-base font-medium text-ink-900">Класс обучения</h2>
               <p className="mt-1 text-xs text-ink-500">Выберите текущий класс для калибровки учебной программы.</p>
               <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-6">
                 {GRADES.map((grade: Grade) => {
@@ -963,7 +963,7 @@ function ProfileContent() {
                     <button
                       key={grade}
                       onClick={() => setStudyDraft((prev) => ({ ...prev, grade }))}
-                      className={`rounded-xl border-2 py-3 text-base font-bold tabular-nums transition-all ${
+                      className={`rounded-xl border-2 py-3 text-base font-medium tabular-nums transition-all ${
                         active
                           ? 'border-brand-500 bg-brand-500 text-white shadow-sm'
                           : 'border-ink-200 bg-white text-ink-700 hover:border-brand-300'
@@ -1001,7 +1001,7 @@ function ProfileContent() {
 
             {/* Предметы */}
             <Card>
-              <h2 className="text-base font-bold text-ink-900">Изучаемые предметы</h2>
+              <h2 className="text-base font-medium text-ink-900">Изучаемые предметы</h2>
               <p className="mt-1 text-xs text-ink-500">Выберите предметы, по которым строится персональный план.</p>
               <div className="mt-3 grid gap-2.5 sm:grid-cols-3">
                 {SUBJECTS.map((subject) => {
@@ -1023,7 +1023,7 @@ function ProfileContent() {
                         <Icon name={subject.icon} size={18} />
                       </span>
                       <div>
-                        <span className="block text-sm font-bold text-ink-900">{subject.title}</span>
+                        <span className="block text-sm font-medium text-ink-900">{subject.title}</span>
                         <span className="block text-xs text-ink-500">{active ? 'Изучается' : 'Не выбран'}</span>
                       </div>
                     </button>
@@ -1034,7 +1034,7 @@ function ProfileContent() {
 
             {/* Цель обучения */}
             <Card>
-              <h2 className="text-base font-bold text-ink-900">Цель обучения</h2>
+              <h2 className="text-base font-medium text-ink-900">Цель обучения</h2>
               <p className="mt-1 text-xs text-ink-500">Определяет темп и уровень сложности подбираемых заданий.</p>
               <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
                 {LEARNING_GOALS.map((goal) => {
@@ -1053,7 +1053,7 @@ function ProfileContent() {
                         <Icon name={goal.icon} size={18} />
                       </span>
                       <div>
-                        <span className="block text-sm font-bold text-ink-900">{goal.title}</span>
+                        <span className="block text-sm font-medium text-ink-900">{goal.title}</span>
                         <span className="mt-0.5 block text-xs leading-relaxed text-ink-500">{goal.description}</span>
                       </div>
                     </button>
@@ -1074,14 +1074,14 @@ function ProfileContent() {
             <Card>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <h2 className="text-base font-bold text-ink-900">Мой дедлайн</h2>
+                  <h2 className="text-base font-medium text-ink-900">Мой дедлайн</h2>
                   <p className="mt-1 text-xs text-ink-500">
                     Напишите, к чему готовитесь, и поставьте срок — система рассчитает
                     ежедневную норму заданий до этой даты.
                   </p>
                 </div>
                 {daysUntilTarget !== null && (
-                  <span className="rounded-full bg-brand-100 px-3 py-1 text-xs font-bold text-brand-700">
+                  <span className="rounded-full bg-brand-100 px-3 py-1 text-xs font-semibold text-brand-700">
                     Осталось {daysUntilTarget} {daysWord(daysUntilTarget)}
                   </span>
                 )}
@@ -1152,11 +1152,11 @@ function ProfileContent() {
             <Card className="bg-gradient-to-br from-brand-50/60 to-white border-brand-200/80">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
-                  <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-brand-600">
+                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-brand-600">
                     <Icon name="school" size={14} />
                     Школьный класс
                   </span>
-                  <h2 className="mt-1 text-lg font-bold text-ink-900">
+                  <h2 className="mt-1 text-lg font-medium text-ink-900">
                     {schoolClass ? `Вы состоите в классе «${schoolClass.name}»` : 'Вы состоите в классе «Мой класс»'}
                   </h2>
                   <p className="mt-1 text-xs text-ink-600">
@@ -1169,8 +1169,8 @@ function ProfileContent() {
                 {/* Код класса */}
                 <div className="flex items-center gap-2">
                   <div className="rounded-xl border border-brand-300 bg-white px-4 py-2 text-center shadow-xs">
-                    <span className="block text-[10px] font-bold uppercase tracking-wider text-ink-400">Код класса</span>
-                    <span className="font-mono text-lg font-black tracking-widest text-brand-600">
+                    <span className="block text-[10px] font-medium uppercase tracking-wider text-ink-400">Код класса</span>
+                    <span className="font-mono text-lg font-medium tracking-widest text-brand-600">
                       {schoolClass?.code ?? 'VNMBCD'}
                     </span>
                   </div>
@@ -1194,15 +1194,15 @@ function ProfileContent() {
             {/* Обзор активности */}
             <div className="grid gap-3 sm:grid-cols-3">
               <Card className="text-center p-5">
-                <p className="text-3xl font-black text-brand-600">{summary.topicsMastered}</p>
+                <p className="text-3xl font-medium text-brand-600">{summary.topicsMastered}</p>
                 <p className="mt-1 text-xs font-semibold text-ink-500">Освоено тем</p>
               </Card>
               <Card className="text-center p-5">
-                <p className="text-3xl font-black text-ink-800">{state.attempts.length}</p>
+                <p className="text-3xl font-medium text-ink-800">{state.attempts.length}</p>
                 <p className="mt-1 text-xs font-semibold text-ink-500">Решено заданий</p>
               </Card>
               <Card className="text-center p-5">
-                <p className="text-3xl font-black text-accent-600">{state.streak.current} дн.</p>
+                <p className="text-3xl font-medium text-accent-600">{state.streak.current} дн.</p>
                 <p className="mt-1 text-xs font-semibold text-ink-500">Серия занятий</p>
               </Card>
             </div>
@@ -1212,7 +1212,7 @@ function ProfileContent() {
               <div className="space-y-6">
                 <div>
                   <Kicker>Портфолио</Kicker>
-                  <h2 className="mt-1 text-xl font-bold text-ink-900">Достижения и олимпиады</h2>
+                  <h2 className="mt-1 text-xl font-medium text-ink-900">Достижения и олимпиады</h2>
                   <p className="mt-1 text-xs text-ink-500">
                     Добавляйте грамоты, сертификаты и участие в олимпиадах — они начисляют баллы в рейтинг школы.
                   </p>
@@ -1247,7 +1247,7 @@ function ProfileContent() {
             {email && (
               <Card className="space-y-4">
                 <div>
-                  <h2 className="text-base font-bold text-ink-900">Безопасность и пароль</h2>
+                  <h2 className="text-base font-medium text-ink-900">Безопасность и пароль</h2>
                   <p className="mt-1 text-xs text-ink-500">Смените пароль для входа в аккаунт.</p>
                 </div>
                 <div className="max-w-md space-y-3">
@@ -1273,7 +1273,7 @@ function ProfileContent() {
 
             {/* Язык интерфейса */}
             <Card>
-              <h2 className="text-base font-bold text-ink-900">Язык интерфейса</h2>
+              <h2 className="text-base font-medium text-ink-900">Язык интерфейса</h2>
               <div className="mt-3 flex flex-wrap gap-2">
                 {LANGUAGE_OPTIONS.map((opt) => (
                   <button
@@ -1281,7 +1281,7 @@ function ProfileContent() {
                     onClick={() => setLanguage(opt.id)}
                     className={`rounded-xl border px-4 py-2 text-sm font-semibold transition-all ${
                       state.language === opt.id
-                        ? 'border-brand-500 bg-brand-50 text-brand-700 font-bold shadow-xs'
+                        ? 'border-brand-500 bg-brand-50 text-brand-700 font-medium shadow-xs'
                         : 'border-ink-200 bg-white text-ink-600 hover:border-ink-300'
                     }`}
                   >
@@ -1294,7 +1294,7 @@ function ProfileContent() {
             {/* Параметры приватности */}
             {isStudent && (
               <Card className="space-y-3">
-                <h2 className="text-base font-bold text-ink-900">Приватность</h2>
+                <h2 className="text-base font-medium text-ink-900">Приватность</h2>
                 <Toggle
                   checked={schoolProfile?.leaderboard_anonymous ?? state.leaderboardAnonymous ?? false}
                   onChange={(val) => {
@@ -1321,7 +1321,7 @@ function ProfileContent() {
 
             {/* Уведомления */}
             <Card className="space-y-3">
-              <h2 className="text-base font-bold text-ink-900">Уведомления</h2>
+              <h2 className="text-base font-medium text-ink-900">Уведомления</h2>
               <Toggle
                 checked={schoolProfile?.notify_learning ?? true}
                 onChange={(val) => save({}, { notifyLearning: val })}
@@ -1340,7 +1340,7 @@ function ProfileContent() {
             {isStudent && (
               <Card className="space-y-4">
                 <div>
-                  <h2 className="text-base font-bold text-ink-900">Расписание и напоминания</h2>
+                  <h2 className="text-base font-medium text-ink-900">Расписание и напоминания</h2>
                   <p className="mt-1 text-xs text-ink-500">Выберите удобные дни и время для занятий.</p>
                 </div>
 
@@ -1366,7 +1366,7 @@ function ProfileContent() {
                               setDaysDraft(null);
                             }
                           }}
-                          className={`h-10 w-10 rounded-xl border text-sm font-bold transition-all ${
+                          className={`h-10 w-10 rounded-xl border text-sm font-medium transition-all ${
                             active
                               ? 'border-brand-500 bg-brand-50 text-brand-700'
                               : 'border-ink-200 bg-white text-ink-500 hover:border-brand-200'
@@ -1390,7 +1390,7 @@ function ProfileContent() {
                           onClick={() => save({}, { studyTime: active ? null : time.id })}
                           className={`rounded-xl border px-3.5 py-2 text-xs font-semibold transition-all ${
                             active
-                              ? 'border-brand-500 bg-brand-50 text-brand-700 font-bold'
+                              ? 'border-brand-500 bg-brand-50 text-brand-700 font-medium'
                               : 'border-ink-200 bg-white text-ink-600 hover:border-brand-200'
                           }`}
                         >
@@ -1405,7 +1405,7 @@ function ProfileContent() {
 
             {/* Выход из аккаунта */}
             <Card className="border-danger-100 bg-danger-50/20">
-              <h2 className="text-base font-bold text-ink-900">Управление аккаунтом</h2>
+              <h2 className="text-base font-medium text-ink-900">Управление аккаунтом</h2>
               <p className="mt-1 text-xs text-ink-500">
                 Вы можете завершить текущий сеанс или очистить локальные сохраненные данные.
               </p>

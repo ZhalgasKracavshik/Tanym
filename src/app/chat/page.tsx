@@ -396,7 +396,7 @@ export default function ChatPage() {
               не должны открываться одинаково, иначе продукт выглядит
               собранным по одному шаблону. */}
           <Kicker>{t.subtitle}</Kicker>
-          <h1 className="mt-2 text-3xl font-semibold text-ink-900 sm:text-4xl">{t.title}</h1>
+          <h1 className="mt-2 text-3xl font-medium text-ink-900 sm:text-4xl">{t.title}</h1>
         </div>
         <div className="flex items-center gap-2">
           {/* Кегль ответа рядом с самим диалогом, а не в общих настройках:
@@ -551,7 +551,7 @@ export default function ChatPage() {
             onClick={() => send(question)}
             disabled={loading || question.trim() === ''}
             aria-label={t.send}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] text-white shadow-[var(--shadow-glow)] transition-opacity disabled:opacity-40 disabled:shadow-none"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] text-white shadow-[var(--shadow-rest)] transition-opacity disabled:opacity-40 disabled:shadow-none"
             style={{ background: 'var(--gradient-brand)' }}
           >
             <Icon name="arrowRight" size={19} />
@@ -564,7 +564,7 @@ export default function ChatPage() {
         <div className="hidden md:block mt-4 mb-2 animate-in fade-in slide-in-from-bottom-3 duration-300">
           <div className="relative overflow-hidden rounded-2xl border border-amber-900/20 bg-[#fbf8f3] p-3 shadow-lg">
             <div className="mb-2 flex items-center justify-between px-2 text-xs">
-              <span className="font-bold flex items-center gap-1.5 text-amber-950">
+              <span className="font-medium flex items-center gap-1.5 text-amber-950">
                 <Icon name="keyboard" size={16} className="text-amber-800" />
                 Тактильная ретро-клавиатура со звуком (нажимайте клавиши на компьютере или кликайте)
               </span>

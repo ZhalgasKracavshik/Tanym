@@ -107,7 +107,7 @@ export default function ArchivePage() {
         и открытие должно отличаться от кабинета, куда ученик ходит каждый день.
       */}
       <Kicker>{t.kicker}</Kicker>
-      <h1 className="mt-2 text-3xl font-semibold text-ink-900 sm:text-4xl">{t.title}</h1>
+      <h1 className="mt-2 text-3xl font-medium text-ink-900 sm:text-4xl">{t.title}</h1>
       <p className="mt-2 max-w-2xl text-sm text-ink-500">{t.subtitle}</p>
 
       <ArchiveTabs active="stock" language={state.language} />
@@ -122,11 +122,11 @@ export default function ArchivePage() {
         без коробки фраза читается как утверждение продукта, а не как сноска.
       */}
       <section className="mt-10 border-y border-ink-200 py-8">
-        <p className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.2em] text-brand-600">
+        <p className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.2em] text-brand-600">
           <Icon name="columns" size={14} />
           {t.socratic}
         </p>
-        <p className="mt-4 max-w-3xl text-2xl font-semibold leading-snug text-ink-900 sm:text-4xl">
+        <p className="mt-4 max-w-3xl text-2xl font-medium leading-snug text-ink-900 sm:text-4xl">
           {t.socraticHint}
         </p>
       </section>
@@ -173,7 +173,7 @@ export default function ArchivePage() {
                         <Badge>{t.difficulty[material.difficulty]}</Badge>
                       </div>
 
-                      <h2 className="mt-2 font-bold text-ink-900">{material.title}</h2>
+                      <h2 className="mt-2 font-medium text-ink-900">{material.title}</h2>
                       <p className="mt-2 text-sm text-ink-500">{material.description}</p>
                       <p className="mt-2 text-xs text-ink-400">
                         <span className="tabular-nums">

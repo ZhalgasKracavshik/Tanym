@@ -35,7 +35,7 @@ import { ButtonLink, Kicker, ProgressBar, RailRow, Skeleton } from '@/components
 function HeroStat({ icon, value, label }: { icon: IconName; value: number | string; label: string }) {
   return (
     <div className="rounded-[var(--radius-control)] border border-white/15 bg-white/10 px-5 py-4 backdrop-blur">
-      <p className="flex items-center gap-2 text-2xl font-semibold tabular-nums text-white">
+      <p className="flex items-center gap-2 text-2xl font-medium tabular-nums text-white">
         <Icon name={icon} size={18} className="text-white/60" />
         {value}
       </p>
@@ -119,8 +119,8 @@ export default function AchievementsPage() {
           style={{ background: 'var(--color-ink-900)' }}
         >
           <div className="relative">
-            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/50">Достижения</p>
-            <h1 className="mt-2 text-3xl font-semibold sm:text-4xl">
+            <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-white/50">Достижения</p>
+            <h1 className="mt-2 text-3xl font-medium sm:text-4xl">
               {isStudent ? 'Твоё портфолио' : 'Достижения школы'}
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/60">

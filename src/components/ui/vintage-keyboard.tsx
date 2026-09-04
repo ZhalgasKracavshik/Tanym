@@ -1133,7 +1133,7 @@ const Key = memo(function Key({
         {label && (
           <span
             className={`absolute leading-none ${
-              small ? "font-semibold" : "font-bold"
+              small ? "font-semibold" : "font-medium"
             } ${primaryAlign === "left" ? "text-left" : "text-center"}`}
             style={{
               bottom: `calc(${sculpt.insetBottom}px + ${LEGEND_SHARED.primaryBottomOffset})`,

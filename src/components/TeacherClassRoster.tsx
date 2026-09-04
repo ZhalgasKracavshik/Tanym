@@ -117,7 +117,7 @@ export function TeacherClassRoster({ language }: { language: Language }) {
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-bold text-ink-900">{t.title}</h2>
+        <h2 className="text-lg font-medium text-ink-900">{t.title}</h2>
         {schoolClass && (
           <span className="rounded-full bg-brand-50 px-3 py-1 text-sm font-semibold tabular-nums text-brand-700">
             {t.code}: {schoolClass.code}

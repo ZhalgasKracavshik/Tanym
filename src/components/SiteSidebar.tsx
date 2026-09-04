@@ -182,7 +182,7 @@ function NavList({
               (collapsed ? (
                 <span aria-hidden className="mx-auto my-2 block h-px w-6 bg-ink-200" />
               ) : (
-                <p className="px-3 pb-1 pt-4 text-[11px] font-bold uppercase tracking-[0.14em] text-ink-400">
+                <p className="px-3 pb-1 pt-4 text-[11px] font-medium uppercase tracking-[0.14em] text-ink-400">
                   {moreLabel}
                 </p>
               ))}
@@ -295,7 +295,7 @@ export function SiteSidebar() {
           onClick={() => setLanguage(item.id)}
           title={item.title}
           aria-pressed={state.language === item.id}
-          className={`flex-1 rounded-md px-2 py-1.5 text-xs font-bold outline-none transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
+          className={`flex-1 rounded-md px-2 py-1.5 text-xs font-semibold outline-none transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
             state.language === item.id ? 'bg-brand-500 text-white' : 'text-ink-400 hover:text-ink-700'
           }`}
         >

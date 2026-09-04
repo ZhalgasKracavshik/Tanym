@@ -26,14 +26,32 @@ type ButtonSize = 'sm' | 'md' | 'lg';
  * на один пиксель остаётся единственным подтверждением, что нажатие засчитано.
  * Смену цвета в этот момент не видно из-под пальца.
  */
+/*
+  Кнопка — капсула, а не прямоугольник со скруглением.
+
+  Это подпись взятой за образец системы: основное действие выглядит
+  капсулой почти чёрного цвета, второстепенное — белым контуром. Форма
+  здесь работает вместо цвета, поэтому фирменный оранжевый освобождается
+  для того, ради чего он и нужен, — для цветных полос и акцентов, а не
+  для каждой кнопки на экране.
+*/
 const BUTTON_BASE =
-  'inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition-all duration-150 active:translate-y-px disabled:cursor-not-allowed disabled:opacity-55 disabled:active:translate-y-0';
+  'inline-flex items-center justify-center gap-2 rounded-[var(--radius-pill)] font-medium transition-all duration-150 active:translate-y-px disabled:cursor-not-allowed disabled:opacity-55 disabled:active:translate-y-0';
 
 const BUTTON_VARIANTS: Record<ButtonVariant, string> = {
-  primary: 'bg-brand-500 text-white shadow-[var(--shadow-rest)] hover:bg-brand-600 hover:shadow-[var(--shadow-lift)] active:bg-brand-700 active:shadow-[var(--shadow-rest)]',
-  secondary: 'border border-ink-200 bg-white text-ink-800 hover:border-ink-300 hover:bg-ink-50',
-  ghost: 'bg-transparent text-brand-600 hover:bg-brand-50',
-  danger: 'bg-danger-500 text-white shadow-[var(--shadow-rest)] hover:bg-danger-700',
+  /*
+    Основное действие — почти чёрное, без тени.
+
+    Раньше оно было оранжевым, и на странице с четырьмя карточками
+    получалось четыре оранжевых кнопки: цвет переставал что-либо
+    выделять, потому что выделял всё. Тёмная кнопка спокойно уступает
+    первенство цветным полосам и при этом остаётся самым контрастным
+    пятном среди элементов управления.
+  */
+  primary: 'bg-ink-900 text-white hover:bg-ink-800 active:bg-ink-700',
+  secondary: 'border border-ink-200 bg-white text-ink-800 hover:border-ink-400 hover:bg-ink-50',
+  ghost: 'bg-transparent text-ink-700 hover:bg-ink-50',
+  danger: 'bg-danger-600 text-white hover:bg-danger-700',
 };
 
 /*
@@ -130,7 +148,7 @@ export function Card({
 }
 
 export function CardTitle({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <h2 className={`text-lg font-bold text-ink-900 ${className}`}>{children}</h2>;
+  return <h2 className={`text-lg font-medium text-ink-900 ${className}`}>{children}</h2>;
 }
 
 /* ------------------------------------------------------------------ */
@@ -239,7 +257,7 @@ export function EmptyState({
   return (
     <div className="flex flex-col items-center rounded-2xl border border-dashed border-ink-200 bg-white px-6 py-12 text-center">
       <Icon name={icon} size={40} className="text-ink-300" />
-      <h3 className="mt-3 text-base font-bold text-ink-900">{title}</h3>
+      <h3 className="mt-3 text-base font-medium text-ink-900">{title}</h3>
       <p className="mt-1.5 max-w-sm text-sm text-ink-500">{description}</p>
       {action && <div className="mt-5">{action}</div>}
     </div>
@@ -299,7 +317,7 @@ export function Stat({
         {icon && <Icon name={icon} size={16} className="text-ink-300" />}
       </div>
 
-      <div className="mt-1 text-2xl font-bold tabular-nums text-ink-900">{value}</div>
+      <div className="mt-1 text-2xl font-medium tabular-nums text-ink-900">{value}</div>
       {hint && <div className="mt-0.5 text-xs text-ink-400">{hint}</div>}
 
       {percent !== null && (
@@ -333,7 +351,7 @@ export function SectionHeader({
   return (
     <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
       <div>
-        <h2 className="text-xl font-bold text-ink-900">{title}</h2>
+        <h2 className="text-xl font-medium text-ink-900">{title}</h2>
         {description && <p className="mt-1 text-sm text-ink-500">{description}</p>}
       </div>
       {action}
@@ -413,6 +431,6 @@ export function Panel({ className = '', children }: { className?: string; childr
  */
 export function Kicker({ children }: { children: ReactNode }) {
   return (
-    <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-600">{children}</p>
+    <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-brand-600">{children}</p>
   );
 }

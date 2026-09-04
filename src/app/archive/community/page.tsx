@@ -61,7 +61,7 @@ export default function CommunityArchivePage() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <Kicker>{t.kicker}</Kicker>
-          <h1 className="mt-2 text-3xl font-semibold text-ink-900 sm:text-4xl">{t.title}</h1>
+          <h1 className="mt-2 text-3xl font-medium text-ink-900 sm:text-4xl">{t.title}</h1>
         </div>
         <PublishAction
           href="/archive/community/new"

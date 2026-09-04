@@ -71,7 +71,7 @@ export function PortfolioSection({ language }: { language: Language }) {
         </div>
 
         <div className="flex items-center gap-4 rounded-[var(--radius-control)] border border-ink-200 bg-white px-5 py-3">
-          <span className="flex items-center gap-2 text-2xl font-semibold tabular-nums text-brand-600">
+          <span className="flex items-center gap-2 text-2xl font-medium tabular-nums text-brand-600">
             <Icon name="trophy" size={20} className="text-accent-500" />
             {approvedPoints}
           </span>

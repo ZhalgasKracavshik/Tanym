@@ -92,7 +92,7 @@ export function OpportunityCard({
             логика, что и в афише.
           */
           <div className="flex h-full items-end p-5">
-            <span className="text-2xl font-semibold leading-tight text-white/90">{tag}</span>
+            <span className="text-2xl font-medium leading-tight text-white/90">{tag}</span>
           </div>
         )}
 
@@ -113,7 +113,7 @@ export function OpportunityCard({
         */}
         <div className="absolute inset-x-3 top-3 flex flex-wrap items-start gap-2">
           {tag && (
-            <span className="flex items-center gap-1.5 whitespace-nowrap rounded-[var(--radius-pill)] bg-white/85 px-2.5 py-1 text-xs font-bold text-ink-800 backdrop-blur-sm">
+            <span className="flex items-center gap-1.5 whitespace-nowrap rounded-[var(--radius-pill)] bg-white/85 px-2.5 py-1 text-xs font-semibold text-ink-800 backdrop-blur-sm">
               {tagIcon && <Icon name={tagIcon} size={13} />}
               {tag}
             </span>
@@ -124,7 +124,7 @@ export function OpportunityCard({
 
       {/* --- Содержание --- */}
       <div className="flex flex-1 flex-col p-5">
-        <h2 className="text-lg font-bold leading-snug break-words text-ink-900">{headline}</h2>
+        <h2 className="text-lg font-medium leading-snug break-words text-ink-900">{headline}</h2>
 
         {meta && <p className="mt-1.5 break-words text-sm text-ink-400">{meta}</p>}
 

@@ -222,7 +222,7 @@ export default function ListingPage({ params }: PageProps<'/marketplace/[id]'>) 
         <div className="mt-6 flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
             <Kicker>{meta?.title[state.language]}</Kicker>
-            <h1 className="mt-2 text-3xl font-semibold text-ink-900 sm:text-4xl">{row.title}</h1>
+            <h1 className="mt-2 text-3xl font-medium text-ink-900 sm:text-4xl">{row.title}</h1>
             <p className="mt-2 text-sm text-ink-500">
               {row.author_name} · {row.author_role}
             </p>
@@ -252,7 +252,7 @@ export default function ListingPage({ params }: PageProps<'/marketplace/[id]'>) 
           <div
             className={`flex aspect-[16/9] items-end rounded-[var(--radius-card)] p-6 sm:p-8 ${TYPE_BANNER[row.type]}`}
           >
-            <span className="text-3xl font-semibold leading-tight text-white/90 sm:text-4xl">
+            <span className="text-3xl font-medium leading-tight text-white/90 sm:text-4xl">
               {meta?.title[state.language]}
             </span>
           </div>

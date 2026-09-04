@@ -208,7 +208,7 @@ export default function AnnouncementsPage() {
       {/* Заголовок и действие в одной строке: кнопка живёт в постоянном
           углу, а не внизу под списком. */}
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-3xl font-semibold text-ink-900 sm:text-4xl">{t.title}</h1>
+        <h1 className="text-3xl font-medium text-ink-900 sm:text-4xl">{t.title}</h1>
         <PublishAction href="/announcements/new" label="Опубликовать" requireRole="admin" />
       </div>
 
@@ -220,7 +220,7 @@ export default function AnnouncementsPage() {
       <div className="mt-10 grid grid-cols-3 gap-x-8 border-y border-ink-200 py-6 sm:divide-x sm:divide-ink-200">
         <div className="sm:pr-8">
           <p className="text-xs font-medium uppercase tracking-wide text-ink-400">{t.statNew}</p>
-          <p className="mt-2 flex items-center gap-2 text-5xl font-semibold tabular-nums text-ink-900">
+          <p className="mt-2 flex items-center gap-2 text-5xl font-medium tabular-nums text-ink-900">
             <Icon
               name="bell"
               size={28}
@@ -231,11 +231,11 @@ export default function AnnouncementsPage() {
         </div>
         <div className="sm:px-8">
           <p className="text-xs font-medium uppercase tracking-wide text-ink-400">{t.statTotal}</p>
-          <p className="mt-2 text-2xl font-semibold tabular-nums text-ink-900">{ANNOUNCEMENTS.length}</p>
+          <p className="mt-2 text-2xl font-medium tabular-nums text-ink-900">{ANNOUNCEMENTS.length}</p>
         </div>
         <div className="sm:px-8">
           <p className="text-xs font-medium uppercase tracking-wide text-ink-400">{t.statPinned}</p>
-          <p className="mt-2 text-2xl font-semibold tabular-nums text-ink-900">{pinnedCount}</p>
+          <p className="mt-2 text-2xl font-medium tabular-nums text-ink-900">{pinnedCount}</p>
         </div>
       </div>
 
@@ -310,7 +310,7 @@ export default function AnnouncementsPage() {
                       {meta && <Icon name={meta.icon} size={14} />}
                       {meta?.title[state.language]}
                     </p>
-                    <h2 className="mt-2 text-lg font-bold text-ink-900">{announcement.title}</h2>
+                    <h2 className="mt-2 text-lg font-medium text-ink-900">{announcement.title}</h2>
                   </div>
 
                   {/* В шапке не больше двух плашек: остальное ушло в строку

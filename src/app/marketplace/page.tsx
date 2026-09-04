@@ -228,7 +228,7 @@ export default function MarketplacePage() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <Kicker>{t.kicker}</Kicker>
-          <h1 className="mt-2 text-3xl font-semibold text-ink-900 sm:text-4xl">{t.title}</h1>
+          <h1 className="mt-2 text-3xl font-medium text-ink-900 sm:text-4xl">{t.title}</h1>
         </div>
         {/* Одна кнопка на все роли — форма за ней своя у каждой. */}
         <PublishAction
@@ -324,7 +324,7 @@ export default function MarketplacePage() {
                   */
                   badge={
                     <span
-                      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-[var(--radius-pill)] bg-white/85 px-2.5 py-1 text-xs font-bold backdrop-blur-sm ${
+                      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-[var(--radius-pill)] bg-white/85 px-2.5 py-1 text-xs font-semibold backdrop-blur-sm ${
                         listing.verified ? 'text-success-700' : 'text-ink-500'
                       }`}
                     >

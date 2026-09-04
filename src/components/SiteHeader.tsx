@@ -50,7 +50,7 @@ export function SiteHeader() {
                 onClick={() => setLanguage(item.id)}
                 title={item.title}
                 aria-pressed={state.language === item.id}
-                className={`rounded-md px-2.5 py-1 text-xs font-bold outline-none transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
+                className={`rounded-md px-2.5 py-1 text-xs font-semibold outline-none transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
                   state.language === item.id ? 'bg-brand-500 text-white shadow-sm' : 'text-ink-400 hover:text-ink-700'
                 }`}
               >

@@ -473,7 +473,7 @@ export function LearnClient({ topicId }: { topicId: string }) {
         </Badge>
         {topic.custom && <Badge tone="accent">{t.teacherTopic}</Badge>}
       </div>
-      <h1 className="mt-2 text-xl font-semibold text-ink-900 sm:text-2xl">{topic.title}</h1>
+      <h1 className="mt-2 text-xl font-medium text-ink-900 sm:text-2xl">{topic.title}</h1>
       <p className="mt-2 text-ink-500">{topic.summary}</p>
 
       {/* Вкладки */}
@@ -511,7 +511,7 @@ export function LearnClient({ topicId }: { topicId: string }) {
             <div className="mt-10 divide-y divide-ink-200">
               {topic.material.sections.map((section) => (
                 <section key={section.heading} className="py-6 first:pt-0">
-                  <h2 className="text-lg font-bold text-ink-900">{section.heading}</h2>
+                  <h2 className="text-lg font-medium text-ink-900">{section.heading}</h2>
                   <p className="mt-2 leading-relaxed text-ink-700"><MathText>{section.body}</MathText></p>
                   {section.formula && (
                     <p className="mt-4 rounded-xl bg-ink-50 px-4 py-3 font-mono text-sm text-ink-800">
@@ -525,7 +525,7 @@ export function LearnClient({ topicId }: { topicId: string }) {
 
           {topic.material.keyPoints.length > 0 && (
             <Panel className="mt-10 border-brand-200 bg-brand-50 p-5">
-              <h2 className="text-lg font-bold text-brand-800">{t.keyPoints}</h2>
+              <h2 className="text-lg font-medium text-brand-800">{t.keyPoints}</h2>
               <ul className="mt-4 space-y-2">
                 {topic.material.keyPoints.map((point) => (
                   <li key={point} className="flex items-start gap-2 text-sm text-brand-800">
@@ -572,7 +572,7 @@ export function LearnClient({ topicId }: { topicId: string }) {
               <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-success-50 text-success-700">
                 <Icon name="crosshair" size={28} />
               </span>
-              <h2 className="mt-4 text-3xl font-semibold text-ink-900">{t.topicDone}</h2>
+              <h2 className="mt-4 text-3xl font-medium text-ink-900">{t.topicDone}</h2>
               <p className="mt-2 tabular-nums text-ink-500">{t.solved(solved, tasks.length)}</p>
               {difficultyExplanation(subject.id, state) && (
                 <p className="mt-4 border-t border-ink-200 pt-4 text-sm text-brand-700">
@@ -591,7 +591,7 @@ export function LearnClient({ topicId }: { topicId: string }) {
               {reviews.length > 0 && (
                 <div className="mt-12 border-t border-ink-200 pt-8">
                   <div className="flex flex-wrap items-center justify-between gap-3">
-                    <h3 className="text-lg font-semibold text-ink-900">{t.reviewTitle}</h3>
+                    <h3 className="text-lg font-medium text-ink-900">{t.reviewTitle}</h3>
                     {mistakeCount > 0 && (
                       <Button variant="secondary" size="sm" onClick={explainAllMistakes}>
                         <Icon name="sparkles" size={15} />
@@ -674,7 +674,7 @@ export function LearnClient({ topicId }: { topicId: string }) {
                 взгляде. Поэтому оно набрано заметно крупнее счётчика над ним
                 и крупнее названия темы в шапке страницы.
               */}
-              <p className="mt-4 text-2xl font-semibold leading-snug text-ink-900 sm:text-3xl"><MathText>{task.prompt}</MathText></p>
+              <p className="mt-4 text-2xl font-medium leading-snug text-ink-900 sm:text-3xl"><MathText>{task.prompt}</MathText></p>
 
               {/* Варианты ответа или поле ввода — в зависимости от типа задания */}
               {task.kind === 'single' && task.options && (
@@ -748,7 +748,7 @@ export function LearnClient({ topicId }: { topicId: string }) {
                 */
                 <div className="mt-10 border-t border-ink-200 pt-6">
                   <div
-                    className={`flex flex-wrap items-center gap-2 rounded-xl px-4 py-3 font-bold ${
+                    className={`flex flex-wrap items-center gap-2 rounded-xl px-4 py-3 font-medium ${
                       feedback.correct ? 'bg-success-50 text-success-700' : 'bg-danger-50 text-danger-700'
                     }`}
                   >

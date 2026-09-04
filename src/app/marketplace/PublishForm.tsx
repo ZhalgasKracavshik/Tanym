@@ -160,7 +160,7 @@ export function PublishForm({ language, profile }: { language: Language; profile
   */
   return (
     <Panel className="space-y-4 p-5 sm:p-6">
-      <h3 className="font-bold text-ink-900">{t.heading}</h3>
+      <h3 className="font-medium text-ink-900">{t.heading}</h3>
 
       <div>
         <span className="mb-2 block text-sm font-semibold text-ink-800">{t.typeLabel}</span>

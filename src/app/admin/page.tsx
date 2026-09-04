@@ -42,20 +42,20 @@ function Overview() {
       >
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-ink-400">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-ink-400">
               Требует внимания
             </p>
             {pendingAchievements === null || pendingListings === null ? (
               <Skeleton className="mt-2 h-9 w-40" />
             ) : waiting > 0 ? (
-              <p className="mt-1 text-3xl font-semibold text-ink-900">
+              <p className="mt-1 text-3xl font-medium text-ink-900">
                 {waiting}
                 <span className="ml-2 text-base font-medium text-ink-500">
                   {waiting === 1 ? 'заявка' : waiting < 5 ? 'заявки' : 'заявок'} на проверке
                 </span>
               </p>
             ) : (
-              <p className="mt-1 text-lg font-semibold text-ink-700">Всё проверено</p>
+              <p className="mt-1 text-lg font-medium text-ink-700">Всё проверено</p>
             )}
           </div>
 
@@ -85,7 +85,7 @@ function Overview() {
               <span className="flex h-11 w-11 items-center justify-center rounded-[var(--radius-control)] bg-brand-50 text-brand-600">
                 <Icon name={section.icon} size={20} />
               </span>
-              <h2 className="mt-4 font-bold text-ink-900">{section.label}</h2>
+              <h2 className="mt-4 font-medium text-ink-900">{section.label}</h2>
               <p className="mt-1 text-sm text-ink-500">{section.hint}</p>
             </Card>
           </Link>
@@ -106,7 +106,7 @@ function Stat({ label, value }: { label: string; value: number | null }) {
       {value === null ? (
         <Skeleton className="mt-2 h-8 w-12" />
       ) : (
-        <p className="mt-1 text-2xl font-semibold tabular-nums text-ink-900">{value}</p>
+        <p className="mt-1 text-2xl font-medium tabular-nums text-ink-900">{value}</p>
       )}
     </div>
   );

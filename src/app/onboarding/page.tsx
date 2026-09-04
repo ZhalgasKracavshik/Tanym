@@ -403,7 +403,7 @@ export default function OnboardingPage() {
         <span className="text-success-600">
           <SuccessCheckMark size={68} />
         </span>
-        <h1 className="mt-6 text-2xl font-bold text-ink-900">Профиль готов</h1>
+        <h1 className="mt-6 text-2xl font-medium text-ink-900">Профиль готов</h1>
         <p className="mt-2 text-sm text-ink-500">Собираем ваш план обучения…</p>
       </div>
     );
@@ -426,7 +426,7 @@ export default function OnboardingPage() {
         Шаг {stepIndex + 1} из {steps.length}
       </p>
 
-      <h1 className="mt-4 text-2xl font-bold text-ink-900 sm:text-3xl">
+      <h1 className="mt-4 text-2xl font-medium text-ink-900 sm:text-3xl">
         {STEP_TITLE[step].title}
       </h1>
       <p className="mt-2 text-sm leading-relaxed text-ink-500">{STEP_TITLE[step].hint}</p>
@@ -480,7 +480,7 @@ export default function OnboardingPage() {
             {schoolClass && (
               <p className="mt-3 text-sm text-ink-500">
                 Код для подключения учеников:{' '}
-                <span className="font-mono font-bold tracking-widest text-brand-600">
+                <span className="font-mono font-medium tracking-widest text-brand-600">
                   {schoolClass.code}
                 </span>
               </p>
@@ -511,7 +511,7 @@ export default function OnboardingPage() {
                     <Icon name={subject.icon} size={20} />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-bold text-ink-900">{subject.title}</span>
+                    <span className="block text-sm font-medium text-ink-900">{subject.title}</span>
                     <span className="mt-0.5 block text-xs text-ink-500">{subject.topics.length} тем</span>
                   </span>
                   {active && (
@@ -535,7 +535,7 @@ export default function OnboardingPage() {
                   type="button"
                   onClick={() => setGrade(item)}
                   aria-pressed={active}
-                  className={`flex h-20 flex-col items-center justify-center rounded-[var(--radius-control)] border-2 font-bold transition-all ${
+                  className={`flex h-20 flex-col items-center justify-center rounded-[var(--radius-control)] border-2 font-medium transition-all ${
                     active
                       ? 'border-brand-500 bg-brand-50 text-brand-700 shadow-[var(--shadow-rest)]'
                       : 'border-ink-200 bg-white text-ink-700 hover:border-brand-300'
@@ -572,7 +572,7 @@ export default function OnboardingPage() {
                     <Icon name={subject.icon} size={20} />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-bold text-ink-900">{subject.title}</span>
+                    <span className="block text-sm font-medium text-ink-900">{subject.title}</span>
                     <span className="mt-0.5 block text-xs text-ink-500">
                       {subject.topics.length} тем
                     </span>
@@ -608,7 +608,7 @@ export default function OnboardingPage() {
                     <Icon name={item.icon} size={18} />
                   </span>
                   <span>
-                    <span className="block text-sm font-bold text-ink-900">{item.title}</span>
+                    <span className="block text-sm font-medium text-ink-900">{item.title}</span>
                     <span className="mt-0.5 block text-xs leading-relaxed text-ink-500">
                       {item.description}
                     </span>
@@ -670,7 +670,7 @@ export default function OnboardingPage() {
           type="button"
           onClick={next}
           disabled={!canContinue || saving}
-          className="flex h-12 flex-1 items-center justify-center gap-2 rounded-[var(--radius-control)] text-[15px] font-bold text-white shadow-[var(--shadow-glow)] transition-all disabled:opacity-45 disabled:shadow-none"
+          className="flex h-12 flex-1 items-center justify-center gap-2 rounded-[var(--radius-control)] text-[15px] font-medium text-white shadow-[var(--shadow-rest)] transition-all disabled:opacity-45 disabled:shadow-none"
           style={{ background: 'var(--gradient-brand)' }}
         >
           {saving ? <Spinner /> : stepIndex === steps.length - 1 ? 'Готово' : 'Далее'}

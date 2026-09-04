@@ -134,7 +134,7 @@ export function EventCard({
             как оформление.
           */
           <div className="flex h-full items-end p-5">
-            <span className="text-2xl font-semibold leading-tight text-white/90">{typeTitle}</span>
+            <span className="text-2xl font-medium leading-tight text-white/90">{typeTitle}</span>
           </div>
         )}
 
@@ -170,13 +170,13 @@ export function EventCard({
           ломаться пополам внутри себя.
         */}
         <div className="absolute inset-x-3 top-3 flex flex-wrap items-start gap-2">
-          <span className="flex items-center gap-1.5 whitespace-nowrap rounded-[var(--radius-pill)] bg-white/85 px-2.5 py-1 text-xs font-bold text-ink-800 backdrop-blur-sm">
+          <span className="flex items-center gap-1.5 whitespace-nowrap rounded-[var(--radius-pill)] bg-white/85 px-2.5 py-1 text-xs font-semibold text-ink-800 backdrop-blur-sm">
             {typeIcon && <Icon name={typeIcon} size={13} />}
             {typeTitle}
           </span>
 
           {event.online && (
-            <span className="whitespace-nowrap rounded-[var(--radius-pill)] bg-white/85 px-2.5 py-1 text-xs font-bold text-ink-800 backdrop-blur-sm">
+            <span className="whitespace-nowrap rounded-[var(--radius-pill)] bg-white/85 px-2.5 py-1 text-xs font-semibold text-ink-800 backdrop-blur-sm">
               {t.online}
             </span>
           )}
@@ -214,7 +214,7 @@ export function EventCard({
 
       {/* --- Содержание --- */}
       <div className="flex flex-1 flex-col p-5">
-        <h2 className="text-lg font-bold leading-snug break-words text-ink-900">{event.title}</h2>
+        <h2 className="text-lg font-medium leading-snug break-words text-ink-900">{event.title}</h2>
 
         <p className="mt-1.5 text-sm text-ink-400">
           {deadlineLabel} · {event.organizer}
@@ -230,7 +230,7 @@ export function EventCard({
         {/* --- Низ: цена, срок и переход на страницу события --- */}
         <div className="mt-auto flex flex-wrap items-center justify-between gap-3 border-t border-ink-200 pt-4">
           <div>
-            <p className="font-bold text-ink-900">{event.free ? t.free : t.paid}</p>
+            <p className="font-medium text-ink-900">{event.free ? t.free : t.paid}</p>
             {registrationRuns && (
               <p
                 className={`text-xs font-semibold ${

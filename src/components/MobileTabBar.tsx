@@ -134,7 +134,7 @@ export function MobileTabBar({ onMore }: { onMore: () => void }) {
         <span
           ref={pillRef}
           aria-hidden
-          className="t-tabs-pill rounded-[var(--radius-pill)] shadow-[var(--shadow-glow)]"
+          className="t-tabs-pill rounded-[var(--radius-pill)] shadow-[var(--shadow-rest)]"
           style={{ background: 'var(--gradient-brand)' }}
         />
         {tabs.map((tab) => {
