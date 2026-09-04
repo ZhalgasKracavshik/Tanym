@@ -28,6 +28,9 @@ const PUBLIC_PATHS = new Set([
   '/',
   '/login',
   '/register',
+  // Отдельный вход для внешних центров: организация приходит по ссылке
+  // со страницы «Для учебных центров» и сессии у неё, разумеется, нет.
+  '/register/center',
   '/forgot-password',
   '/reset-password',
   '/for-schools',

@@ -25,6 +25,7 @@ import { getServerProfile } from '@/lib/supabase/serverProfile';
 import { CUSTOM_GOAL_MAX, GRADES, LEARNING_GOALS } from '@/lib/types';
 import type { Grade } from '@/lib/types';
 import { checkPersonName } from '@/lib/personName';
+import { safeExternalUrl } from '@/lib/safeUrl';
 import { SUBJECTS } from '@/data';
 
 function randomClassCode(): string {
@@ -276,11 +277,48 @@ export async function POST(request: Request) {
 
   const body = await request.json().catch(() => null);
   const role = body?.role;
-  if (role !== 'student' && role !== 'teacher') {
+  if (role !== 'student' && role !== 'teacher' && role !== 'center') {
     return NextResponse.json({ error: 'invalid_role' }, { status: 400 });
   }
 
   const name: string = user.user_metadata?.full_name || user.user_metadata?.name || user.email || 'Без имени';
+
+  /*
+    Внешний учебный центр — не участник школы.
+
+    У него нет класса, предметов и цели обучения, зато есть название
+    организации и контакт: по ним школа решает, пускать ли его
+    объявления. Имя профиля берём названием организации — в списке
+    объявлений подписывается именно оно, а не почта директора.
+  */
+  if (role === 'center') {
+    const orgName = typeof body?.orgName === 'string' ? body.orgName.trim() : '';
+    const orgContact = typeof body?.orgContact === 'string' ? body.orgContact.trim() : '';
+    if (orgName.length < 2 || orgName.length > 120) {
+      return NextResponse.json({ error: 'invalid_org_name' }, { status: 400 });
+    }
+    if (orgContact.length < 5 || orgContact.length > 200) {
+      return NextResponse.json({ error: 'invalid_org_contact' }, { status: 400 });
+    }
+
+    const orgSite = typeof body?.orgSite === 'string' ? safeExternalUrl(body.orgSite.trim()) : null;
+
+    const { error } = await supabase.from('profiles').insert({
+      id: user.id,
+      role,
+      name: orgName,
+      org_name: orgName,
+      org_contact: orgContact,
+      org_site: orgSite,
+    });
+    if (error) {
+      return NextResponse.json(
+        await describeInsertError(supabase, error, { role, email: user.email ?? '' }),
+        { status: 403 },
+      );
+    }
+    return NextResponse.json({ ok: true, role });
+  }
 
   if (role === 'teacher') {
     // Профиль сначала без класса: политика на INSERT в classes проверяет,

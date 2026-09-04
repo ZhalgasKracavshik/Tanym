@@ -554,7 +554,7 @@ export default function HomePage() {
                     className="group flex h-full flex-col overflow-hidden rounded-[var(--radius-card)] p-8 sm:p-10"
                     style={{ background: partner.bg }}
                   >
-                    <span className="text-[11px] font-medium uppercase tracking-[0.16em] text-white/55">
+                    <span className="text-[13px] font-medium text-white/60">
                       {partner.badge}
                     </span>
 

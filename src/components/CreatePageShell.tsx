@@ -23,7 +23,7 @@ import { Icon } from './Icon';
 import { EmptyState, Kicker, Skeleton } from './ui';
 import { Reveal } from './motion';
 
-type SchoolRole = 'student' | 'teacher' | 'admin';
+type SchoolRole = 'student' | 'teacher' | 'admin' | 'center';
 
 export function CreatePageShell({
   backHref,

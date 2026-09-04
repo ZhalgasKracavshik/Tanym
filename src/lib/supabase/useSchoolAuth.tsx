@@ -32,8 +32,13 @@ export interface SchoolProfile {
   /**
    * 'admin' никогда не выбирается на форме входа — только вручную через SQL
    * (см. profiles в Supabase). chooseRole ниже принимает только student/teacher.
+   *
+   * 'center' — внешний учебный центр. Он не участник школы: прогресс
+   * учеников, рейтинг и материалы учителей закрыты для него на уровне
+   * базы (is_school_member). Роль назначается своей формой регистрации,
+   * а не выбором на общем экране.
    */
-  role: 'student' | 'teacher' | 'admin';
+  role: 'student' | 'teacher' | 'admin' | 'center';
   name: string;
   grade: number | null;
   class_id: string | null;

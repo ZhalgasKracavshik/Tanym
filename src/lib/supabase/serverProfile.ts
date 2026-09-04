@@ -17,7 +17,7 @@ import { createClient } from './server';
 
 export interface ServerProfile {
   id: string;
-  role: 'student' | 'teacher' | 'admin';
+  role: 'student' | 'teacher' | 'admin' | 'center';
   name: string;
   grade: number | null;
   class_id: string | null;

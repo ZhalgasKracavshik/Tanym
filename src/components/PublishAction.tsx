@@ -20,7 +20,7 @@ import Link from 'next/link';
 import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
 import { Icon } from './Icon';
 
-type SchoolRole = 'student' | 'teacher' | 'admin';
+type SchoolRole = 'student' | 'teacher' | 'admin' | 'center';
 
 export function PublishAction({
   href,

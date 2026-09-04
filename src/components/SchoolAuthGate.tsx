@@ -44,7 +44,7 @@ const SUBMIT_ERROR_TEXT: Record<string, Record<'ru' | 'kk' | 'en', string>> = {
   },
 };
 
-type SchoolRole = 'student' | 'teacher' | 'admin';
+type SchoolRole = 'student' | 'teacher' | 'admin' | 'center';
 
 interface SchoolAuthGateProps {
   requireRole: SchoolRole | SchoolRole[];

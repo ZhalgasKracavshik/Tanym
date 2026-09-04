@@ -32,6 +32,9 @@ export interface PartnerPageProps {
   steps: { title: string; text: string }[];
   ctaTitle: string;
   ctaText: string;
+  /** Кнопка регистрации рядом с почтой. Есть только у центров. */
+  signUpHref?: string;
+  signUpLabel?: string;
   contactEmail: string;
   children?: ReactNode;
 }
@@ -45,6 +48,8 @@ export function PartnerPage({
   steps,
   ctaTitle,
   ctaText,
+  signUpHref,
+  signUpLabel,
   contactEmail,
 }: PartnerPageProps) {
   return (
@@ -180,10 +185,28 @@ export function PartnerPage({
               <div className="relative">
                 <h2 className="text-3xl font-medium sm:text-4xl">{ctaTitle}</h2>
                 <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-white/70">{ctaText}</p>
-                <div className="mt-8 flex justify-center">
+                {/*
+                  Когда есть самостоятельная регистрация, она идёт первой,
+                  а почта остаётся рядом как запасной путь: организации,
+                  готовой начать сейчас, незачем ждать ответа на письмо.
+                */}
+                <div className="mt-8 flex flex-wrap justify-center gap-3">
+                  {signUpHref && (
+                    <PressLink
+                      href={signUpHref}
+                      className="inline-flex h-14 items-center gap-2 rounded-[var(--radius-pill)] bg-white px-8 text-base font-medium text-ink-900"
+                    >
+                      {signUpLabel}
+                      <Icon name="arrow-right" size={18} />
+                    </PressLink>
+                  )}
                   <PressLink
                     href={`mailto:${contactEmail}`}
-                    className="inline-flex h-14 items-center gap-2 rounded-[var(--radius-control)] bg-white px-8 text-base font-medium text-ink-900 shadow-[var(--shadow-lift)]"
+                    className={`inline-flex h-14 items-center gap-2 rounded-[var(--radius-pill)] px-8 text-base font-medium ${
+                      signUpHref
+                        ? 'border border-white/35 text-white hover:border-white/60'
+                        : 'bg-white text-ink-900'
+                    }`}
                   >
                     {contactEmail}
                     <Icon name="mail" size={18} />

@@ -32,9 +32,16 @@ const TEXT = {
     action: 'В панель администратора',
     href: '/admin',
   },
+  center: {
+    title: 'Это раздел для учеников',
+    description:
+      'Учебная часть Tanym доступна только школе. Ваши объявления и их проверка — в панели центра.',
+    action: 'В панель центра',
+    href: '/center',
+  },
 } as const;
 
-export function StudentOnlyNotice({ role }: { role: 'teacher' | 'admin' }) {
+export function StudentOnlyNotice({ role }: { role: 'teacher' | 'admin' | 'center' }) {
   const t = TEXT[role];
 
   return (

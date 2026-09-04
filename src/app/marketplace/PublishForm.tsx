@@ -55,7 +55,7 @@ interface Profile {
   // SchoolAuthGate типизирует роль как student|teacher|admin в общем случае,
   // хотя сюда admin никогда не попадёт — requireRole на странице это
   // гарантирует раньше, чем этот компонент вообще отрендерится.
-  role: 'student' | 'teacher' | 'admin';
+  role: 'student' | 'teacher' | 'admin' | 'center';
   grade: number | null;
 }
 
@@ -82,13 +82,16 @@ export function PublishForm({ language, profile }: { language: Language; profile
    * «Секции школы» — это официальный кружок, за который отвечает школа,
    * и объявление от ученика с такой плашкой выглядело бы как заявление
    * от лица школы. Раньше этот тип был ученику доступен — теперь нет.
-   * Внешние центры остаются за администрацией: это платные партнёры.
+   *
+   * Внешний центр публикует только свой тип и, как ученик с учителем,
+   * отправляет объявление на проверку: администрация решает, пускать ли
+   * коммерческое предложение к школьникам.
    */
-  const allowedTypes = LISTING_TYPES.filter((item) =>
-    profile.role === 'teacher'
-      ? item.id === 'teacher-course' || item.id === 'school-club'
-      : item.id === 'student-service',
-  );
+  const allowedTypes = LISTING_TYPES.filter((item) => {
+    if (profile.role === 'teacher') return item.id === 'teacher-course' || item.id === 'school-club';
+    if (profile.role === 'center') return item.id === 'external-center';
+    return item.id === 'student-service';
+  });
 
   const canSave =
     title.trim() !== '' &&
@@ -108,7 +111,12 @@ export function PublishForm({ language, profile }: { language: Language; profile
       type,
       title: title.trim(),
       author_name: profile.name,
-      author_role: profile.role === 'teacher' ? 'учитель' : `ученик ${profile.grade ?? ''} класса`,
+      author_role:
+        profile.role === 'teacher'
+          ? 'учитель'
+          : profile.role === 'center'
+            ? 'учебный центр'
+            : `ученик ${profile.grade ?? ''} класса`,
       description: description.trim(),
       category: category.trim(),
       price: free ? null : Number(price),

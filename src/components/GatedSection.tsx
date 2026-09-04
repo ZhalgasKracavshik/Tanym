@@ -20,7 +20,7 @@ import type { SchoolProfile } from '@/lib/supabase/useSchoolAuth';
 import { SchoolAuthGate } from './SchoolAuthGate';
 import { Kicker } from './ui';
 
-type SchoolRole = 'student' | 'teacher' | 'admin';
+type SchoolRole = 'student' | 'teacher' | 'admin' | 'center';
 
 export function GatedSection({
   title,

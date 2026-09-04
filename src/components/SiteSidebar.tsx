@@ -37,10 +37,17 @@ import { avatarPhotoUrl } from '@/lib/supabase/avatarPhoto';
  * не нужны инструменты ученика (план, кабинет, наставник), ученику не нужна
  * панель мониторинга класса.
  */
-const HIDDEN_FOR_ROLE: Record<'student' | 'teacher' | 'admin', string[]> = {
+const HIDDEN_FOR_ROLE: Record<'student' | 'teacher' | 'admin' | 'center', string[]> = {
   student: ['/teacher', '/admin'],
   teacher: ['/plan', '/dashboard', '/chat', '/admin'],
   admin: ['/plan', '/dashboard', '/chat', '/teacher'],
+  /*
+    Внешнему центру закрыта вся учебная часть — и не только в меню: она
+    закрыта в самой базе (см. is_school_member). Прятать здесь нужно
+    затем, чтобы он не видел ссылок, которые всё равно ничего ему не
+    покажут: пустая страница выглядит как поломка, а не как запрет.
+  */
+  center: ['/plan', '/dashboard', '/chat', '/teacher', '/admin', '/archive', '/achievements', '/leaderboard', '/events', '/announcements'],
 };
 
 const TEXT: Dict<{
