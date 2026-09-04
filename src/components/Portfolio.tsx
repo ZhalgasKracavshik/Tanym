@@ -30,6 +30,7 @@ import {
 import { normalizeSocialUrl } from '@/lib/social';
 import { Icon } from './Icon';
 import { PressButton, Spinner, StaggerGroup, StaggerItem } from './motion';
+import { storageObjectName } from '@/lib/storageKey';
 
 interface Row {
   id: string;
@@ -418,7 +419,13 @@ export function AchievementForm({
   const [organizer, setOrganizer] = useState('');
   const [proofUrl, setProofUrl] = useState('');
   const [file, setFile] = useState<File | null>(null);
-  const [status, setStatus] = useState<'idle' | 'sending' | 'done' | 'error'>('idle');
+  /*
+    Отказ загрузки и незаполненные поля — разные вещи, и раньше они
+    показывали одно сообщение: «проверьте название и дату». Человек с
+    заполненными названием и датой читал это как поломку продукта, а
+    отказ на самом деле приходил от хранилища.
+  */
+  const [status, setStatus] = useState<'idle' | 'sending' | 'done' | 'error' | 'upload-failed'>('idle');
 
   async function submit() {
     if (!title.trim() || !happenedOn) {
@@ -431,10 +438,10 @@ export function AchievementForm({
     let proofPath: string | null = null;
 
     if (file) {
-      const path = `${studentId}/${Date.now()}-${file.name}`;
+      const path = `${studentId}/${storageObjectName(file.name)}`;
       const { error: uploadError } = await supabase.storage.from('achievement-proofs').upload(path, file);
       if (uploadError) {
-        setStatus('error');
+        setStatus('upload-failed');
         return;
       }
       proofPath = path;
@@ -625,6 +632,13 @@ export function AchievementForm({
       {status === 'error' && (
         <p className="text-sm font-semibold text-danger-600">
           Проверьте название и дату — без них отправить не получится.
+        </p>
+      )}
+
+      {status === 'upload-failed' && (
+        <p className="text-sm font-semibold text-danger-600">
+          Не удалось загрузить файл. Попробуйте другой — или отправьте без него, диплом можно
+          приложить позже.
         </p>
       )}
 

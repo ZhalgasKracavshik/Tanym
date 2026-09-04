@@ -20,6 +20,7 @@ import { Button } from './ui';
 import { Icon } from './Icon';
 import { MathKeys } from './MathKeys';
 import type { ArchiveTaskKind } from '@/lib/archive';
+import { storageObjectName } from '@/lib/storageKey';
 
 interface DraftTask {
   id: string;
@@ -155,7 +156,7 @@ export function ArchiveMaterialPublishForm({
     const supabase = createClient();
     let filePath: string | null = null;
     if (file) {
-      const path = `${userId}/${Date.now()}-${file.name}`;
+      const path = `${userId}/${storageObjectName(file.name)}`;
       const { error: uploadError } = await supabase.storage.from('archive-materials').upload(path, file);
       if (uploadError) {
         setStatus('error');

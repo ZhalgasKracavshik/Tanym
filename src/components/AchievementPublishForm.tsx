@@ -15,6 +15,7 @@ import { createClient } from '@/lib/supabase/client';
 import { Button } from './ui';
 import { Icon } from './Icon';
 import { isSafeExternalUrl } from '@/lib/safeUrl';
+import { storageObjectName } from '@/lib/storageKey';
 
 /*
   Что можно приложить к записи.
@@ -138,7 +139,7 @@ export function AchievementPublishForm({
 
     /** Общая загрузка: путь начинается с идентификатора автора — по нему разграничен доступ. */
     async function upload(item: File): Promise<string | null> {
-      const path = `${userId}/${Date.now()}-${item.name}`;
+      const path = `${userId}/${storageObjectName(item.name)}`;
       const { error: uploadError } = await supabase.storage.from('achievement-photos').upload(path, item);
       return uploadError ? null : path;
     }
