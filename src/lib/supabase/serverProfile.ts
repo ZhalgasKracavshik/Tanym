@@ -85,7 +85,21 @@ export async function getServerProfile(): Promise<ServerProfileResult> {
   const { data: rawProfile } = await supabase.rpc('get_own_profile').maybeSingle();
   // rpc не знает формы возвращаемой строки, поэтому тип задаём здесь —
   // ровно тот же, что и раньше отдавал select('*').
-  const profile = (rawProfile as ServerProfile | null) ?? null;
+  /*
+    Строка без идентификатора — это отсутствие профиля, а не профиль.
+
+    Функция объявлена как RETURNS profiles, то есть возвращает составной
+    тип таблицы. Когда строки нет, слой PostgREST способен отдать не
+    пустоту, а объект, у которого ВСЕ поля равны null. Такой объект
+    проходит проверку «профиль есть», после чего роль оказывается пустой,
+    и код, который ищет её в таблице настроек, получает undefined.
+
+    Это состояние не выдумано: в него попадает каждый, кто зарегистрировал
+    учётную запись, но профиль которому создать не удалось, — например
+    центр до того, как для него завели право на вставку.
+  */
+  const raw = rawProfile as (ServerProfile & { id?: string | null }) | null;
+  const profile = raw && raw.id ? (raw as ServerProfile) : null;
 
   let schoolClass: ServerSchoolClass | null = null;
   if (profile?.class_id) {

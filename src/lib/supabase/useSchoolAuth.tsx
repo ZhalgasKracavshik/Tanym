@@ -159,7 +159,12 @@ export function SchoolAuthProvider({
       const data = await res.json();
       setEmail(data.email ?? null);
       setEmailConfirmed(Boolean(data.emailConfirmed));
-      setProfile(data.profile ?? null);
+      /*
+        Та же защита, что и на сервере: профиль без идентификатора — это
+        отсутствие профиля. Иначе объект из одних null проходит проверку
+        «профиль есть», и дальше по коду роль оказывается пустой.
+      */
+      setProfile(data.profile?.id ? data.profile : null);
       setSchoolClass(data.class ?? null);
       knownUserId.current = data.profile?.id ?? null;
     } catch {

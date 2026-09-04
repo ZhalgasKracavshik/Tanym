@@ -24,9 +24,31 @@ export const ARCHIVE_CATEGORIES: {
   { id: 'sor-soch', icon: 'clipboard', title: { ru: 'ТЖБ / БЖБ', kk: 'ТЖБ / БЖБ', en: 'Term assessments' } },
 ];
 
+/**
+ * Вид задания архива.
+ *
+ * 'open' — ученик пишет ответ словами, и разговор ведётся по методу
+ * Сократа. Это исходный и главный вид: он учит рассуждать.
+ *
+ * 'single' и 'multiple' — выбор варианта и выбор нескольких. Нужны там,
+ * где проверяется знание, а не ход решения: даты, термины, формулировки
+ * правил. Загонять такое в диалог бессмысленно — подводить не к чему.
+ */
+export type ArchiveTaskKind = 'open' | 'single' | 'multiple';
+
 export interface ArchiveTask {
   id: string;
   materialId: string;
+  /**
+   * Вид задания. Поле необязательное: материалы, созданные до его
+   * появления, его не имеют, и все они по смыслу открытые. Читать
+   * значение следует через archiveTaskKind() ниже, а не напрямую.
+   */
+  kind?: ArchiveTaskKind;
+  /** Варианты ответа — только для 'single' и 'multiple'. */
+  options?: string[];
+  /** Номера верных вариантов. Для 'single' в списке ровно один. */
+  correctIndexes?: number[];
   /** Условие. Для IELTS сюда же входит короткий отрывок текста. */
   prompt: string;
   /**
@@ -42,6 +64,18 @@ export interface ArchiveTask {
   opening: string;
 }
 
+/**
+ * Вид задания с учётом старых материалов.
+ *
+ * Отдельная функция, а не `task.kind ?? 'open'` по месту: обращений к
+ * виду задания много, и стоит забыть подстановку в одном из них, как
+ * старый материал начнёт вести себя как задание без вариантов ответа —
+ * то есть покажет ученику пустой список.
+ */
+export function archiveTaskKind(task: ArchiveTask): ArchiveTaskKind {
+  return task.kind ?? 'open';
+}
+
 export interface ArchiveMaterial {
   id: string;
   title: string;
@@ -55,6 +89,12 @@ export interface ArchiveMaterial {
   source: string;
   description: string;
   tasks: ArchiveTask[];
+  /**
+   * Приложенный файл. Материал может быть без него (набор задач,
+   * составленный в форме) или наоборот состоять только из него —
+   * подборка PDF без разбора тоже полезна.
+   */
+  filePath?: string | null;
 }
 
 /* ------------------------------------------------------------------ */

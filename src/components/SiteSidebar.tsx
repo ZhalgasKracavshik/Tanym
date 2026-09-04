@@ -277,9 +277,21 @@ export function SiteSidebar() {
     { href: '/events', label: t.events, icon: 'calendar', section: 'more' },
     { href: '/marketplace', label: t.marketplace, icon: 'backpack', section: 'more' },
   ];
-  const NAV = ALL_NAV.filter(
-    (item) => !schoolProfile || !HIDDEN_FOR_ROLE[schoolProfile.role].includes(item.href)
-  );
+  /*
+    Роль, которой нет в таблице, не должна ронять приложение.
+
+    Здесь стояло HIDDEN_FOR_ROLE[role].includes(...) без запасного
+    значения. Стоило роли оказаться пустой — и обращение к .includes у
+    несуществующего списка валило РЕНДЕР ВСЕЙ СТРАНИЦЫ: меню рисуется в
+    общей оболочке, поэтому падал не сайдбар, а любая страница целиком,
+    включая форму регистрации. Пользователь видел «This page couldn't
+    load» и не мог даже выйти из аккаунта.
+
+    Пустой список означает «ничего не прятать»: показать лишний пункт
+    меню несравнимо лучше, чем не показать ничего.
+  */
+  const hidden = schoolProfile ? (HIDDEN_FOR_ROLE[schoolProfile.role] ?? []) : [];
+  const NAV = ALL_NAV.filter((item) => !hidden.includes(item.href));
 
   /*
     Отдельным компонентом, а не общей переменной с разметкой: список
