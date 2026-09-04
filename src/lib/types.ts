@@ -100,6 +100,19 @@ export const LEARNING_GOALS: { id: LearningGoal; title: string; description: str
 /** Ограничение длины своей цели: она уходит в промпт наставника. */
 export const CUSTOM_GOAL_MAX = 120;
 
+/**
+ * Причина, по которой тема попала в план. Числа — часть причины, поэтому
+ * едут вместе с кодом, а не подставляются в готовую фразу.
+ */
+export type TopicReason =
+  | { kind: 'weak'; percent: number }
+  | { kind: 'growing'; percent: number }
+  | { kind: 'mastered'; percent: number }
+  | { kind: 'started' }
+  | { kind: 'prereq-missing' }
+  | { kind: 'prereq-done' }
+  | { kind: 'fits-goal'; goal: LearningGoal };
+
 /** Уровень сложности задания и темы: от 1 (базовый) до 5 (олимпиадный). */
 export type Difficulty = 1 | 2 | 3 | 4 | 5;
 
@@ -390,7 +403,15 @@ export interface RankedTopic {
   /** Готовность: пройдены ли темы-предпосылки, 0..1. */
   readiness: number;
   /** Причины попадания в список, уже готовые к выводу на экран. */
-  reasons: string[];
+  /**
+   * Причины отбора темы — кодами, а не готовым текстом.
+   *
+   * Движок раньше собирал их сразу по-русски, и на казахском интерфейсе
+   * посреди переведённой страницы висело «Слабое место: тема освоена на
+   * 0%». Движок не знает языка и знать не должен: он считает, а
+   * формулирует интерфейс (см. reasonText в lib/reasons.ts).
+   */
+  reasons: TopicReason[];
   status: 'weak' | 'in-progress' | 'mastered' | 'new';
 }
 

@@ -17,7 +17,6 @@ import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
 import { useOwnStreakPoints, useSchoolLeaderboard, useVerifiedProgress } from '@/lib/supabase/leaderboard';
 import { rankEntries } from '@/lib/leaderboard';
 import { evaluateAchievements } from '@/lib/achievements';
-import { summarize } from '@/lib/personalization';
 import {
   AchievementForm,
   PortfolioGrid,
@@ -70,7 +69,6 @@ export default function AchievementsPage() {
     );
   }
 
-  const summary = summarize(state);
   const achievementPoints = portfolioPoints(achievements);
   /*
     Баллы за тренажёр берутся из проверенных сервером попыток, а не из

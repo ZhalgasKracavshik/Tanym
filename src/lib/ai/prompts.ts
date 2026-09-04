@@ -110,11 +110,23 @@ ${task.kind === 'single' && task.options ? `Варианты ответа: ${tas
 /*  2. Объяснение персонального плана                                  */
 /* ------------------------------------------------------------------ */
 
+export interface PlanTopicLine {
+  topic: Topic;
+  mastery: number;
+  reasons: string[];
+}
+
 export interface PlanInput {
   subject: Subject;
   profile: Profile | null;
   diagnostic: DiagnosticResult | null;
-  ranked: RankedTopic[];
+  /*
+    Промпту нужны причины уже текстом, а не кодами: язык здесь всегда
+    русский (учебный контент русский), и выбирать его промпт не должен.
+    Отдельный тип вместо RankedTopic ещё и развязывает промпт с
+    внутренним типом движка.
+  */
+  ranked: PlanTopicLine[];
   weakSkills: SkillMasteryEntry[];
   daysLeft: number | null;
 }

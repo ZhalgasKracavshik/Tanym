@@ -11,6 +11,7 @@ import { NextResponse } from 'next/server';
 import { getSubject, getTopic } from '@/data';
 import { AiUnavailableError, generateText, isAiConfigured } from '@/lib/ai/gemini';
 import { planPrompt, planSystem, type PlanInput } from '@/lib/ai/prompts';
+import type { PlanTopicLine } from '@/lib/ai/prompts';
 import { planFallback } from '@/lib/ai/fallback';
 import { checkRateLimit, clientKeyFromRequest } from '@/lib/ai/rate-limit';
 import type { PlanRequest, PlanResponse } from '@/lib/ai/contracts';
@@ -54,24 +55,19 @@ export async function POST(request: Request): Promise<NextResponse<PlanResponse 
     ? body.weakSkills.filter((item): item is NonNullable<typeof item> => Boolean(item) && typeof item === 'object')
     : [];
 
-  const ranked: RankedTopic[] = rankedInput
-    // Явная аннотация нужна, иначе TypeScript выводит status как литерал 'new'
-    // и потом отказывается считать результат совместимым с RankedTopic.
-    .map((item): RankedTopic | null => {
+  const ranked: PlanTopicLine[] = rankedInput
+    .map((item): PlanTopicLine | null => {
       const topic = getTopic(item.topicId);
       if (!topic) return null;
       return {
         topic,
-        score: 0,
         mastery: clampNumber(item.mastery, 0, 1, 0),
-        readiness: 1,
         /* Причины отбора приходят от браузера и попадают в промпт текстом.
            Раньше они уходили туда без проверки длины и типа. */
         reasons: clampTextList(item.reasons, LIMITS.reasons, LIMITS.reason),
-        status: 'new',
       };
     })
-    .filter((item): item is RankedTopic => item !== null)
+    .filter((item): item is PlanTopicLine => item !== null)
     .slice(0, 3);
 
   const weakSkills: SkillMasteryEntry[] = weakInput.slice(0, LIMITS.topics).map((item) => ({

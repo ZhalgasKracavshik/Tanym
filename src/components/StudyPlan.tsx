@@ -17,6 +17,7 @@ import { useEffect, useRef, useState } from 'react';
 import { getSubject } from '@/data';
 import { daysUntil, rankTopics, weakestSkills } from '@/lib/personalization';
 import type { PlanRequest, PlanResponse } from '@/lib/ai/contracts';
+import { reasonList, reasonText } from '@/lib/reasons';
 import { useStore } from '@/components/StoreProvider';
 import { useEffectiveProfile } from '@/lib/useEffectiveProfile';
 import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
@@ -245,7 +246,12 @@ export function StudyPlan() {
       ranked: ranked.slice(0, 3).map((item) => ({
         topicId: item.topic.id,
         mastery: item.mastery,
-        reasons: item.reasons,
+        /*
+          Модели причины уходят по-русски всегда: учебный контент русский,
+          и смешивать в одном промпте два языка незачем. Ученику тот же
+          список показывается на языке интерфейса.
+        */
+        reasons: item.reasons.map((reason) => reasonText(reason, 'ru')),
       })),
       weakSkills: weak.map((item) => ({
         skillId: item.skill.id,
@@ -457,7 +463,7 @@ export function StudyPlan() {
                     <span className="tabular-nums">
                       ≈ {item.topic.estimatedMinutes} {t.minutes}
                     </span>
-                    {item.reasons.length > 0 && <span>· {item.reasons.join(' · ')}</span>}
+                    {item.reasons.length > 0 && <span>· {reasonList(item.reasons, state.language)}</span>}
                   </p>
                   <ButtonLink href={`/learn/${item.topic.id}`} size="sm">
                     {t.study}

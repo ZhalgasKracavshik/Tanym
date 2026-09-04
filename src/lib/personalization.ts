@@ -29,6 +29,7 @@ import type {
   TaskAttempt,
   TaskId,
   Topic,
+  TopicReason,
   TopicId,
 } from './types';
 
@@ -262,7 +263,13 @@ function topicStatus(mastery: number, started: boolean): RankedTopic['status'] {
   return 'new';
 }
 
-/** Собирает человекочитаемые причины рекомендации. Пустого списка не бывает. */
+/**
+ * Причины рекомендации — кодами. Пустого списка не бывает.
+ *
+ * Текста здесь нет намеренно: движок не знает языка интерфейса, а раньше
+ * собирал фразы сразу по-русски, и они торчали посреди казахской
+ * страницы. Формулирует lib/reasons.ts.
+ */
 function buildReasons(input: {
   topic: Topic;
   mastery: number;
@@ -270,41 +277,28 @@ function buildReasons(input: {
   fit: number;
   started: boolean;
   profile: Profile | null;
-}): string[] {
+}): TopicReason[] {
   const { topic, mastery, readiness, fit, started, profile } = input;
-  const reasons: string[] = [];
+  const reasons: TopicReason[] = [];
   const percent = Math.round(mastery * 100);
 
   if (mastery < WEAKNESS_THRESHOLD) {
-    reasons.push(`Слабое место: тема освоена на ${percent}%`);
+    reasons.push({ kind: 'weak', percent });
   } else if (mastery < MASTERY_THRESHOLD) {
-    reasons.push(`Есть куда расти: тема освоена на ${percent}%`);
+    reasons.push({ kind: 'growing', percent });
   } else {
-    reasons.push(`Тема уже освоена на ${percent}%, можно закрепить`);
+    reasons.push({ kind: 'mastered', percent });
   }
 
-  if (started) reasons.push('Вы уже начали эту тему, стоит довести до конца');
+  if (started) reasons.push({ kind: 'started' });
 
   if (readiness < 1) {
-    reasons.push('Сначала лучше подтянуть темы-предпосылки');
+    reasons.push({ kind: 'prereq-missing' });
   } else if (topic.prerequisites.length > 0) {
-    reasons.push('Все базовые темы для неё уже пройдены');
+    reasons.push({ kind: 'prereq-done' });
   }
 
-  if (fit >= 1 && profile) {
-    const goalTitle: Record<LearningGoal, string> = {
-      ent: 'подготовки к ЕНТ',
-      tzhb: 'суммативной работы',
-      olympiad: 'олимпиады',
-      sat: 'подготовки к SAT',
-      nis: 'отбора в НИШ или БИЛ',
-      review: 'повторения',
-      catchup: 'закрытия пробелов',
-      interest: 'изучения предмета',
-      custom: 'вашей цели',
-    };
-    reasons.push(`Уровень сложности подходит для ${goalTitle[profile.goal]}`);
-  }
+  if (fit >= 1 && profile) reasons.push({ kind: 'fits-goal', goal: profile.goal });
 
   return reasons;
 }
