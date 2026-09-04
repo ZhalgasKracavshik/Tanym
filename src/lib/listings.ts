@@ -79,7 +79,9 @@ export interface Listing {
   priceNote?: string;
   format: 'online' | 'offline' | 'both';
   schedule: string;
-  /** Как связаться. В MVP это заглушка, настоящие контакты требуют авторизации. */
+  /** Где проходит: адрес или «онлайн». */
+  location?: string | null;
+  /** Как связаться: телефон, WhatsApp или адрес, который оставил автор. */
   contact: string;
   /** Свободных мест, если набор ограничен. */
   spots?: number;

@@ -12,10 +12,12 @@
 
 import { useState } from 'react';
 import { LISTING_TYPES } from '@/lib/listings';
+import { normalizeSocialUrl } from '@/lib/social';
 import type { ListingType } from '@/lib/listings';
 import type { Language } from '@/lib/types';
 import { createClient } from '@/lib/supabase/client';
 import { Icon } from '@/components/Icon';
+import { ImageField } from '@/components/ImageField';
 import { Alert, Button, Panel } from '@/components/ui';
 
 const TEXT = {
@@ -46,6 +48,14 @@ const TEXT = {
     pricePlaceholder: '1500',
     scheduleLabel: 'Когда',
     schedulePlaceholder: 'Например, суббота 11:00–13:00',
+    locationLabel: 'Где проходит',
+    locationPlaceholder: 'Астана, Кабанбай батыра 53 — или «онлайн»',
+    linkLabel: 'Ссылка для записи (необязательно)',
+    linkPlaceholder: 'https://',
+    linkHint: 'Сайт, форма записи или страница в соцсети.',
+    coverLabel: 'Изображение',
+    coverHint: 'Карточка без картинки покажет цветную плашку.',
+    coverFailed: 'Не удалось загрузить изображение. Попробуйте другое.',
     submit: 'Отправить на проверку',
     cancel: 'Отмена',
     published: 'Объявление отправлено на проверку школе.',
@@ -98,6 +108,9 @@ export function PublishForm({ language, profile, defaultContact }: {
   const [price, setPrice] = useState('');
   const [schedule, setSchedule] = useState('');
   const [spots, setSpots] = useState('');
+  const [location, setLocation] = useState('');
+  const [link, setLink] = useState('');
+  const [cover, setCover] = useState<File | null>(null);
   /*
     Контакт подставляется из профиля организации: она его уже вводила при
     регистрации, и просить снова — значит собирать расхождения между тем,
@@ -127,15 +140,40 @@ export function PublishForm({ language, profile, defaultContact }: {
     description.trim() !== '' &&
     category.trim() !== '' &&
     schedule.trim() !== '' &&
+    location.trim() !== '' &&
     contact.trim().length >= 5 &&
     (priceMode !== 'fixed' || Number(price) > 0);
+
+  /**
+   * Кладёт обложку в бакет и возвращает путь.
+   *
+   * undefined — настоящая ошибка загрузки, null — картинки просто нет.
+   * Разделять важно: публикацию без обложки останавливать не за что, а
+   * публикацию с потерянной обложкой — есть.
+   */
+  async function uploadCover(supabase: ReturnType<typeof createClient>) {
+    if (!cover) return null;
+    const extension = cover.name.split('.').pop()?.toLowerCase() ?? 'jpg';
+    const path = `${Date.now()}-${Math.round(Math.random() * 1e6)}.${extension}`;
+    const { error: uploadError } = await supabase.storage.from('card-covers').upload(path, cover);
+    return uploadError ? undefined : path;
+  }
 
   async function save() {
     setSending(true);
     setError(false);
 
     const supabase = createClient();
+
+    const coverPath = await uploadCover(supabase);
+    if (coverPath === undefined) {
+      setSending(false);
+      setError(true);
+      return;
+    }
+
     const { error: insertError } = await supabase.from('published_listings').insert({
+      cover_path: coverPath,
       admin_id: profile.id,
       status: 'pending',
       type,
@@ -157,6 +195,13 @@ export function PublishForm({ language, profile, defaultContact }: {
       price_note: priceMode === 'fixed' ? 'за час' : priceMode === 'request' ? t.priceOnRequest : null,
       format,
       schedule: schedule.trim(),
+      location: location.trim(),
+      /*
+        Ссылка нормализуется здесь, а не на странице объявления: адрес без
+        схемы («centr.kz») браузер считает относительным путём и уводит
+        внутрь Tanym вместо сайта центра.
+      */
+      registration_url: link.trim() === '' ? null : normalizeSocialUrl(link.trim()),
       spots: spots.trim() === '' ? null : Number(spots),
       contact: contact.trim(),
       verified: false,
@@ -175,6 +220,9 @@ export function PublishForm({ language, profile, defaultContact }: {
     setSchedule('');
     setPriceMode('free');
     setSpots('');
+    setLocation('');
+    setLink('');
+    setCover(null);
     setSaved(true);
     setOpen(false);
   }
@@ -288,6 +336,18 @@ export function PublishForm({ language, profile, defaultContact }: {
       </label>
 
       <label className="block">
+        <span className="mb-2 block text-sm font-semibold text-ink-800">{t.locationLabel}</span>
+        <input
+          type="text"
+          value={location}
+          onChange={(event) => setLocation(event.target.value)}
+          placeholder={t.locationPlaceholder}
+          maxLength={200}
+          className={INPUT}
+        />
+      </label>
+
+      <label className="block">
         <span className="mb-2 block text-sm font-medium text-ink-800">{t.contactLabel}</span>
         <input
           value={contact}
@@ -350,6 +410,21 @@ export function PublishForm({ language, profile, defaultContact }: {
           </label>
         )}
       </div>
+
+      <label className="block">
+        <span className="mb-2 block text-sm font-medium text-ink-800">{t.linkLabel}</span>
+        <input
+          type="url"
+          value={link}
+          onChange={(event) => setLink(event.target.value)}
+          placeholder={t.linkPlaceholder}
+          maxLength={300}
+          className={INPUT}
+        />
+        <span className="mt-1.5 block text-xs text-ink-400">{t.linkHint}</span>
+      </label>
+
+      <ImageField file={cover} onChange={setCover} label={t.coverLabel} hint={t.coverHint} />
 
       {error && <Alert tone="danger">{t.error}</Alert>}
 

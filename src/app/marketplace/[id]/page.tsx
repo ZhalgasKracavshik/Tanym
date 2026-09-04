@@ -26,6 +26,7 @@ import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
 import { createClient } from '@/lib/supabase/client';
 import { OwnerActions } from '@/components/OwnerActions';
 import { Icon } from '@/components/Icon';
+import { normalizeSocialUrl } from '@/lib/social';
 import { Badge, Button, ButtonLink, EmptyState, Kicker, Skeleton } from '@/components/ui';
 import { Reveal } from '@/components/motion';
 
@@ -48,6 +49,9 @@ const TEXT: Dict<{
   verifiedToggle: string;
   approve: string;
   approving: string;
+  place: string;
+  spots: string;
+  signUp: string;
 }> = {
   ru: {
     back: 'Назад к возможностям',
@@ -59,7 +63,10 @@ const TEXT: Dict<{
     offline: 'Очно',
     both: 'Очно и онлайн',
     schedule: 'Когда',
+    place: 'Где',
+    spots: 'Свободных мест',
     contact: 'Как связаться',
+    signUp: 'Записаться',
     verified: 'Проверено школой',
     unverified: 'Без проверки школы',
     unverifiedHint: 'Школа не проверяла это предложение. Обсуди с родителями, прежде чем платить.',
@@ -79,7 +86,10 @@ const TEXT: Dict<{
     offline: 'Қатысып',
     both: 'Қатысып және онлайн',
     schedule: 'Қашан',
+    place: 'Қайда',
+    spots: 'Бос орын',
     contact: 'Байланыс',
+    signUp: 'Тіркелу',
     verified: 'Мектеп тексерген',
     unverified: 'Мектеп тексермеген',
     unverifiedHint: 'Мектеп бұл ұсынысты тексерген жоқ. Төлемес бұрын ата-анаңмен ақылдас.',
@@ -99,7 +109,10 @@ const TEXT: Dict<{
     offline: 'In person',
     both: 'In person and online',
     schedule: 'When',
+    place: 'Where',
+    spots: 'Spots left',
     contact: 'Contact',
+    signUp: 'Sign up',
     verified: 'Verified by school',
     unverified: 'Not verified by school',
     unverifiedHint: 'The school has not vetted this offer. Talk to your parents before paying.',
@@ -132,6 +145,8 @@ interface ListingRow {
   price_note: string | null;
   spots: number | null;
   schedule: string;
+  location: string | null;
+  registration_url: string | null;
   contact: string;
   verified: boolean;
   status: string;
@@ -197,6 +212,7 @@ export default function ListingPage({ params }: PageProps<'/marketplace/[id]'>) 
   const coverUrl = row.cover_path
     ? createClient().storage.from('card-covers').getPublicUrl(row.cover_path).data.publicUrl
     : null;
+  const signUpUrl = row.registration_url ? normalizeSocialUrl(row.registration_url) : null;
   const isAdmin = profile?.role === 'admin';
   const formatLabel = { online: t.online, offline: t.offline, both: t.both };
   const verified = verifiedDraft ?? row.verified;
@@ -304,11 +320,42 @@ export default function ListingPage({ params }: PageProps<'/marketplace/[id]'>) 
           <dt className="shrink-0 font-semibold text-ink-500">{t.schedule}:</dt>
           <dd className="text-ink-800">{row.schedule}</dd>
         </div>
+        {row.location && (
+          <div className="flex gap-2">
+            <dt className="shrink-0 font-semibold text-ink-500">{t.place}:</dt>
+            <dd className="text-ink-800">{row.location}</dd>
+          </div>
+        )}
+        {row.spots !== null && (
+          <div className="flex gap-2">
+            <dt className="shrink-0 font-semibold text-ink-500">{t.spots}:</dt>
+            <dd className="text-ink-800">{row.spots}</dd>
+          </div>
+        )}
         <div className="flex gap-2">
           <dt className="shrink-0 font-semibold text-ink-500">{t.contact}:</dt>
-          <dd className="text-ink-800">{row.contact}</dd>
+          <dd className="[overflow-wrap:anywhere] text-ink-800">{row.contact}</dd>
         </div>
       </dl>
+
+      {/*
+        Ссылка ведёт наружу, поэтому проверяется ещё раз здесь.
+        Записи в базе старше проверки в форме, и доверять им как безопасным
+        нельзя: href с чужой схемой — это исполняемый код на нашей странице.
+      */}
+      {signUpUrl && (
+        <div className="mt-6">
+          <a
+            className="inline-flex items-center gap-2 rounded-[var(--radius-pill)] bg-ink-900 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-ink-800"
+            href={signUpUrl}
+            target="_blank"
+            rel="noopener noreferrer nofollow"
+          >
+            {t.signUp}
+            <Icon name="arrow-right" size={15} />
+          </a>
+        </div>
+      )}
 
       {/*
         Решение о галочке принимается здесь же, а не заранее в форме

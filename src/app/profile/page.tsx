@@ -70,12 +70,37 @@ interface StudyDraft {
   subjectIds?: string[];
 }
 
-const TABS: { id: ProfileTab; label: string; icon: IconName }[] = [
-  { id: 'personal', label: 'Личные данные', icon: 'sparkles' },
-  { id: 'study', label: 'Учёба и класс', icon: 'cap' },
-  { id: 'activity', label: 'Активность и достижения', icon: 'trophy' },
-  { id: 'settings', label: 'Настройки и безопасность', icon: 'settings' },
-];
+/**
+ * Вкладки профиля собираются под роль, а не показываются всем подряд.
+ *
+ * Администратору здесь предлагали выбрать «класс обучения» и предметы, по
+ * которым ему построят персональный план, а на вкладке активности
+ * показывали три нуля: освоено тем — 0, решено заданий — 0, серия — 0.
+ * Это не украшение и не мелочь: экран сообщал человеку неправду о том,
+ * кто он в продукте, и предлагал настройки, которые ни на что не влияют.
+ *
+ * Учителю класс нужен, но не свой учебный, а тот, код которого он
+ * раздаёт ученикам — поэтому вкладка у него остаётся, а содержимое
+ * другое.
+ */
+function tabsForRole(role: string): { id: ProfileTab; label: string; icon: IconName }[] {
+  const personal = { id: 'personal' as const, label: 'Личные данные', icon: 'sparkles' as IconName };
+  const settings = { id: 'settings' as const, label: 'Настройки и безопасность', icon: 'settings' as IconName };
+
+  if (role === 'teacher') {
+    return [personal, { id: 'study', label: 'Мой класс', icon: 'cap' }, settings];
+  }
+  if (role === 'admin') {
+    return [personal, settings];
+  }
+  return [
+    personal,
+    { id: 'study', label: 'Учёба и класс', icon: 'cap' },
+    { id: 'activity', label: 'Активность и достижения', icon: 'trophy' },
+    settings,
+  ];
+}
+
 
 const ROLE_TITLE: Record<string, string> = {
   student: 'Ученик',
@@ -138,7 +163,7 @@ function ProfileContent() {
     refresh,
   } = useSchoolAuth();
 
-  const [activeTab, setActiveTab] = useState<ProfileTab>(
+  const [rawActiveTab, setActiveTab] = useState<ProfileTab>(
     tabParam && ['personal', 'study', 'activity', 'settings'].includes(tabParam)
       ? tabParam
       : 'personal',
@@ -260,6 +285,14 @@ function ProfileContent() {
   const displayName = schoolProfile?.name ?? state.profile?.name ?? 'Ученик';
   const role = schoolProfile?.role ?? state.profile?.role ?? 'student';
   const isStudent = role === 'student';
+  const tabs = tabsForRole(role);
+  /*
+    Активная вкладка может не существовать у этой роли: она хранится в
+    состоянии и приходит из адреса (?tab=), а адрес переживает смену роли
+    и просто пересылается ссылкой. Без этой подстраховки такой адрес
+    показывал бы пустоту под шапкой профиля.
+  */
+  const activeTab = tabs.some((tab) => tab.id === rawActiveTab) ? rawActiveTab : 'personal';
 
   /*
     У внешнего центра свой экран, а не ветка внутри ученического.
@@ -661,13 +694,15 @@ function ProfileContent() {
                     {currentGrade} класс
                   </span>
                 )}
-                {schoolClass ? (
+                {/*
+                  Плашка появляется, только если класс есть. Раньше в
+                  запасном варианте стояло «Мой класс» — подпись, которая
+                  выглядела как настоящее название и держалась даже у
+                  администратора, никогда ни в каком классе не состоявшего.
+                */}
+                {schoolClass && (
                   <span className="rounded-full bg-brand-500/30 px-2.5 py-0.5 text-brand-200">
                     «{schoolClass.name}»
-                  </span>
-                ) : (
-                  <span className="rounded-full bg-brand-500/30 px-2.5 py-0.5 text-brand-200">
-                    Мой класс
                   </span>
                 )}
                 {email && <span className="truncate text-white/50">{email}</span>}
@@ -799,7 +834,7 @@ function ProfileContent() {
       {/* Вкладки навигации по профилю */}
       <div className="mt-6 border-b border-ink-200">
         <div className="flex gap-1 overflow-x-auto pb-px">
-          {TABS.map((tab) => {
+          {tabs.map((tab) => {
             const active = activeTab === tab.id;
             return (
               <button
@@ -963,7 +998,14 @@ function ProfileContent() {
         {/* ВКЛАДКА 2: УЧЁБА И КЛАСС */}
         {activeTab === 'study' && (
           <div className="space-y-6">
-            {/* Класс */}
+            {/*
+              Класс обучения, предметы, цель и дата экзамена — это входные
+              данные движка персонализации. У учителя своего плана нет, и
+              выбирать «свой 10 класс» ему незачем: у него остаётся только
+              карточка класса с кодом, который он раздаёт ученикам.
+            */}
+            {isStudent && (
+              <>
             <Card>
               <h2 className="text-base font-medium text-ink-900">Класс обучения</h2>
               <p className="mt-1 text-xs text-ink-500">Выберите текущий класс для калибровки учебной программы.</p>
@@ -1159,43 +1201,60 @@ function ProfileContent() {
               </div>
             </Card>
 
-            {/* Карточка класса */}
-            <Card className="bg-brand-50 border-brand-200">
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <div>
-                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-brand-600">
-                    <Icon name="school" size={14} />
-                    Школьный класс
-                  </span>
-                  <h2 className="mt-1 text-lg font-medium text-ink-900">
-                    {schoolClass ? `Вы состоите в классе «${schoolClass.name}»` : 'Вы состоите в классе «Мой класс»'}
-                  </h2>
-                  <p className="mt-1 text-xs text-ink-600">
-                    {schoolProfile?.role === 'teacher'
-                      ? 'Раздайте код ученикам, чтобы подключить их к вашей панели.'
-                      : 'Ваш учитель видит результаты выполненных заданий и прогресс.'}
-                  </p>
-                </div>
+              </>
+            )}
 
-                {/* Код класса */}
-                <div className="flex items-center gap-2">
-                  <div className="rounded-xl border border-brand-300 bg-white px-4 py-2 text-center shadow-xs">
-                    <span className="block text-[10px] font-medium uppercase tracking-wider text-ink-400">Код класса</span>
-                    <span className="font-mono text-lg font-medium tracking-widest text-brand-600">
-                      {schoolClass?.code ?? 'VNMBCD'}
+            {/*
+              Код класса показывается, только когда класс есть.
+
+              Здесь стояло «VNMBCD» запасным значением — код, который
+              выглядел как настоящий и который учитель мог бы честно
+              раздать ученикам. По нему никто бы никуда не подключился.
+            */}
+            {schoolClass ? (
+              <Card className="bg-brand-50 border-brand-200">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <div>
+                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-brand-600">
+                      <Icon name="school" size={14} />
+                      Школьный класс
                     </span>
+                    <h2 className="mt-1 text-lg font-medium text-ink-900">
+                      {isStudent
+                        ? `Вы состоите в классе «${schoolClass.name}»`
+                        : `Ваш класс — «${schoolClass.name}»`}
+                    </h2>
+                    <p className="mt-1 text-xs text-ink-600">
+                      {isStudent
+                        ? 'Ваш учитель видит результаты выполненных заданий и прогресс.'
+                        : 'Раздайте код ученикам, чтобы подключить их к вашей панели.'}
+                    </p>
                   </div>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => copyClassCode(schoolClass?.code ?? 'VNMBCD')}
-                  >
-                    <Icon name={copiedCode ? 'check' : 'copy'} size={15} />
-                    {copiedCode ? 'Скопировано!' : 'Копировать'}
-                  </Button>
+
+                  <div className="flex items-center gap-2">
+                    <div className="rounded-xl border border-brand-300 bg-white px-4 py-2 text-center shadow-xs">
+                      <span className="block text-[10px] font-medium uppercase tracking-wider text-ink-400">Код класса</span>
+                      <span className="font-mono text-lg font-medium tracking-widest text-brand-600">
+                        {schoolClass.code}
+                      </span>
+                    </div>
+                    <Button variant="secondary" size="sm" onClick={() => copyClassCode(schoolClass.code)}>
+                      <Icon name={copiedCode ? 'check' : 'copy'} size={15} />
+                      {copiedCode ? 'Скопировано!' : 'Копировать'}
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            </Card>
+              </Card>
+            ) : (
+              <Card className="bg-ink-50">
+                <h2 className="text-base font-medium text-ink-900">Класс не подключён</h2>
+                <p className="mt-1 text-sm text-ink-600">
+                  {isStudent
+                    ? 'Попросите у учителя код класса — он откроет ему ваш прогресс.'
+                    : 'Класс создаёт администрация школы. После этого здесь появится код для учеников.'}
+                </p>
+              </Card>
+            )}
           </div>
         )}
 

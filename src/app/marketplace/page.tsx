@@ -37,6 +37,7 @@ interface PublishedListingRow {
   price_note: string | null;
   spots: number | null;
   schedule: string;
+  location: string | null;
   contact: string;
   verified: boolean;
   cover_path: string | null;
@@ -55,6 +56,7 @@ function rowToListing(row: PublishedListingRow): Listing {
     priceNote: row.price_note ?? undefined,
     format: row.format,
     schedule: row.schedule,
+    location: row.location,
     contact: row.contact,
     spots: row.spots ?? undefined,
     verified: row.verified,
@@ -279,6 +281,12 @@ export default function MarketplacePage() {
                     listing.priceNote ? ` / ${listing.priceNote}` : ''
                   }`,
               formatLabel[listing.format],
+              /*
+                Место стоит рядом с форматом, а не в подвале карточки:
+                «очно» без города — это половина ответа, и ученик всё равно
+                открывал объявление только затем, чтобы узнать вторую.
+              */
+              listing.location,
               listing.spots !== undefined
                 ? listing.spots > 0
                   ? t.spots(listing.spots)

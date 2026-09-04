@@ -21,6 +21,8 @@ import { Badge, Button, ButtonLink, Card, EmptyState, Panel, RailRow, Skeleton }
 import { Scratchpad } from '@/components/Scratchpad';
 import { Icon } from '@/components/Icon';
 import { MathText } from '@/components/MathText';
+import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
+import { StudentOnlyNotice } from '@/components/StudentOnlyNotice';
 
 /**
  * Одна отвеченная задача за заход: условие, ответ ученика и вердикт сервера.
@@ -206,6 +208,7 @@ const TEXT: Dict<LearnText> = {
 };
 
 export function LearnClient({ topicId }: { topicId: string }) {
+  const { profile: schoolProfile } = useSchoolAuth();
   const { state, hydrated, recordAttempt } = useStore();
   const t = TEXT[state.language];
 
@@ -277,6 +280,17 @@ export function LearnClient({ topicId }: { topicId: string }) {
     return selectTasks(topic, difficulty, state);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hydrated, topicId, session]);
+
+
+  /*
+    Учителю и администратору задания ученика не нужны: попытки пишутся на
+    его имя и попадают в его же прогресс. Кабинет и наставник уже
+    закрыты так же — раздел должен вести себя одинаково во всех своих
+    страницах, иначе закрытость выглядит случайной.
+  */
+  if (schoolProfile && schoolProfile.role !== 'student') {
+    return <StudentOnlyNotice role={schoolProfile.role} />;
+  }
 
   if (!hydrated) {
     return (

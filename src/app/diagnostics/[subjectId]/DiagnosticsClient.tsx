@@ -21,6 +21,8 @@ import { Badge, Button, ButtonLink, EmptyState, Kicker, ProgressBar } from '@/co
 import { Scratchpad } from '@/components/Scratchpad';
 import { Icon } from '@/components/Icon';
 import { MathText } from '@/components/MathText';
+import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
+import { StudentOnlyNotice } from '@/components/StudentOnlyNotice';
 
 /** Подписи страницы на трёх языках. Ключи одинаковые — за этим следит TypeScript. */
 const TEXT: Dict<{
@@ -117,6 +119,7 @@ const TEXT: Dict<{
 };
 
 export function DiagnosticsClient({ subjectId }: { subjectId: string }) {
+  const { profile: schoolProfile } = useSchoolAuth();
   const { state, saveDiagnostic } = useStore();
   const t = TEXT[state.language];
   const subject = getSubject(subjectId);
@@ -127,6 +130,17 @@ export function DiagnosticsClient({ subjectId }: { subjectId: string }) {
   const [answer, setAnswer] = useState('');
   const [answers, setAnswers] = useState<{ task: Task; answer: string; correct: boolean }[]>([]);
   const [result, setResult] = useState<DiagnosticResult | null>(null);
+
+
+  /*
+    Учителю и администратору задания ученика не нужны: попытки пишутся на
+    его имя и попадают в его же прогресс. Кабинет и наставник уже
+    закрыты так же — раздел должен вести себя одинаково во всех своих
+    страницах, иначе закрытость выглядит случайной.
+  */
+  if (schoolProfile && schoolProfile.role !== 'student') {
+    return <StudentOnlyNotice role={schoolProfile.role} />;
+  }
 
   if (!subject) {
     return (
