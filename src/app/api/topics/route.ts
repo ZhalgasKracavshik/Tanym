@@ -1,8 +1,10 @@
 /**
  * Темы, составленные учителем.
  *
- * GET — отдаёт темы школы, чтобы они попали в план ученика наравне с
- * готовым контентом.
+ * Выдача тем переехала в /api/sync: она нужна вместе с попытками и
+ * диагностикой, а три отдельных роута означали три проверки пользователя
+ * в Supabase Auth подряд — на проде это стоило больше четырёх секунд
+ * каждая.
  *
  * POST — принимает черновик темы и проверяет каждое задание теми же
  * правилами, что и форма (lib/taskValidation). Проверка на сервере не
@@ -15,7 +17,6 @@ import { NextResponse } from 'next/server';
 import { getSubject } from '@/data';
 import { createClient } from '@/lib/supabase/server';
 import { draftToTask, validateTask, type TaskDraft } from '@/lib/taskValidation';
-import type { Difficulty, Grade, Topic } from '@/lib/types';
 
 const MAX_TASKS = 20;
 
@@ -27,45 +28,6 @@ interface TopicBody {
   difficulty?: unknown;
   estimatedMinutes?: unknown;
   tasks?: unknown;
-}
-
-/** Строка из базы → тема в том же виде, что и готовый контент. */
-function rowToTopic(row: Record<string, unknown>): Topic {
-  return {
-    id: String(row.id),
-    subjectId: String(row.subject_id),
-    title: String(row.title),
-    summary: String(row.summary),
-    grades: (row.grades as Grade[]) ?? [],
-    difficulty: Number(row.difficulty) as Difficulty,
-    skills: (row.skills as string[]) ?? [],
-    prerequisites: [],
-    estimatedMinutes: Number(row.estimated_minutes),
-    material: (row.material as Topic['material']) ?? {
-      intro: String(row.summary),
-      sections: [],
-      keyPoints: [],
-      examples: [],
-    },
-    tasks: (row.tasks as Topic['tasks']) ?? [],
-    custom: true,
-  };
-}
-
-export async function GET() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ topics: [] });
-
-  const { data } = await supabase
-    .from('custom_topics')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .limit(200);
-
-  return NextResponse.json({ topics: (data ?? []).map((row) => rowToTopic(row)) });
 }
 
 export async function POST(request: Request) {

@@ -290,7 +290,7 @@ export default function MarketplacePage() {
               <Link
                 key={listing.id}
                 href={`/marketplace/${listing.id}`}
-                className="group block h-full rounded-[var(--radius-card)] outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                className="group block h-full min-w-0 rounded-[var(--radius-card)] outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
               >
                 <OpportunityCard
                   headline={listing.title}

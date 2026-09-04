@@ -16,7 +16,7 @@ import { planFallback } from '@/lib/ai/fallback';
 import { checkRateLimit, clientKeyFromRequest } from '@/lib/ai/rate-limit';
 import type { PlanRequest, PlanResponse } from '@/lib/ai/contracts';
 import { LIMITS, clampNumber, clampTextList, clampText, sanitizeProfile } from '@/lib/ai/sanitize';
-import type { RankedTopic, SkillMasteryEntry } from '@/lib/types';
+import type { SkillMasteryEntry } from '@/lib/types';
 
 export async function POST(request: Request): Promise<NextResponse<PlanResponse | { error: string }>> {
   const limit = checkRateLimit(clientKeyFromRequest(request));

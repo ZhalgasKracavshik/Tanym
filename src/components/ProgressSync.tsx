@@ -29,82 +29,39 @@ export function ProgressSync() {
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /*
-    Темы, составленные учителями, тянем для всех вошедших — и для
-    учеников, и для самих учителей.
+    Всё восстановление — одним запросом при входе.
 
-    Раньше такие темы жили в localStorage автора: учитель добавлял тему,
-    видел её у себя, и на этом всё — ни один ученик её не получал
-    никогда. Функция выглядела рабочей ровно до проверки с двух устройств.
-  */
-  useEffect(() => {
-    if (!hydrated || !profile) return;
-    let cancelled = false;
+    Раньше здесь было три: попытки, диагностики и темы учителей. Замер на
+    проде: 5122, 4337 и 4083 миллисекунды, и все три уходили при открытии
+    любой страницы. Запросы к базе быстрые — медленной была тройная
+    проверка пользователя в Supabase Auth плюс холодный старт функции на
+    каждый роут.
 
-    fetch('/api/topics')
-      .then((res) => res.json())
-      .then((data: { topics?: Topic[] }) => {
-        if (cancelled || !Array.isArray(data.topics)) return;
-        hydrateCustomTopics(data.topics);
-      })
-      .catch(() => {});
-
-    return () => {
-      cancelled = true;
-    };
-  }, [hydrated, profile, hydrateCustomTopics]);
-
-  /*
-    Забираем сохранённые диагностики при входе.
-
-    Раньше синхронизация работала в одну сторону: снимок уходил наверх и
-    не возвращался никогда. Диагностика при этом на сервер не попадала
-    вовсе и жила только в localStorage — ученик проходил её на телефоне,
-    открывал ноутбук, и продукт снова предлагал «пройти диагностику», а
-    план строился по классу и цели вместо измеренного уровня.
-
-    Запрос идёт один раз на вход: перезапрашивать нечего, дальше
-    состояние меняет сам ученик.
+    Запрос идёт один раз на вход: дальше состояние меняет сам ученик, и
+    перезапрашивать нечего.
   */
   const pulledFor = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!hydrated || !profile || profile.role !== 'student') return;
+    if (!hydrated || !profile) return;
     if (pulledFor.current === profile.id) return;
     pulledFor.current = profile.id;
 
     let cancelled = false;
-
-    /*
-      Попытки восстанавливаем вместе с диагностикой: без них кабинет
-      писал «Пока нет данных о прогрессе» ученику, чьи решённые задания
-      лежат на сервере и уже учтены в школьном рейтинге. Один человек
-      видел две разные картины на соседних вкладках.
-    */
-    fetch('/api/attempts')
+    fetch('/api/sync')
       .then((res) => res.json())
-      .then((data: { attempts?: TaskAttempt[] }) => {
-        if (cancelled || !Array.isArray(data.attempts)) return;
-        if (data.attempts.length > 0) hydrateAttempts(data.attempts);
-      })
-      .catch(() => {});
+      .then((data: { attempts?: TaskAttempt[]; diagnostics?: unknown[]; topics?: Topic[] }) => {
+        if (cancelled) return;
 
-    fetch('/api/diagnostics')
-      .then((res) => res.json())
-      .then((data: { diagnostics?: unknown[] }) => {
-        if (cancelled || !Array.isArray(data.diagnostics)) return;
-        const results = data.diagnostics.map((row) => {
-          const r = row as Record<string, unknown>;
-          return {
-            subjectId: r.subject_id,
-            answers: r.answers ?? [],
-            skillMastery: r.skill_mastery ?? {},
-            score: r.score,
-            level: r.level,
-            startingDifficulty: r.starting_difficulty,
-            completedAt: r.completed_at,
-          } as DiagnosticResult;
-        });
-        if (results.length > 0) hydrateDiagnostics(results);
+        if (Array.isArray(data.topics)) hydrateCustomTopics(data.topics);
+
+        if (Array.isArray(data.attempts) && data.attempts.length > 0) {
+          hydrateAttempts(data.attempts);
+        }
+
+        if (Array.isArray(data.diagnostics) && data.diagnostics.length > 0) {
+          hydrateDiagnostics(data.diagnostics as DiagnosticResult[]);
+        }
       })
       .catch(() => {
         // Сеть отвалилась — работаем на местной копии, это не повод падать.
@@ -113,7 +70,7 @@ export function ProgressSync() {
     return () => {
       cancelled = true;
     };
-  }, [hydrated, profile, hydrateDiagnostics, hydrateAttempts]);
+  }, [hydrated, profile, hydrateDiagnostics, hydrateAttempts, hydrateCustomTopics]);
 
   useEffect(() => {
     // Синхронизировать есть смысл только настоящему вошедшему ученику —
