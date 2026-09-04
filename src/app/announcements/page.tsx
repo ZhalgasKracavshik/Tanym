@@ -21,6 +21,7 @@ import type { Dict } from '@/lib/i18n';
 import { useStore } from '@/components/StoreProvider';
 import { Icon } from '@/components/Icon';
 import { Badge, EmptyState, RailRow, Skeleton } from '@/components/ui';
+import { OwnerActions } from '@/components/OwnerActions';
 import { usePublishedAnnouncements } from '@/lib/supabase/announcements';
 import { PublishAction } from '@/components/PublishAction';
 
@@ -109,7 +110,12 @@ export default function AnnouncementsPage() {
     обычным переходом, а список перечитывается при монтировании. Значение
     остаётся как стабильный аргумент хука.
   */
-  const [feedRefreshKey] = useState(0);
+  /*
+    Ключ снова изменяемый: после удаления объявления список обязан
+    перечитаться, иначе убранная запись остаётся на экране до перезагрузки
+    и человек жмёт «Убрать» второй раз.
+  */
+  const [feedRefreshKey, setFeedRefreshKey] = useState(0);
   const published = usePublishedAnnouncements(feedRefreshKey);
   const ANNOUNCEMENTS = published ?? [];
   const [onlyMyGrade, setOnlyMyGrade] = useState(false);
@@ -356,6 +362,20 @@ export default function AnnouncementsPage() {
                       </span>
                     </>
                   )}
+
+                  {/*
+                    Убрать можно прямо здесь, а не только в админке.
+                    Возможность там была, но добраться до неё значило уйти
+                    со страницы, где ты видишь ошибку.
+                  */}
+                  <span className="ml-auto">
+                    <OwnerActions
+                      table="published_announcements"
+                      id={announcement.id}
+                      authorId={null}
+                      onRemoved={() => setFeedRefreshKey((key) => key + 1)}
+                    />
+                  </span>
                 </div>
               </RailRow>
             );

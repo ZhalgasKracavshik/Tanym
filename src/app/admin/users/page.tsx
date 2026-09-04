@@ -15,7 +15,7 @@
  * операции нет, лучше не давать кнопку, которая делает необратимое не то.
  */
 
-import { Suspense, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useStore } from '@/components/StoreProvider';
 import { SchoolAuthGate } from '@/components/SchoolAuthGate';
 import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
@@ -23,15 +23,21 @@ import { createClient } from '@/lib/supabase/client';
 import { avatarPhotoUrl } from '@/lib/supabase/avatarPhoto';
 import { Avatar } from '@/components/Avatar';
 import { Alert, Badge, Skeleton } from '@/components/ui';
-import { AdminShell, Section, useRows } from '../parts';
+import { AdminShell, Section, useRows, type DataRow } from '../parts';
 
 const ROLE_LABEL: Record<string, string> = {
   student: 'Ученик',
   teacher: 'Учитель',
   admin: 'Администратор',
+  center: 'Учебный центр',
 };
 
-const ROLES = ['student', 'teacher', 'admin'] as const;
+/*
+  Роль центра в переключателе есть, но менять её вручную незачем — она
+  назначается своей формой регистрации. Показывается она затем, чтобы
+  администратор понимал, кто перед ним, а не видел сырое «center».
+*/
+const ROLES = ['student', 'teacher', 'admin', 'center'] as const;
 
 function UsersPanel() {
   const { profile: me } = useSchoolAuth();
@@ -45,11 +51,28 @@ function UsersPanel() {
     навигации обещает «роли, классы и участники», а класс — то, по чему
     администратор ищет человека в первую очередь («кто у нас в 10Б»).
   */
-  const users = useRows(
-    'profiles',
-    'id, name, role, grade, avatar_color, avatar_photo_path, classes(name)',
-    refreshKey,
-  );
+  /*
+    Список берётся функцией admin_list_users, а не обычным select.
+
+    Причина — почта. Имена совпадают: в базе одновременно жили два профиля
+    «Влад Итан», ученик и учитель, и различить их в панели было нечем.
+    Администратор видел роль рядом с именем и относил её не к тому
+    человеку. Почта лежит в auth.users, куда клиенту хода нет и быть не
+    должно, поэтому функция с правами владельца и проверкой роли внутри.
+  */
+  const [users, setUsers] = useState<DataRow[] | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    createClient()
+      .rpc('admin_list_users')
+      .then(({ data }) => {
+        if (!cancelled) setUsers((data as DataRow[] | null) ?? []);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshKey]);
 
   async function setRole(id: string, role: string) {
     setBusyId(id);
@@ -72,9 +95,11 @@ function UsersPanel() {
   */
   const needle = query.trim().toLowerCase();
   const filtered = (users ?? []).filter((row) => {
+    // Ищем и по почте: она единственная не повторяется у тёзок.
     const haystack = [
       String(row.name ?? ''),
-      (row.classes as { name?: string } | null)?.name ?? '',
+      String(row.email ?? ''),
+      String(row.class_name ?? ''),
     ]
       .join(' ')
       .toLowerCase();
@@ -109,8 +134,7 @@ function UsersPanel() {
             {filtered.map((row) => {
               const role = String(row.role);
               const isMe = row.id === me?.id;
-              // Связь приходит объектом, а у учеников без класса — null.
-              const className = (row.classes as { name?: string } | null)?.name ?? '';
+              const className = String(row.class_name ?? '');
 
               return (
                 <li key={row.id} className="flex flex-wrap items-center gap-3 py-3">
@@ -130,6 +154,12 @@ function UsersPanel() {
                         </Badge>
                       )}
                     </p>
+                    {/*
+                      Почта — отдельной строкой и первой после имени:
+                      именно она отвечает на вопрос «это точно тот
+                      человек?», а роль и класс уже уточняют.
+                    */}
+                    <p className="truncate text-xs text-ink-500">{String(row.email ?? '')}</p>
                     <p className="text-xs text-ink-400">
                       {ROLE_LABEL[role] ?? role}
                       {row.grade ? ` · ${String(row.grade)} класс` : ''}

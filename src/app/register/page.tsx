@@ -79,6 +79,9 @@ const TEXT: Dict<{
   haveAccount: string;
   dataNote: string;
   dataLink: string;
+  agree: string;
+  agreeLink: string;
+  agreeRequired: string;
   login: string;
 }> = {
   ru: {
@@ -120,6 +123,9 @@ const TEXT: Dict<{
     haveAccount: 'Уже есть аккаунт?',
     dataNote: 'Регистрируясь, вы подтверждаете, что родители знают о ваших занятиях в Tanym.',
     dataLink: 'Что мы храним',
+    agree: 'Я согласен с обработкой данных и подтверждаю, что родители знают о моих занятиях в Tanym.',
+    agreeLink: 'Что именно хранится',
+    agreeRequired: 'Без согласия зарегистрироваться нельзя.',
     login: 'Войти',
   },
   kk: {
@@ -161,6 +167,9 @@ const TEXT: Dict<{
     haveAccount: 'Аккаунтыңыз бар ма?',
     dataNote: 'Тіркелу арқылы ата-анаңыз Tanym-дегі сабақтарыңыз туралы білетінін растайсыз.',
     dataLink: 'Не сақтаймыз',
+    agree: 'Деректерді өңдеуге келісемін және ата-анам Tanym-дегі сабақтарым туралы білетінін растаймын.',
+    agreeLink: 'Нақты не сақталады',
+    agreeRequired: 'Келісімсіз тіркелу мүмкін емес.',
     login: 'Кіру',
   },
   en: {
@@ -201,6 +210,9 @@ const TEXT: Dict<{
     haveAccount: 'Already have an account?',
     dataNote: 'By signing up you confirm your parents know you study on Tanym.',
     dataLink: 'What we store',
+    agree: 'I agree to the processing of my data and confirm my parents know I study on Tanym.',
+    agreeLink: 'What exactly is stored',
+    agreeRequired: 'You cannot sign up without agreeing.',
     login: 'Log in',
   },
 };
@@ -228,6 +240,16 @@ export default function RegisterPage() {
   const [emailError, setEmailError] = useState<string | undefined>();
   const [passwordError, setPasswordError] = useState<string | undefined>();
   const [shakeKey, setShakeKey] = useState(0);
+  /*
+    Согласие — отдельное действие, а не строка мелким шрифтом.
+
+    Продуктом пользуются несовершеннолетние, и «регистрируясь, вы
+    соглашаетесь» внизу формы человек не читает и, строго говоря, ни на
+    что не соглашается. Галочка требует движения, а ссылка рядом ведёт на
+    страницу, где написано конкретно, что хранится и кто это видит.
+  */
+  const [agreed, setAgreed] = useState(false);
+  const [agreeError, setAgreeError] = useState<string | null>(null);
 
   function translateSignUpError(message: string): string {
     if (/already registered|already exists/i.test(message)) return t.alreadyRegistered;
@@ -259,6 +281,7 @@ export default function RegisterPage() {
 
   async function submit() {
     resetFieldErrors();
+    setAgreeError(null);
     setShakeKey((k) => k + 1);
 
     /*
@@ -277,6 +300,10 @@ export default function RegisterPage() {
     }
     if (!password) {
       setPasswordError(t.passwordRequired);
+      hasError = true;
+    }
+    if (!agreed) {
+      setAgreeError(t.agreeRequired);
       hasError = true;
     }
     if (hasError || !checkedName.ok) return;
@@ -494,6 +521,22 @@ export default function RegisterPage() {
 
         {formError && <FormMessage tone="error">{formError}</FormMessage>}
         {notice && <FormMessage tone="success">{notice}</FormMessage>}
+
+        <label className="flex cursor-pointer items-start gap-3">
+          <input
+            type="checkbox"
+            checked={agreed}
+            onChange={(event) => {
+              setAgreed(event.target.checked);
+              if (event.target.checked) setAgreeError(null);
+            }}
+            className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--color-brand-600)]"
+          />
+          <span className="text-xs leading-relaxed text-ink-500">
+            {t.agree} <AuthLink href="/privacy">{t.agreeLink}</AuthLink>
+          </span>
+        </label>
+        {agreeError && <FormMessage tone="error">{agreeError}</FormMessage>}
 
         <SubmitButton loading={status === 'loading'} success={status === 'success'}>
           {t.submit}

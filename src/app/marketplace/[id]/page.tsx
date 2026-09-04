@@ -17,12 +17,14 @@
 
 import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { LISTING_TYPES } from '@/lib/listings';
 import type { ListingType } from '@/lib/listings';
 import type { Dict } from '@/lib/i18n';
 import { useStore } from '@/components/StoreProvider';
 import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
 import { createClient } from '@/lib/supabase/client';
+import { OwnerActions } from '@/components/OwnerActions';
 import { Icon } from '@/components/Icon';
 import { Badge, Button, ButtonLink, EmptyState, Kicker, Skeleton } from '@/components/ui';
 import { Reveal } from '@/components/motion';
@@ -139,6 +141,7 @@ interface ListingRow {
 export default function ListingPage({ params }: PageProps<'/marketplace/[id]'>) {
   const { id } = use(params);
   const { state } = useStore();
+  const router = useRouter();
   const { profile } = useSchoolAuth();
   const t = TEXT[state.language];
 
@@ -210,13 +213,27 @@ export default function ListingPage({ params }: PageProps<'/marketplace/[id]'>) 
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
-      <Link
-        href="/marketplace"
-        className="inline-flex items-center gap-2 rounded-lg text-sm font-semibold text-ink-500 outline-none transition-colors duration-150 hover:text-brand-600 focus-visible:ring-2 focus-visible:ring-brand-500"
-      >
-        <Icon name="arrow-left" size={16} />
-        {t.back}
-      </Link>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Link
+          href="/marketplace"
+          className="inline-flex items-center gap-2 rounded-lg text-sm font-semibold text-ink-500 outline-none transition-colors duration-150 hover:text-brand-600 focus-visible:ring-2 focus-visible:ring-brand-500"
+        >
+          <Icon name="arrow-left" size={16} />
+          {t.back}
+        </Link>
+
+        {/*
+          Убрать карточку может её автор или администрация — и делают это
+          отсюда, со страницы самой карточки. Раньше для этого нужно было
+          знать про раздел «Контент» в админке, а автор туда не ходит вовсе.
+        */}
+        <OwnerActions
+          table="published_listings"
+          id={row.id}
+          authorId={row.admin_id}
+          onRemoved={() => router.push('/marketplace')}
+        />
+      </div>
 
       <Reveal immediate>
         <div className="mt-6 flex flex-wrap items-start justify-between gap-4">

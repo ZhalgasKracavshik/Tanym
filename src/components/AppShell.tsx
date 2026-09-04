@@ -28,7 +28,24 @@ import { MatrixLoader } from './MatrixLoader';
  * логика, и вдобавок у них уже есть собственная мини-шапка внутри
  * PartnerPage, так что шапка продукта здесь была бы третьей подряд.
  */
-const SHELLESS_ROUTES = ['/login', '/register', '/forgot-password', '/reset-password', '/for-schools', '/for-centers'];
+/*
+  Страницы без оболочки приложения.
+
+  Сравнение точным совпадением пути не годилось: /register/center —
+  отдельный маршрут, и на нём разворачивалось всё меню приложения, включая
+  «Кабинет» и «Админ». Организация, пришедшая зарегистрироваться, видела
+  чужую навигацию вокруг формы. Поэтому проверка по префиксу: у /register
+  есть вложенные страницы, и у любой из них оболочки быть не должно.
+*/
+const SHELLESS_ROUTES = [
+  '/login',
+  '/register',
+  '/forgot-password',
+  '/reset-password',
+  '/for-schools',
+  '/for-centers',
+  '/privacy',
+];
 
 /**
  * Регистрация считается незавершённой, пока у ученика нет класса обучения
@@ -69,7 +86,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     действия, которое нужно сделать прямо сейчас.
   */
   const pendingRoleChoice = !loading && isSignedIn && !profile;
-  const isShellless = SHELLESS_ROUTES.includes(pathname);
+  const isShellless = SHELLESS_ROUTES.some(
+    (route) => pathname === route || pathname.startsWith(`${route}/`),
+  );
   const onboardingPending = needsOnboarding(profile);
 
   /*
