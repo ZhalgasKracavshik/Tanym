@@ -71,7 +71,16 @@ const ERASER_WIDTH = 18;
 const INK = '#1c1917';
 const PAPER = '#ffffff';
 
-export function Scratchpad({ resetKey }: { resetKey?: string }) {
+/*
+  Сброс при переходе к новому заданию делается не здесь, а сменой key на
+  вызывающей стороне: <Scratchpad key={task.id} />.
+
+  Так задумано в самом React — новая личность компонента даёт новое
+  состояние. Прежний вариант со сбросом через эффект работал, но вызывал
+  лишний круг перерисовки: сначала кадр со старыми штрихами под новым
+  условием, потом кадр с чистым листом.
+*/
+export function Scratchpad() {
   const { state } = useStore();
   const t = TEXT[state.language];
 
@@ -82,14 +91,6 @@ export function Scratchpad({ resetKey }: { resetKey?: string }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawing = useRef<Stroke | null>(null);
 
-  /*
-    Новое задание — чистый лист. Черновик на то и черновик, что не
-    переживает переход к следующей задаче: чужие вычисления под новым
-    условием только мешают.
-  */
-  useEffect(() => {
-    setStrokes([]);
-  }, [resetKey]);
 
   /** Перерисовывает полотно целиком из списка штрихов. */
   const repaint = useCallback((all: Stroke[]) => {

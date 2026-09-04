@@ -14,6 +14,7 @@
  * нужен явный признак, что ученик именно ОТВЕЧАЕТ, а не пересказывает данные.
  */
 
+import { archiveTaskKind } from './archive';
 import type { ArchiveTask } from './archive';
 
 /** Слова, которыми ученик обозначает вывод, на трёх языках. */
@@ -39,6 +40,9 @@ const ANSWER_MARKERS = [
 
 /** Варианты ответа в заданиях IELTS — их легко процитировать из условия. */
 const IELTS_OPTIONS = ['not given', 'true', 'false'];
+
+/** Разделители в списке выбранных вариантов: запятая, точка с запятой, перенос строки. */
+const SPLIT_CHOICES = /[,;\r\n]/;
 
 function normalize(value: string): string {
   return value.trim().toLowerCase().replace(/\s+/g, ' ').replace(/,/g, '.');
@@ -109,6 +113,35 @@ function isBareNumber(text: string, expected: number): boolean {
  * из возможного.
  */
 export function matchesArchiveAnswer(task: ArchiveTask, message: string): boolean {
+  /*
+    Задание с вариантами проверяется сравнением наборов, а не поиском
+    слов в тексте.
+
+    Вся хитрость ниже написана для открытого ответа, где ученик
+    рассуждает словами и число может случайно попасть в пересказ условия.
+    С вариантами такой опасности нет: выбор — это список, и он либо
+    совпадает с верным, либо нет. Прогонять его через поиск маркеров
+    означало бы засчитывать «не знаю, может первый или второй» как
+    правильный ответ, если верным был первый.
+  */
+  const kind = archiveTaskKind(task);
+  if (kind !== 'open') {
+    const chosen = new Set(
+      message
+        .split(SPLIT_CHOICES)
+        .map((part) => normalize(part))
+        .filter(Boolean),
+    );
+    const right = new Set(
+      task.answer
+        .split(SPLIT_CHOICES)
+        .map((part) => normalize(part))
+        .filter(Boolean),
+    );
+    if (chosen.size !== right.size) return false;
+    return [...right].every((value) => chosen.has(value));
+  }
+
   const expected = normalize(task.answer);
   const said = normalize(message);
   const prompt = normalize(task.prompt);

@@ -10,7 +10,7 @@
  * ровно в том же формате, что и у стандартного архива.
  */
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { SUBJECTS } from '@/data';
 import { ARCHIVE_CATEGORIES } from '@/lib/archive';
 import type { ArchiveCategory } from '@/lib/archive';
@@ -18,18 +18,52 @@ import type { Language } from '@/lib/types';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from './ui';
 import { Icon } from './Icon';
+import { MathKeys } from './MathKeys';
+import type { ArchiveTaskKind } from '@/lib/archive';
 
 interface DraftTask {
   id: string;
+  /** Открытый ответ, выбор варианта или выбор нескольких. */
+  kind: ArchiveTaskKind;
   prompt: string;
   answer: string;
   unit: string;
   opening: string;
   explanation: string;
+  /** Варианты — только для выбора. */
+  options: string[];
+  /** Номера верных вариантов. Для одиночного выбора в списке ровно один. */
+  correct: number[];
 }
 
 function emptyTask(): DraftTask {
-  return { id: crypto.randomUUID(), prompt: '', answer: '', unit: '', opening: '', explanation: '' };
+  return {
+    id: crypto.randomUUID(),
+    kind: 'open',
+    prompt: '',
+    answer: '',
+    unit: '',
+    opening: '',
+    explanation: '',
+    options: ['', '', '', ''],
+    correct: [0],
+  };
+}
+
+/**
+ * Заполнено ли задание настолько, чтобы его можно было решать.
+ *
+ * У видов разные требования, и это не придирка: открытому заданию нужен
+ * эталонный ответ и первый наводящий вопрос, потому что оно ведётся
+ * диалогом. Заданию с вариантами наводящий вопрос не нужен вовсе —
+ * подводить там не к чему, ученик выбирает из готового списка.
+ */
+function taskReady(task: DraftTask): boolean {
+  if (!task.prompt.trim() || !task.explanation.trim()) return false;
+  if (task.kind === 'open') return Boolean(task.answer.trim() && task.opening.trim());
+  const filled = task.options.filter((option) => option.trim() !== '');
+  if (filled.length < 2) return false;
+  return task.correct.length > 0 && task.correct.every((index) => index < filled.length);
 }
 
 const TEXT = {
@@ -58,7 +92,18 @@ const TEXT = {
     publishing: 'Публикуем…',
     done: 'Материал опубликован и виден в архиве.',
     error: 'Не получилось опубликовать. Проверьте поля.',
-    needTask: 'Заполните хотя бы одно задание полностью.',
+    needTask: 'Заполните хотя бы одно задание полностью или приложите файл.',
+    withTasks: 'С заданиями',
+    fileOnly: 'Только файл',
+    modeHint: 'Материал можно выложить и без заданий — одним файлом.',
+    fileRequired: 'Приложите файл: без заданий материал состоит только из него.',
+    kind: 'Вид задания',
+    kindOpen: 'Открытый ответ',
+    kindSingle: 'Один верный вариант',
+    kindMultiple: 'Несколько верных',
+    options: 'Варианты ответа',
+    markCorrect: 'верный',
+    addOption: 'Ещё вариант',
   },
 } as const;
 
@@ -82,6 +127,13 @@ export function ArchiveMaterialPublishForm({
   const [description, setDescription] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [tasks, setTasks] = useState<DraftTask[]>([emptyTask()]);
+  /*
+    Режим материала. «Только файл» — не упрощение ради упрощения: у
+    учителя часто уже есть готовый сборник в PDF, и требовать к нему
+    выдуманные задания значит либо получить пустышки, либо не получить
+    материал вовсе.
+  */
+  const [withTasks, setWithTasks] = useState(true);
   const [status, setStatus] = useState<'idle' | 'sending' | 'done' | 'error' | 'need-task'>('idle');
 
   function updateTask(id: string, patch: Partial<DraftTask>) {
@@ -89,10 +141,12 @@ export function ArchiveMaterialPublishForm({
   }
 
   async function submit() {
-    const validTasks = tasks.filter(
-      (task) => task.prompt.trim() && task.answer.trim() && task.opening.trim() && task.explanation.trim(),
-    );
-    if (validTasks.length === 0 || !title.trim()) {
+    const validTasks = withTasks ? tasks.filter(taskReady) : [];
+    /*
+      Материал обязан нести хоть что-то: либо задания, либо файл. Пустая
+      строка в списке архива только мешает искать.
+    */
+    if (!title.trim() || (validTasks.length === 0 && !file)) {
       setStatus('need-task');
       return;
     }
@@ -125,15 +179,26 @@ export function ArchiveMaterialPublishForm({
       source,
       grades: gradeList,
       description,
-      file_path: filePath ?? '',
-      tasks: validTasks.map((task) => ({
-        id: task.id,
-        prompt: task.prompt,
-        answer: task.answer,
-        unit: task.unit || undefined,
-        opening: task.opening,
-        explanation: task.explanation,
-      })),
+      file_path: filePath,
+      tasks: validTasks.map((task) => {
+        const filled = task.options.map((option) => option.trim()).filter(Boolean);
+        return {
+          id: task.id,
+          kind: task.kind,
+          prompt: task.prompt,
+          /*
+            У задания с вариантами эталонный ответ — текст верного
+            варианта. Так разбор наставника и подпись «правильный ответ»
+            работают одинаково для всех видов, без отдельной ветки.
+          */
+          answer: task.kind === 'open' ? task.answer : task.correct.map((i) => filled[i]).join(', '),
+          options: task.kind === 'open' ? undefined : filled,
+          correctIndexes: task.kind === 'open' ? undefined : task.correct,
+          unit: task.unit || undefined,
+          opening: task.opening,
+          explanation: task.explanation,
+        };
+      }),
     });
 
     if (error) {
@@ -205,69 +270,51 @@ export function ArchiveMaterialPublishForm({
       </div>
 
       <div className="border-t border-ink-200 pt-4">
-        <p className="font-semibold text-ink-800">{t.tasksTitle}</p>
-        <p className="mt-1 text-xs text-ink-400">{t.tasksHint}</p>
-
-        <div className="mt-3 space-y-4">
-          {tasks.map((task, index) => (
-            <div key={task.id} className="rounded-xl border border-ink-200 p-4">
-              <div className="mb-2 flex items-center justify-between">
-                <span className="text-xs font-semibold uppercase tracking-wide text-ink-400">#{index + 1}</span>
-                {tasks.length > 1 && (
-                  <button
-                    onClick={() => setTasks((current) => current.filter((item) => item.id !== task.id))}
-                    className="flex items-center gap-1 text-xs font-semibold text-danger-600 hover:underline"
-                  >
-                    <Icon name="close" size={12} />
-                    {t.removeTask}
-                  </button>
-                )}
-              </div>
-              <div className="space-y-2">
-                <textarea
-                  value={task.prompt}
-                  onChange={(e) => updateTask(task.id, { prompt: e.target.value })}
-                  placeholder={t.prompt}
-                  rows={2}
-                  className={inputCls}
-                />
-                <div className="grid grid-cols-2 gap-2">
-                  <input
-                    value={task.answer}
-                    onChange={(e) => updateTask(task.id, { answer: e.target.value })}
-                    placeholder={t.answer}
-                    className={inputCls}
-                  />
-                  <input
-                    value={task.unit}
-                    onChange={(e) => updateTask(task.id, { unit: e.target.value })}
-                    placeholder={t.unit}
-                    className={inputCls}
-                  />
-                </div>
-                <textarea
-                  value={task.opening}
-                  onChange={(e) => updateTask(task.id, { opening: e.target.value })}
-                  placeholder={t.opening}
-                  rows={2}
-                  className={inputCls}
-                />
-                <textarea
-                  value={task.explanation}
-                  onChange={(e) => updateTask(task.id, { explanation: e.target.value })}
-                  placeholder={t.explanation}
-                  rows={2}
-                  className={inputCls}
-                />
-              </div>
-            </div>
-          ))}
+        {/*
+          Переключатель режима стоит ПЕРЕД списком заданий, а не галочкой
+          под ним: решение «с заданиями или без» принимается раньше, чем
+          человек начнёт их заполнять, и предлагать его после десяти
+          заполненных полей означало бы обесценить уже сделанную работу.
+        */}
+        <div className="flex flex-wrap items-center gap-2">
+          <Button size="sm" variant={withTasks ? 'primary' : 'secondary'} onClick={() => setWithTasks(true)}>
+            {t.withTasks}
+          </Button>
+          <Button size="sm" variant={withTasks ? 'secondary' : 'primary'} onClick={() => setWithTasks(false)}>
+            {t.fileOnly}
+          </Button>
         </div>
+        <p className="mt-2 text-xs text-ink-400">{withTasks ? t.tasksHint : t.fileRequired}</p>
 
-        <Button variant="ghost" size="sm" className="mt-3" onClick={() => setTasks((current) => [...current, emptyTask()])}>
-          <Icon name="plus" size={16} />
-          {t.addTask}
-        </Button>
+        {withTasks && (
+          <>
+            <p className="mt-4 font-semibold text-ink-800">{t.tasksTitle}</p>
+            <div className="mt-3 space-y-4">
+              {tasks.map((task, index) => (
+                <TaskFields
+                  key={task.id}
+                  task={task}
+                  index={index}
+                  removable={tasks.length > 1}
+                  t={t}
+                  inputCls={inputCls}
+                  onChange={(patch) => updateTask(task.id, patch)}
+                  onRemove={() => setTasks((current) => current.filter((item) => item.id !== task.id))}
+                />
+              ))}
+            </div>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              className="mt-3"
+              onClick={() => setTasks((current) => [...current, emptyTask()])}
+            >
+              <Icon name="plus" size={16} />
+              {t.addTask}
+            </Button>
+          </>
+        )}
       </div>
 
       {status === 'done' && <p className="text-sm font-semibold text-success-700">{t.done}</p>}
@@ -283,3 +330,164 @@ export function ArchiveMaterialPublishForm({
 
 const inputCls =
   'w-full rounded-xl border border-ink-200 p-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-brand-500';
+
+/**
+ * Поля одного задания.
+ *
+ * Вынесено отдельным компонентом ради ссылки на поле условия: клавиша
+ * математического знака вставляет символ по месту курсора, а значит ей
+ * нужен доступ именно к тому полю, рядом с которым она стоит. Держать
+ * массив ссылок в родителе означало бы синхронизировать его с массивом
+ * заданий при каждом добавлении и удалении.
+ */
+function TaskFields({
+  task,
+  index,
+  removable,
+  t,
+  inputCls,
+  onChange,
+  onRemove,
+}: {
+  task: DraftTask;
+  index: number;
+  removable: boolean;
+  t: Record<string, string>;
+  inputCls: string;
+  onChange: (patch: Partial<DraftTask>) => void;
+  onRemove: () => void;
+}) {
+  const promptRef = useRef<HTMLTextAreaElement>(null);
+  const choice = task.kind !== 'open';
+
+  function toggleCorrect(optionIndex: number) {
+    if (task.kind === 'single') {
+      onChange({ correct: [optionIndex] });
+      return;
+    }
+    const next = task.correct.includes(optionIndex)
+      ? task.correct.filter((i) => i !== optionIndex)
+      : [...task.correct, optionIndex].sort((a, b) => a - b);
+    onChange({ correct: next });
+  }
+
+  return (
+    <div className="rounded-[var(--radius-card)] border border-ink-200 p-4">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <span className="text-xs font-medium tabular-nums text-ink-400">#{index + 1}</span>
+        <div className="flex items-center gap-2">
+          <select
+            value={task.kind}
+            onChange={(event) => {
+              const kind = event.target.value as ArchiveTaskKind;
+              // При переходе к одиночному выбору оставляем ровно один
+              // верный вариант: два «единственно верных» — бессмыслица.
+              onChange({ kind, correct: kind === 'single' ? task.correct.slice(0, 1) : task.correct });
+            }}
+            className="rounded-[var(--radius-control)] border border-ink-200 px-2 py-1.5 text-sm text-ink-800"
+            aria-label={t.kind}
+          >
+            <option value="open">{t.kindOpen}</option>
+            <option value="single">{t.kindSingle}</option>
+            <option value="multiple">{t.kindMultiple}</option>
+          </select>
+          {removable && (
+            <button
+              type="button"
+              onClick={onRemove}
+              className="flex items-center gap-1 text-xs font-medium text-danger-600 hover:underline"
+            >
+              <Icon name="close" size={12} />
+              {t.removeTask}
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <textarea
+          ref={promptRef}
+          value={task.prompt}
+          onChange={(e) => onChange({ prompt: e.target.value })}
+          placeholder={t.prompt}
+          rows={2}
+          className={inputCls}
+        />
+        {/* Клавиатура знаков стоит под условием — именно там она нужна. */}
+        <MathKeys target={promptRef} onInsert={(value) => onChange({ prompt: value })} />
+
+        {choice ? (
+          <div className="pt-1">
+            <p className="text-sm font-medium text-ink-800">{t.options}</p>
+            <div className="mt-2 space-y-2">
+              {task.options.map((option, optionIndex) => (
+                <div key={optionIndex} className="flex items-center gap-2">
+                  <input
+                    type={task.kind === 'single' ? 'radio' : 'checkbox'}
+                    name={`correct-${task.id}`}
+                    checked={task.correct.includes(optionIndex)}
+                    onChange={() => toggleCorrect(optionIndex)}
+                    aria-label={`${optionIndex + 1} — ${t.markCorrect}`}
+                    className="h-4 w-4 shrink-0 accent-[var(--color-brand-600)]"
+                  />
+                  <input
+                    value={option}
+                    onChange={(e) =>
+                      onChange({
+                        options: task.options.map((item, i) => (i === optionIndex ? e.target.value : item)),
+                      })
+                    }
+                    placeholder={`${optionIndex + 1}`}
+                    className={inputCls}
+                  />
+                </div>
+              ))}
+            </div>
+            {task.options.length < 6 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="mt-2"
+                onClick={() => onChange({ options: [...task.options, ''] })}
+              >
+                {t.addOption}
+              </Button>
+            )}
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                value={task.answer}
+                onChange={(e) => onChange({ answer: e.target.value })}
+                placeholder={t.answer}
+                className={inputCls}
+              />
+              <input
+                value={task.unit}
+                onChange={(e) => onChange({ unit: e.target.value })}
+                placeholder={t.unit}
+                className={inputCls}
+              />
+            </div>
+            <textarea
+              value={task.opening}
+              onChange={(e) => onChange({ opening: e.target.value })}
+              placeholder={t.opening}
+              rows={2}
+              className={inputCls}
+            />
+          </>
+        )}
+
+        <textarea
+          value={task.explanation}
+          onChange={(e) => onChange({ explanation: e.target.value })}
+          placeholder={t.explanation}
+          rows={2}
+          className={inputCls}
+        />
+      </div>
+    </div>
+  );
+}

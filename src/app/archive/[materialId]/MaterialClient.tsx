@@ -10,7 +10,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { getMaterial } from '@/data/archive';
-import { ARCHIVE_CATEGORIES } from '@/lib/archive';
+import { ARCHIVE_CATEGORIES, archiveTaskKind } from '@/lib/archive';
 import type { ArchiveTask } from '@/lib/archive';
 import type { ChatMessage, Difficulty } from '@/lib/types';
 import type { SocraticRequest, SocraticResponse } from '@/lib/ai/contracts';
@@ -33,6 +33,7 @@ const TEXT: Dict<{
   startHint: string;
   placeholder: string;
   send: string;
+  chooseAnswer: string;
   giveUp: string;
   confirmGiveUp: string;
   solution: string;
@@ -54,6 +55,7 @@ const TEXT: Dict<{
     startHint: 'Напиши, с чего бы ты начал. Не бойся ошибиться, наставник поправит вопросом.',
     placeholder: 'Твоя мысль или ответ…',
     send: 'Отправить',
+    chooseAnswer: 'Выберите ответ',
     giveUp: 'Показать разбор',
     confirmGiveUp: 'Открыть полное решение? Дальше разбирать самому будет уже неинтересно.',
     solution: 'Полное решение',
@@ -75,6 +77,7 @@ const TEXT: Dict<{
     startHint: 'Неден бастайтыныңды жаз. Қателесуден қорықпа, тәлімгер сұрақпен түзетеді.',
     placeholder: 'Ойың немесе жауабың…',
     send: 'Жіберу',
+    chooseAnswer: 'Жауапты таңдаңыз',
     giveUp: 'Талдауды көрсету',
     confirmGiveUp: 'Толық шешім ашылсын ба? Одан кейін өзің талдау қызық болмайды.',
     solution: 'Толық шешім',
@@ -96,6 +99,7 @@ const TEXT: Dict<{
     startHint: 'Write where you would start. Mistakes are fine, the mentor answers with a question.',
     placeholder: 'Your thinking or answer…',
     send: 'Send',
+    chooseAnswer: 'Choose an answer',
     giveUp: 'Show the solution',
     confirmGiveUp: 'Reveal the full solution? Working it out yourself stops being interesting after this.',
     solution: 'Full solution',
@@ -119,6 +123,7 @@ export function MaterialClient({ materialId }: { materialId: string }) {
   const [aiScale, setAiScale] = useAiTextScale();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState('');
+  const [chosen, setChosen] = useState<number[]>([]);
   const [loading, setLoading] = useState(false);
   const [solved, setSolved] = useState(false);
   const [showSolution, setShowSolution] = useState(false);
@@ -338,12 +343,70 @@ export function MaterialClient({ materialId }: { materialId: string }) {
       )}
 
       {/*
+        Задание с вариантами решается выбором, а не письмом.
+
+        Наставник здесь по-прежнему ведёт разговор, но подводить вопросами
+        не к чему: ученик выбирает из готового списка. Заставлять его
+        печатать текст варианта вручную значило бы добавить возможность
+        ошибиться там, где ошибаться нечем.
+      */}
+      {!solved && task && archiveTaskKind(task) !== 'open' && task.options && (
+        <div className="mt-8 rounded-[var(--radius-card)] border border-ink-200 bg-white p-4">
+          <p className="text-sm font-medium text-ink-800">{t.chooseAnswer}</p>
+          <div className="mt-3 space-y-2">
+            {task.options.map((option, index) => {
+              const picked = chosen.includes(index);
+              const single = archiveTaskKind(task) === 'single';
+              return (
+                <button
+                  key={index}
+                  type="button"
+                  onClick={() =>
+                    setChosen((current) =>
+                      single
+                        ? [index]
+                        : current.includes(index)
+                          ? current.filter((i) => i !== index)
+                          : [...current, index].sort((a, b) => a - b),
+                    )
+                  }
+                  aria-pressed={picked}
+                  className={`flex w-full items-center gap-3 rounded-[var(--radius-control)] border px-4 py-3 text-left text-sm transition-colors ${
+                    picked ? 'border-brand-500 bg-brand-50 text-ink-900' : 'border-ink-200 hover:border-ink-400'
+                  }`}
+                >
+                  <span
+                    aria-hidden
+                    className={`h-4 w-4 shrink-0 border ${single ? 'rounded-full' : 'rounded-[4px]'} ${
+                      picked ? 'border-brand-600 bg-brand-600' : 'border-ink-300'
+                    }`}
+                  />
+                  {option}
+                </button>
+              );
+            })}
+          </div>
+          <Button
+            className="mt-4"
+            disabled={chosen.length === 0 || loading}
+            onClick={() => {
+              const text = chosen.map((index) => task.options?.[index] ?? '').join(', ');
+              setChosen([]);
+              send(text);
+            }}
+          >
+            {t.send}
+          </Button>
+        </div>
+      )}
+
+      {/*
         Черновик доступен и в сократическом разборе: наставник ведёт
         вопросами, но считать ученику всё равно приходится самому.
       */}
       {!solved && task && (
         <div className="mt-8">
-          <Scratchpad resetKey={task.id} />
+          <Scratchpad key={task.id} />
         </div>
       )}
 

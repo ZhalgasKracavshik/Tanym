@@ -72,7 +72,13 @@ export interface ArchiveTask {
  * старый материал начнёт вести себя как задание без вариантов ответа —
  * то есть покажет ученику пустой список.
  */
-export function archiveTaskKind(task: ArchiveTask): ArchiveTaskKind {
+export function archiveTaskKind(task: { kind?: ArchiveTaskKind }): ArchiveTaskKind {
+  /*
+    Параметр описан минимальной формой, а не целым ArchiveTask: та же
+    функция нужна для заданий, приходящих из базы, а у них своя структура
+    строки. Требовать полное совпадение типов значило бы либо копировать
+    функцию, либо приводить типы силой в месте вызова.
+  */
   return task.kind ?? 'open';
 }
 

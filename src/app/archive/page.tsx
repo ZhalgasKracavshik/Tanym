@@ -8,16 +8,17 @@
  * выдачу значило бы мешать. Персонализация живёт на странице плана.
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ARCHIVE } from '@/data/archive';
 import { ARCHIVE_CATEGORIES } from '@/lib/archive';
 import type { ArchiveCategory } from '@/lib/archive';
 import type { Difficulty } from '@/lib/types';
 import type { Dict } from '@/lib/i18n';
+import { createClient } from '@/lib/supabase/client';
 import { useStore } from '@/components/StoreProvider';
 import { Icon } from '@/components/Icon';
 import { Badge, ButtonLink, EmptyState, Kicker, RailRow } from '@/components/ui';
-import { ArchiveTabs } from './ArchiveTabs';
+import { PublishAction } from '@/components/PublishAction';
 
 const TEXT: Dict<{
   kicker: string;
@@ -30,6 +31,9 @@ const TEXT: Dict<{
   socratic: string;
   socraticHint: string;
   year: string;
+  fromTeacher: string;
+  withFile: string;
+  publish: string;
   difficulty: Record<Difficulty, string>;
 }> = {
   ru: {
@@ -44,6 +48,9 @@ const TEXT: Dict<{
     socraticHint:
       'Наставник здесь работает иначе: он не выдаёт решение, а задаёт вопросы, пока ты не дойдёшь до ответа сам.',
     year: 'год',
+    fromTeacher: 'От учителя',
+    withFile: 'С файлом',
+    publish: 'Добавить материал',
     difficulty: { 1: 'Базовый', 2: 'Простой', 3: 'Средний', 4: 'Продвинутый', 5: 'Олимпиадный' },
   },
   kk: {
@@ -58,6 +65,9 @@ const TEXT: Dict<{
     socraticHint:
       'Мұндағы тәлімгер басқаша жұмыс істейді: ол шешімді бермейді, сен өзің жауапқа жеткенше сұрақ қояды.',
     year: 'жыл',
+    fromTeacher: 'Мұғалімнен',
+    withFile: 'Файлмен',
+    publish: 'Материал қосу',
     difficulty: { 1: 'Бастапқы', 2: 'Жеңіл', 3: 'Орташа', 4: 'Күрделі', 5: 'Олимпиадалық' },
   },
   en: {
@@ -72,6 +82,9 @@ const TEXT: Dict<{
     socraticHint:
       'The mentor works differently here: instead of giving the solution, it asks questions until you reach the answer yourself.',
     year: 'year',
+    fromTeacher: 'From a teacher',
+    withFile: 'With a file',
+    publish: 'Add material',
     difficulty: { 1: 'Basic', 2: 'Easy', 3: 'Medium', 4: 'Advanced', 5: 'Olympiad' },
   },
 };
@@ -91,13 +104,120 @@ const CATEGORY_TONE: Record<ArchiveCategory, 'brand' | 'accent' | 'success' | 'd
   'sor-soch': 'neutral',
 };
 
+/** Строка материала учителя из базы. */
+interface PublishedRow {
+  id: string;
+  title: string;
+  subject: string;
+  category: string | null;
+  description: string | null;
+  file_path: string | null;
+  tasks: unknown;
+  created_at: string;
+  teacher_id: string;
+  difficulty: number | null;
+  year: number | null;
+  grades: number[] | null;
+  source: string | null;
+}
+
+/** Готовый материал и материал учителя, приведённые к одному виду. */
+interface ListItem {
+  id: string;
+  title: string;
+  category: ArchiveCategory;
+  description: string;
+  difficulty: Difficulty;
+  year: number;
+  /** Кто автор: составитель готового архива или имя учителя. */
+  source: string;
+  taskCount: number;
+  hasFile: boolean;
+  fromTeacher: boolean;
+}
+
+type PublishedMaterial = ListItem;
+
 export default function ArchivePage() {
   const { state } = useStore();
   const t = TEXT[state.language];
 
   const [category, setCategory] = useState<ArchiveCategory | 'all'>('all');
 
-  const materials = category === 'all' ? ARCHIVE : ARCHIVE.filter((item) => item.category === category);
+  /*
+    Материалы учителей лежат в одном списке с готовыми, а не в отдельной
+    вкладке.
+
+    Разделение было продиктовано разницей в доверии: готовый архив собран
+    заранее, учительский появляется постоянно. Но ученику, который ищет
+    задачи по теме, эта разница не помогает выбрать — она заставляет его
+    открыть две вкладки и сравнить. Происхождение материала честнее
+    показать плашкой на самой строке: видно сразу и не делит поиск надвое.
+  */
+  const [published, setPublished] = useState<PublishedMaterial[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const supabase = createClient();
+
+    async function load() {
+      const { data } = await supabase
+        .from('archive_materials')
+        .select('id, title, subject, category, description, file_path, tasks, created_at, teacher_id, difficulty, year, grades, source')
+        .order('created_at', { ascending: false })
+        .limit(100);
+      if (cancelled) return;
+
+      const rows = (data ?? []) as PublishedRow[];
+      const ids = [...new Set(rows.map((row) => row.teacher_id))];
+      const names: Record<string, string> = {};
+      if (ids.length > 0) {
+        const { data: profiles } = await supabase.from('profiles').select('id, name').in('id', ids);
+        for (const profile of (profiles ?? []) as { id: string; name: string }[]) {
+          names[profile.id] = profile.name;
+        }
+      }
+      if (cancelled) return;
+
+      setPublished(
+        rows.map((row) => ({
+          id: row.id,
+          title: row.title,
+          category: (row.category ?? 'ent') as ArchiveCategory,
+          description: row.description ?? '',
+          difficulty: (row.difficulty ?? 3) as Difficulty,
+          year: row.year ?? new Date().getFullYear(),
+          source: names[row.teacher_id] ?? '—',
+          taskCount: Array.isArray(row.tasks) ? row.tasks.length : 0,
+          hasFile: Boolean(row.file_path),
+          fromTeacher: true,
+        })),
+      );
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const all: ListItem[] = [
+    ...ARCHIVE.map((item) => ({
+      id: item.id,
+      title: item.title,
+      category: item.category,
+      description: item.description,
+      difficulty: item.difficulty,
+      year: item.year,
+      source: item.source,
+      taskCount: item.tasks.length,
+      hasFile: false,
+      fromTeacher: false,
+    })),
+    ...published,
+  ];
+
+  const materials = category === 'all' ? all : all.filter((item) => item.category === category);
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
@@ -106,11 +226,15 @@ export default function ArchivePage() {
         с серой строкой под ним. Архив это раздел, а не очередной экран,
         и открытие должно отличаться от кабинета, куда ученик ходит каждый день.
       */}
-      <Kicker>{t.kicker}</Kicker>
-      <h1 className="mt-2 text-3xl font-medium text-ink-900 sm:text-4xl">{t.title}</h1>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <Kicker>{t.kicker}</Kicker>
+          <h1 className="mt-2 text-3xl font-medium text-ink-900 sm:text-4xl">{t.title}</h1>
+        </div>
+        <PublishAction href="/archive/community/new" label={t.publish} requireRole={['teacher', 'admin']} />
+      </div>
       <p className="mt-2 max-w-2xl text-sm text-ink-500">{t.subtitle}</p>
 
-      <ArchiveTabs active="stock" language={state.language} />
 
       {/*
         Главный элемент экрана.
@@ -171,6 +295,13 @@ export default function ArchivePage() {
                           {meta?.title[state.language]}
                         </Badge>
                         <Badge>{t.difficulty[material.difficulty]}</Badge>
+                        {/*
+                          Происхождение материала — плашкой, а не отдельной
+                          вкладкой: разница в доверии настоящая, но делить
+                          из-за неё поиск надвое незачем.
+                        */}
+                        {material.fromTeacher && <Badge tone="accent">{t.fromTeacher}</Badge>}
+                        {material.hasFile && <Badge>{t.withFile}</Badge>}
                       </div>
 
                       <h2 className="mt-2 font-medium text-ink-900">{material.title}</h2>
@@ -182,11 +313,15 @@ export default function ArchivePage() {
                         {' · '}
                         {material.source}
                         {' · '}
-                        <span className="tabular-nums">{t.tasks(material.tasks.length)}</span>
+                        <span className="tabular-nums">{t.tasks(material.taskCount)}</span>
                       </p>
                     </div>
 
-                    <ButtonLink href={`/archive/${material.id}`} size="sm" variant="secondary">
+                    <ButtonLink
+                      href={material.fromTeacher ? `/archive/community/${material.id}` : `/archive/${material.id}`}
+                      size="sm"
+                      variant="secondary"
+                    >
                       {t.open}
                     </ButtonLink>
                   </div>

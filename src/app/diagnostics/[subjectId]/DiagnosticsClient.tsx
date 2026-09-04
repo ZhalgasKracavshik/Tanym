@@ -296,7 +296,7 @@ export function DiagnosticsClient({ subjectId }: { subjectId: string }) {
 
         {/* Диагностика — те же задания, и считать в ней приходится так же. */}
         <div className="mt-8">
-          <Scratchpad resetKey={task.id} />
+          <Scratchpad key={task.id} />
         </div>
 
         <Button className="mt-6 w-full" size="lg" onClick={submit} disabled={answer === ''}>

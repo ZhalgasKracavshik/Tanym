@@ -786,7 +786,7 @@ export function LearnClient({ topicId }: { topicId: string }) {
                 новым условием только мешают.
               */}
               <div className="mt-8">
-                <Scratchpad resetKey={task.id} />
+                <Scratchpad key={task.id} />
               </div>
 
               <div className="mt-6">

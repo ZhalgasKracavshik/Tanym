@@ -1,11 +1,15 @@
 /** Проверка распознавания ответов в архиве Запуск - npm run test:answers Каждый случай здесь взят из реального поведения, а не придуман: главный — тоже 20). 
 * Наивная проверка засчитывала его как решение и выдавала ученику разбор ни за что. */
 
+import { register } from 'node:module';
 import { pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+// archive-answer теперь берёт из archive не только типы, но и функцию
+// archiveTaskKind — а импорты внутри проекта идут без расширений.
+register(new URL('./ts-resolver.mjs', import.meta.url));
 const load = (path) => import(pathToFileURL(join(root, path)).href);
 
 const { matchesArchiveAnswer } = await load('src/lib/archive-answer.ts');
