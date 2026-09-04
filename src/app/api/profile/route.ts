@@ -456,28 +456,56 @@ export async function POST(request: Request) {
   */
   const classCode: string = (body?.classCode ?? '').trim().toUpperCase();
 
-  let cls: { id: string; name: string; code: string } | null = null;
-  if (classCode) {
-    const { data } = await supabase
-      .from('classes')
-      .select('id, name, code')
-      .eq('code', classCode)
-      .maybeSingle();
-    if (!data) return NextResponse.json({ error: 'class_not_found' }, { status: 404 });
-    cls = data;
-  }
+  /*
+    Профиль создаётся первым, класс подключается вторым — и только
+    функцией join_class_by_code.
 
+    Раньше здесь стоял обычный select по коду, и он не находил НИ ОДИН
+    код, ни у кого. Политика на classes называется «authenticated users
+    can look up classes», но искать по коду не даёт: читать разрешено
+    только свой класс или тот, где ты учитель. У человека, который прямо
+    сейчас регистрируется, класса ещё нет — поэтому запрос возвращал ноль
+    строк, а роут отвечал «класс с таким кодом не найден» на совершенно
+    правильный код.
+
+    Открыть таблицу на чтение было бы неверным лекарством: код класса —
+    это и есть пропуск в него, и общий select позволил бы выписать все
+    коды школы и подключиться к любому классу. Функция принимает код и
+    возвращает не больше одной строки, так что перебирать нечего.
+
+    Порядок именно такой: функция подключает класс тому, кто уже
+    существует и является учеником. До вставки профиля подключать некого.
+  */
   const { error } = await supabase
     .from('profiles')
-    .insert({ id: user.id, role, name, class_id: cls?.id ?? null });
+    .insert({ id: user.id, role, name, class_id: null });
 
   if (error) return NextResponse.json(await describeInsertError(supabase, error, { role, email: user.email ?? "" }), { status: 403 });
+
+  let cls: { name: string; code: string } | null = null;
+  if (classCode) {
+    const { data: joined, error: joinError } = await supabase
+      .rpc('join_class_by_code', { p_code: classCode })
+      .maybeSingle();
+
+    /*
+      Неверный код — ошибка, но профиль уже создан и остаётся. Иначе
+      человек с опечаткой в коде оказывался бы вообще без аккаунта, хотя
+      всё остальное он ввёл верно; код можно подключить позже в
+      онбординге, там та же функция.
+    */
+    if (joinError) {
+      return NextResponse.json({ error: 'class_not_found' }, { status: 404 });
+    }
+    const row = joined as { class_name: string; class_code: string } | null;
+    cls = row ? { name: row.class_name, code: row.class_code } : null;
+  }
 
   // Созданную строку читаем функцией: RETURNING не проходит, потому что
   // телефон закрыт правом на колонку (см. get_own_profile).
   const { data: created } = await supabase.rpc('get_own_profile').maybeSingle();
   return NextResponse.json({
     profile: created ?? null,
-    class: cls ? { name: cls.name, code: cls.code } : null,
+    class: cls,
   });
 }
