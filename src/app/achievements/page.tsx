@@ -22,7 +22,6 @@ import {
   PortfolioGrid,
   portfolioPoints,
   usePortfolio,
-  useSchoolPortfolio,
 } from '@/components/Portfolio';
 import { ActivityFeed } from '@/components/ActivityFeed';
 import { Icon } from '@/components/Icon';
@@ -51,13 +50,6 @@ export default function AchievementsPage() {
   const achievements = usePortfolio(schoolProfile?.id ?? null, refreshKey);
   const streakPoints = useOwnStreakPoints(schoolProfile?.id ?? null);
   const verified = useVerifiedProgress(schoolProfile?.id ?? null);
-  /*
-    Учитель и администрация смотрят достижения всей школы. Условие стоит
-    здесь, а не внутри хука, чтобы ученик не отправлял лишний запрос за
-    данными, которых всё равно не увидит.
-  */
-  const isStaff = schoolProfile?.role === 'teacher' || schoolProfile?.role === 'admin';
-  const schoolPortfolio = useSchoolPortfolio(isStaff, refreshKey);
   const others = useSchoolLeaderboard(schoolProfile?.id ?? null);
 
   if (!hydrated || loading) {
@@ -160,37 +152,22 @@ export default function AchievementsPage() {
         </section>
       )}
 
-      {/* Портфолио школы — для учителя и администрации */}
-      {isStaff && (
-        <section className="mt-12">
-          <Kicker>Достижения учеников</Kicker>
-          <p className="mt-2 text-sm text-ink-500">
-            Подтверждённые олимпиады, конкурсы и проекты — по всей школе.
-          </p>
-          <div className="mt-5">
-            {schoolPortfolio === null ? (
-              <Skeleton className="h-40 w-full" />
-            ) : (
-              <PortfolioGrid
-                items={schoolPortfolio.map((row) => ({
-                  ...row.achievement,
-                  // Имя автора идёт в заголовок карточки: без него список
-                  // достижений школы не отвечает на вопрос «чьё это».
-                  title: `${row.achievement.title} — ${row.author}`,
-                }))}
-                language={state.language}
-                emptyText="Пока ни одно достижение не подтверждено."
-              />
-            )}
-          </div>
-        </section>
-      )}
+      {/*
+        Один раздел вместо двух.
 
-      {/* Лента школы */}
-      <section className="mt-14">
-        <Kicker>Лента школы</Kicker>
+        Здесь стояли «Достижения учеников» (подтверждённые школой) и
+        «Лента школы» (вью, который объединяет посты учеников И ТЕ ЖЕ
+        подтверждённые достижения). Списки пересекались: одна и та же
+        олимпиада показывалась дважды на одном экране, и человек не мог
+        понять, чем разделы отличаются.
+
+        Остался верхний. Показывает он всё, чем ученики делятся: и
+        подтверждённые достижения, и посты о проектах.
+      */}
+      <section className="mt-12">
+        <Kicker>Достижения учеников</Kicker>
         <p className="mt-2 text-sm text-ink-500">
-          Олимпиады, конкурсы и проекты, которыми делятся ученики.
+          Олимпиады, конкурсы и проекты — по всей школе.
         </p>
         <div className="mt-5">
           <ActivityFeed limit={20} refreshKey={refreshKey} />

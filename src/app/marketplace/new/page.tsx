@@ -47,6 +47,7 @@ export default function NewListingPage() {
               role: profile.role,
               grade: profile.grade,
             }}
+            defaultContact={profile.org_contact}
           />
         )
       }

@@ -34,6 +34,14 @@ const TEXT = {
     offline: 'Очно',
     both: 'Очно и онлайн',
     freeLabel: 'Бесплатно',
+    priceTitle: 'Стоимость',
+    priceOnRequest: 'По запросу',
+    priceFixed: 'Фиксированная',
+    contactLabel: 'Контакт для учеников',
+    contactPlaceholder: 'Телефон, WhatsApp или адрес',
+    contactHint: 'По нему с вами свяжутся. Показывается на странице объявления.',
+    spotsLabel: 'Свободных мест (необязательно)',
+    spotsPlaceholder: 'Например, 8',
     priceLabel: 'Цена за занятие, тг',
     pricePlaceholder: '1500',
     scheduleLabel: 'Когда',
@@ -59,7 +67,12 @@ interface Profile {
   grade: number | null;
 }
 
-export function PublishForm({ language, profile }: { language: Language; profile: Profile }) {
+export function PublishForm({ language, profile, defaultContact }: {
+  language: Language;
+  profile: Profile;
+  /** Контакт из профиля организации — подставляется в поле. */
+  defaultContact?: string | null;
+}) {
   const t = TEXT.ru;
 
   const [open, setOpen] = useState(false);
@@ -72,9 +85,25 @@ export function PublishForm({ language, profile }: { language: Language; profile
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
   const [format, setFormat] = useState<'online' | 'offline' | 'both'>('offline');
-  const [free, setFree] = useState(true);
+  /*
+    Цена бывает трёх видов, а не двух.
+
+    Раньше выбор был между «бесплатно» и числом, и число требовалось
+    обязательно. Для учебного центра это не работает: стоимость зависит от
+    программы и её называют после разговора. Люди обходили это, вписывая
+    «требует консультирование» в поле «Когда» — то есть форма заставляла
+    портить другое поле.
+  */
+  const [priceMode, setPriceMode] = useState<'free' | 'fixed' | 'request'>('free');
   const [price, setPrice] = useState('');
   const [schedule, setSchedule] = useState('');
+  const [spots, setSpots] = useState('');
+  /*
+    Контакт подставляется из профиля организации: она его уже вводила при
+    регистрации, и просить снова — значит собирать расхождения между тем,
+    что в профиле, и тем, что в объявлении.
+  */
+  const [contact, setContact] = useState(defaultContact ?? '');
 
   /**
    * Ученик публикует только от своего имени.
@@ -98,7 +127,8 @@ export function PublishForm({ language, profile }: { language: Language; profile
     description.trim() !== '' &&
     category.trim() !== '' &&
     schedule.trim() !== '' &&
-    (free || Number(price) > 0);
+    contact.trim().length >= 5 &&
+    (priceMode !== 'fixed' || Number(price) > 0);
 
   async function save() {
     setSending(true);
@@ -119,11 +149,16 @@ export function PublishForm({ language, profile }: { language: Language; profile
             : `ученик ${profile.grade ?? ''} класса`,
       description: description.trim(),
       category: category.trim(),
-      price: free ? null : Number(price),
-      price_note: free ? null : 'за час',
+      price: priceMode === 'fixed' ? Number(price) : null,
+      /*
+        Подпись к цене несёт смысл сама по себе: пустая цена без неё
+        читается как «бесплатно», а это разные вещи.
+      */
+      price_note: priceMode === 'fixed' ? 'за час' : priceMode === 'request' ? t.priceOnRequest : null,
       format,
       schedule: schedule.trim(),
-      contact: 'Через платформу',
+      spots: spots.trim() === '' ? null : Number(spots),
+      contact: contact.trim(),
       verified: false,
     });
 
@@ -138,7 +173,8 @@ export function PublishForm({ language, profile }: { language: Language; profile
     setCategory('');
     setPrice('');
     setSchedule('');
-    setFree(true);
+    setPriceMode('free');
+    setSpots('');
     setSaved(true);
     setOpen(false);
   }
@@ -251,20 +287,58 @@ export function PublishForm({ language, profile }: { language: Language; profile
         />
       </label>
 
-      <div>
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            checked={free}
-            onChange={(event) => setFree(event.target.checked)}
-            className="h-4 w-4 accent-[var(--color-brand-500)]"
-          />
-          <span className="text-sm font-semibold text-ink-800">{t.freeLabel}</span>
-        </label>
+      <label className="block">
+        <span className="mb-2 block text-sm font-medium text-ink-800">{t.contactLabel}</span>
+        <input
+          value={contact}
+          onChange={(event) => setContact(event.target.value)}
+          placeholder={t.contactPlaceholder}
+          maxLength={200}
+          className={INPUT}
+        />
+        <span className="mt-1.5 block text-xs text-ink-400">{t.contactHint}</span>
+      </label>
 
-        {!free && (
+      <label className="block">
+        <span className="mb-2 block text-sm font-medium text-ink-800">{t.spotsLabel}</span>
+        <input
+          type="number"
+          min={0}
+          value={spots}
+          onChange={(event) => setSpots(event.target.value)}
+          placeholder={t.spotsPlaceholder}
+          className={INPUT}
+        />
+      </label>
+
+      <div>
+        <span className="mb-2 block text-sm font-medium text-ink-800">{t.priceTitle}</span>
+        {/*
+          Три кнопки вместо галочки «бесплатно». Галочка предлагала выбор
+          из двух, а видов цены три, и третий — «назовём после разговора» —
+          у учебных центров самый частый.
+        */}
+        <div className="flex flex-wrap gap-2">
+          {(['free', 'request', 'fixed'] as const).map((mode) => (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => setPriceMode(mode)}
+              aria-pressed={priceMode === mode}
+              className={`rounded-[var(--radius-pill)] border px-4 py-2 text-sm font-medium transition-colors ${
+                priceMode === mode
+                  ? 'border-ink-900 bg-ink-900 text-white'
+                  : 'border-ink-200 bg-white text-ink-700 hover:border-ink-400'
+              }`}
+            >
+              {mode === 'free' ? t.freeLabel : mode === 'request' ? t.priceOnRequest : t.priceFixed}
+            </button>
+          ))}
+        </div>
+
+        {priceMode === 'fixed' && (
           <label className="mt-4 block">
-            <span className="mb-2 block text-sm font-semibold text-ink-800">{t.priceLabel}</span>
+            <span className="mb-2 block text-sm font-medium text-ink-800">{t.priceLabel}</span>
             <input
               type="number"
               min={0}
