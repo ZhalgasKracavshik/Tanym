@@ -35,6 +35,8 @@ const PUBLIC_PATHS = new Set([
   '/reset-password',
   '/for-schools',
   '/for-centers',
+  // Что хранится об ученике — читают до регистрации, значит без сессии.
+  '/privacy',
 ]);
 
 /**

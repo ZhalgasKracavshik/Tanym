@@ -77,6 +77,8 @@ const TEXT: Dict<{
   submit: string;
   or: string;
   haveAccount: string;
+  dataNote: string;
+  dataLink: string;
   login: string;
 }> = {
   ru: {
@@ -116,6 +118,8 @@ const TEXT: Dict<{
     submit: 'Зарегистрироваться',
     or: 'или',
     haveAccount: 'Уже есть аккаунт?',
+    dataNote: 'Регистрируясь, вы подтверждаете, что родители знают о ваших занятиях в Tanym.',
+    dataLink: 'Что мы храним',
     login: 'Войти',
   },
   kk: {
@@ -155,6 +159,8 @@ const TEXT: Dict<{
     submit: 'Тіркелу',
     or: 'немесе',
     haveAccount: 'Аккаунтыңыз бар ма?',
+    dataNote: 'Тіркелу арқылы ата-анаңыз Tanym-дегі сабақтарыңыз туралы білетінін растайсыз.',
+    dataLink: 'Не сақтаймыз',
     login: 'Кіру',
   },
   en: {
@@ -193,6 +199,8 @@ const TEXT: Dict<{
     submit: 'Sign up',
     or: 'or',
     haveAccount: 'Already have an account?',
+    dataNote: 'By signing up you confirm your parents know you study on Tanym.',
+    dataLink: 'What we store',
     login: 'Log in',
   },
 };
@@ -395,6 +403,15 @@ export default function RegisterPage() {
       footer={
         <>
           {t.haveAccount} <AuthLink href="/login">{t.login}</AuthLink>
+          {/*
+            Строка про данные стоит в подвале формы, а не отдельной
+            галочкой «согласен». Галочка, которую жмут не читая, ничего не
+            значит; ссылка на страницу, где написано конкретно, что
+            хранится и кто это видит, — значит.
+          */}
+          <span className="mt-2 block text-xs leading-relaxed text-ink-400">
+            {t.dataNote} <AuthLink href="/privacy">{t.dataLink}</AuthLink>
+          </span>
         </>
       }
     >
