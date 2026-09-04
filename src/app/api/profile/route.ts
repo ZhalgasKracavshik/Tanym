@@ -159,6 +159,10 @@ export async function PATCH(request: Request) {
       const own = typeof body.goalCustom === 'string' ? body.goalCustom.trim() : '';
       patch.goal_custom = own ? own.slice(0, CUSTOM_GOAL_MAX) : null;
     } else {
+      /*
+        Готовая цель стирает прежнюю формулировку: иначе она осталась бы в
+        базе и продолжала уходить в промпт наставника вопреки выбору.
+      */
       patch.goal_custom = null;
     }
   }
@@ -255,7 +259,19 @@ export async function PATCH(request: Request) {
     .update(patch)
     .eq('id', user.id);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 403 });
+  if (error) {
+    /*
+      Сообщение базы уходит в лог, а не только в ответ.
+
+      Доступ к profiles закрыт грантами на уровне колонок, и самая частая
+      поломка здесь такая: колонку добавили, а право на неё выдать забыли.
+      Снаружи это выглядит как безликий 403 «Не удалось сохранить» на
+      последнем шаге регистрации, и по нему невозможно понять, что дело в
+      одном недостающем гранте. В логе видно сразу.
+    */
+    console.error('Профиль не сохранён', { patch: Object.keys(patch), message: error.message });
+    return NextResponse.json({ error: error.message }, { status: 403 });
+  }
 
   /*
     Читаем профиль отдельным вызовом, а не через RETURNING.
