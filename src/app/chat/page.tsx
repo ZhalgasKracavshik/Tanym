@@ -475,14 +475,14 @@ export default function ChatPage() {
             className={message.role === 'user' ? 'flex justify-end' : 'flex justify-start'}
           >
             {message.role === 'user' ? (
-              <p className="max-w-[85%] rounded-2xl bg-brand-500 px-4 py-3 text-white">{message.content}</p>
+              <p className="max-w-[85%] rounded-[var(--radius-card)] bg-brand-500 px-4 py-3 text-white">{message.content}</p>
             ) : (
               /*
                 Ответ наставника — отдельная карточка с полем и подписью,
                 а не просто пузырь с текстом: разбор задачи читают дольше
                 реплики в переписке, и ему нужен воздух и структура.
               */
-              <div className="w-full max-w-[92%] overflow-hidden rounded-2xl border border-ink-200 bg-white shadow-[var(--shadow-rest)]">
+              <div className="w-full max-w-[92%] overflow-hidden rounded-[var(--radius-card)] border border-ink-200 bg-white shadow-[var(--shadow-rest)]">
                 <div className="flex items-center justify-between gap-3 border-b border-ink-100 bg-ink-50/60 px-4 py-2">
                   <AiBadge live={message.live ?? false} />
                   <button
@@ -509,7 +509,7 @@ export default function ChatPage() {
           и в две строки, и в двадцать.
         */}
         {loading && (
-          <div className="flex items-center gap-2.5 rounded-2xl border border-ink-200 bg-white px-4 py-3">
+          <div className="flex items-center gap-2.5 rounded-[var(--radius-card)] border border-ink-200 bg-white px-4 py-3">
             <Icon name="sparkles" size={16} className="text-brand-500" />
             <ShimmerText className="text-sm font-semibold">Наставник думает</ShimmerText>
           </div>
@@ -524,7 +524,7 @@ export default function ChatPage() {
         опускается ниже — панели там нет.
       */}
       <div className="sticky bottom-24 z-10 mt-8 md:bottom-6">
-        <div className="flex items-end gap-2 rounded-[var(--radius-card)] border border-white/10 p-2.5 shadow-[var(--shadow-float)] transition-all duration-200 focus-within:border-white/25" style={{ background: 'var(--gradient-ink)' }}>
+        <div className="flex items-end gap-2 rounded-[var(--radius-card)] border border-white/10 p-2.5 shadow-[var(--shadow-float)] transition-all duration-200 focus-within:border-white/25" style={{ background: 'var(--surface-ink)' }}>
           <textarea
             value={question}
             onChange={(event) => setQuestion(event.target.value)}
@@ -552,7 +552,7 @@ export default function ChatPage() {
             disabled={loading || question.trim() === ''}
             aria-label={t.send}
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] text-white shadow-[var(--shadow-rest)] transition-opacity disabled:opacity-40 disabled:shadow-none"
-            style={{ background: 'var(--gradient-brand)' }}
+            style={{ background: 'var(--surface-brand)' }}
           >
             <Icon name="arrowRight" size={19} />
           </PressButton>
@@ -562,7 +562,7 @@ export default function ChatPage() {
       {/* Винтажная ретро-клавиатура — только для ПК/десктопа */}
       {showKeyboard && (
         <div className="hidden md:block mt-4 mb-2 animate-in fade-in slide-in-from-bottom-3 duration-300">
-          <div className="relative overflow-hidden rounded-2xl border border-amber-900/20 bg-[#fbf8f3] p-3 shadow-lg">
+          <div className="relative overflow-hidden rounded-[var(--radius-card)] border border-amber-900/20 bg-[#fbf8f3] p-3 shadow-lg">
             <div className="mb-2 flex items-center justify-between px-2 text-xs">
               <span className="font-medium flex items-center gap-1.5 text-amber-950">
                 <Icon name="keyboard" size={16} className="text-amber-800" />

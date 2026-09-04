@@ -273,7 +273,7 @@ export default function LeaderboardPage() {
             const height = entry.rank === 1 ? 'h-28 sm:h-36' : entry.rank === 2 ? 'h-20 sm:h-28' : 'h-16 sm:h-24';
             const tone =
               entry.rank === 1
-                ? 'var(--gradient-brand)'
+                ? 'var(--surface-brand)'
                 : entry.rank === 2
                   ? 'linear-gradient(135deg, #d3e0e8, #a8bcc8)'
                   : 'linear-gradient(135deg, #f6c0a8, #e57545)';
@@ -496,7 +496,7 @@ export default function LeaderboardPage() {
           {/* Иконка вынесена рядом: проп icon в EmptyState принимает строку,
               а строкой иконку из набора не передать. */}
           <div className="mb-3 flex justify-center">
-            <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-ink-200 bg-white text-ink-400">
+            <span className="flex h-12 w-12 items-center justify-center rounded-[var(--radius-card)] border border-ink-200 bg-white text-ink-400">
               <Icon name="trophy" size={24} />
             </span>
           </div>

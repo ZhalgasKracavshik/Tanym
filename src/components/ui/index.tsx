@@ -255,7 +255,7 @@ export function EmptyState({
   action?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center rounded-2xl border border-dashed border-ink-200 bg-white px-6 py-12 text-center">
+    <div className="flex flex-col items-center rounded-[var(--radius-card)] border border-dashed border-ink-200 bg-white px-6 py-12 text-center">
       <Icon name={icon} size={40} className="text-ink-300" />
       <h3 className="mt-3 text-base font-medium text-ink-900">{title}</h3>
       <p className="mt-1.5 max-w-sm text-sm text-ink-500">{description}</p>

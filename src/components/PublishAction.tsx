@@ -41,7 +41,7 @@ export function PublishAction({
     <Link
       href={href}
       className="inline-flex shrink-0 items-center gap-2 rounded-[var(--radius-control)] px-4 py-2.5 text-sm font-semibold text-white shadow-[var(--shadow-lift)] transition-all duration-150 hover:shadow-[var(--shadow-lift)] focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
-      style={{ background: 'var(--gradient-brand)' }}
+      style={{ background: 'var(--surface-brand)' }}
     >
       <Icon name="plus" size={17} />
       {label}

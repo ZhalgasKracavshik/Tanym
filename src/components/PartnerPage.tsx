@@ -88,7 +88,7 @@ export function PartnerPage({
               <PressLink
                 href={`mailto:${contactEmail}`}
                 className="inline-flex h-14 items-center gap-2 rounded-[var(--radius-control)] px-8 text-base font-medium text-white shadow-[var(--shadow-rest)]"
-                style={{ background: 'var(--gradient-brand)' }}
+                style={{ background: 'var(--surface-brand)' }}
               >
                 Обсудить сотрудничество
                 <Icon name="arrowRight" size={18} />
@@ -136,7 +136,7 @@ export function PartnerPage({
                 <LiftCard className="h-full rounded-[var(--radius-card)] border border-ink-200/80 bg-white p-7 shadow-[var(--shadow-rest)]">
                   <span
                     className="flex h-12 w-12 items-center justify-center rounded-[var(--radius-control)] text-white"
-                    style={{ background: 'var(--gradient-brand)' }}
+                    style={{ background: 'var(--surface-brand)' }}
                   >
                     <Icon name={item.icon} size={22} />
                   </span>

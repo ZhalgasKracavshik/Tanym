@@ -63,7 +63,7 @@ function Overview() {
             <Link
               href="/admin/moderation"
               className="inline-flex items-center gap-2 rounded-[var(--radius-control)] px-4 py-2.5 text-sm font-semibold text-white shadow-[var(--shadow-lift)]"
-              style={{ background: 'var(--gradient-brand)' }}
+              style={{ background: 'var(--surface-brand)' }}
             >
               Перейти к проверке
               <Icon name="arrowRight" size={16} />

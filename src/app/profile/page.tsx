@@ -722,7 +722,7 @@ function ProfileContent() {
                     className="h-full rounded-full transition-all duration-700"
                     style={{
                       width: `${Math.max(4, Math.round(level.progress * 100))}%`,
-                      background: 'var(--gradient-brand)',
+                      background: 'var(--surface-brand)',
                     }}
                   />
                 </div>
@@ -1149,7 +1149,7 @@ function ProfileContent() {
             </Card>
 
             {/* Карточка класса */}
-            <Card className="bg-gradient-to-br from-brand-50/60 to-white border-brand-200/80">
+            <Card className="bg-brand-50 border-brand-200">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
                   <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-brand-600">

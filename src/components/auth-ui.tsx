@@ -107,14 +107,14 @@ export function AuthShell({
     // div, а не main: AppShell уже оборачивает бесшовные маршруты (в том
     // числе этот) в свой <main>, и два <main> на странице — не разметка,
     // а поломанная семантика документа.
-    <div className="flex min-h-screen w-full bg-[var(--gradient-warm)] p-2 lg:h-screen lg:p-4">
+    <div className="flex min-h-screen w-full bg-[var(--surface-warm)] p-2 lg:h-screen lg:p-4">
       <LanguageCorner />
       {/*
         Левая колонка: та же тёмная дымка в терракоту, что и раньше во всей
         оболочке, — но теперь как один акцентный блок среди светлой
         страницы, а не как фон для всего экрана. Тот же приём уже стоит в
         кабинете и в профиле (тёмная панель-акцент на градиенте
-        --gradient-ink внутри светлого макета).
+        --surface-ink внутри светлого макета).
       */}
       <div className="relative hidden h-full w-[43%] shrink-0 overflow-hidden rounded-[var(--radius-card)] shadow-[var(--shadow-float)] lg:flex lg:flex-col lg:justify-between">
         <SmokeyBackground color="#d85f2e" />
@@ -491,7 +491,7 @@ export function SubmitButton({
       onClick={onClick}
       disabled={disabled || loading || success}
       className="group flex h-12 w-full items-center justify-center gap-2 rounded-[var(--radius-control)] text-[15px] font-semibold text-white shadow-[var(--shadow-rest)] transition-all duration-300 hover:brightness-105 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:ring-offset-2 focus:ring-offset-white disabled:opacity-60"
-      style={{ background: 'var(--gradient-brand)' }}
+      style={{ background: 'var(--surface-brand)' }}
     >
       <AnimatePresence mode="wait" initial={false}>
         {success ? (

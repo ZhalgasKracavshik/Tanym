@@ -289,7 +289,7 @@ export function LearnClient({ topicId }: { topicId: string }) {
   if (!topic || !subject) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-ink-100 text-ink-400">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-[var(--radius-card)] bg-ink-100 text-ink-400">
           <Icon name="book" size={28} />
         </div>
         <div className="mt-4">
@@ -569,7 +569,7 @@ export function LearnClient({ topicId }: { topicId: string }) {
             // Задания закончились, показываем итог. Карточка тут не нужна: на экране больше
             // ничего нет, обводить единственный блок рамкой значит спорить с ним.
             <div className="py-6">
-              <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-success-50 text-success-700">
+              <span className="flex h-14 w-14 items-center justify-center rounded-[var(--radius-card)] bg-success-50 text-success-700">
                 <Icon name="crosshair" size={28} />
               </span>
               <h2 className="mt-4 text-3xl font-medium text-ink-900">{t.topicDone}</h2>

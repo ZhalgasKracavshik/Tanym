@@ -671,7 +671,7 @@ export default function OnboardingPage() {
           onClick={next}
           disabled={!canContinue || saving}
           className="flex h-12 flex-1 items-center justify-center gap-2 rounded-[var(--radius-control)] text-[15px] font-medium text-white shadow-[var(--shadow-rest)] transition-all disabled:opacity-45 disabled:shadow-none"
-          style={{ background: 'var(--gradient-brand)' }}
+          style={{ background: 'var(--surface-brand)' }}
         >
           {saving ? <Spinner /> : stepIndex === steps.length - 1 ? 'Готово' : 'Далее'}
           {!saving && <Icon name="arrowRight" size={17} />}

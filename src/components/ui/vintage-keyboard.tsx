@@ -1332,7 +1332,7 @@ export const VintageKeyboard = () => {
 
   return (
     <div
-      className="kb-viewport flex w-full items-center justify-center overflow-x-hidden rounded-2xl bg-white/40 p-4 border border-ink-200/60 shadow-inner"
+      className="kb-viewport flex w-full items-center justify-center overflow-x-hidden rounded-[var(--radius-card)] bg-white/40 p-4 border border-ink-200/60 shadow-inner"
       style={{
         padding: container.padding,
       }}

@@ -135,7 +135,7 @@ export function MobileTabBar({ onMore }: { onMore: () => void }) {
           ref={pillRef}
           aria-hidden
           className="t-tabs-pill rounded-[var(--radius-pill)] shadow-[var(--shadow-rest)]"
-          style={{ background: 'var(--gradient-brand)' }}
+          style={{ background: 'var(--surface-brand)' }}
         />
         {tabs.map((tab) => {
           const active = pathname === tab.href || pathname.startsWith(`${tab.href}/`);

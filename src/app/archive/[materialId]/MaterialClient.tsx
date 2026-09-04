@@ -270,7 +270,7 @@ export function MaterialClient({ materialId }: { materialId: string }) {
       <div className="mt-10 space-y-2">
         {/* Первый вопрос заготовлен в контенте: он не требует обращения к модели
             и задаёт разговору верный тон с первой секунды */}
-        <div className="rounded-2xl border border-ink-200 bg-white px-4 py-3">
+        <div className="rounded-[var(--radius-card)] border border-ink-200 bg-white px-4 py-3">
           <p className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-brand-600">
             <Icon name="columns" size={14} />
             {t.mentor}
@@ -288,11 +288,11 @@ export function MaterialClient({ materialId }: { materialId: string }) {
             className={message.role === 'user' ? 'flex justify-end' : 'flex justify-start'}
           >
             {message.role === 'user' ? (
-              <p className="max-w-[85%] whitespace-pre-line rounded-2xl bg-brand-500 px-4 py-3 text-white">
+              <p className="max-w-[85%] whitespace-pre-line rounded-[var(--radius-card)] bg-brand-500 px-4 py-3 text-white">
                 {message.content}
               </p>
             ) : (
-              <div className="max-w-[92%] rounded-2xl border border-ink-200 bg-white px-4 py-3">
+              <div className="max-w-[92%] rounded-[var(--radius-card)] border border-ink-200 bg-white px-4 py-3">
                 <div className="mb-2">
                   <AiBadge live={message.live ?? false} />
                 </div>
@@ -305,7 +305,7 @@ export function MaterialClient({ materialId }: { materialId: string }) {
         ))}
 
         {loading && (
-          <div className="max-w-[92%] space-y-2 rounded-2xl border border-ink-200 bg-white px-4 py-3">
+          <div className="max-w-[92%] space-y-2 rounded-[var(--radius-card)] border border-ink-200 bg-white px-4 py-3">
             <Skeleton className="h-4 w-full" />
             <Skeleton className="h-4 w-8/12" />
           </div>
@@ -340,7 +340,7 @@ export function MaterialClient({ materialId }: { materialId: string }) {
       {!solved && (
         <div className="mt-10">
           <p className="mb-2 text-sm text-ink-400">{messages.length === 0 ? t.startHint : t.yourTurn}</p>
-          <div className="flex items-end gap-2 rounded-2xl border border-ink-200 bg-white p-2 shadow-[var(--shadow-rest)] transition-all duration-150 focus-within:border-brand-300 focus-within:shadow-[var(--shadow-lift)]">
+          <div className="flex items-end gap-2 rounded-[var(--radius-card)] border border-ink-200 bg-white p-2 shadow-[var(--shadow-rest)] transition-all duration-150 focus-within:border-brand-300 focus-within:shadow-[var(--shadow-lift)]">
             <textarea
               value={draft}
               onChange={(event) => setDraft(event.target.value)}

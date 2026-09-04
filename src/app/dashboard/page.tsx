@@ -337,7 +337,7 @@ export default function DashboardPage() {
       */}
       {nextTopics[0] && (
         <Reveal immediate>
-          <Card className="mt-6 border-brand-200/80 bg-gradient-to-br from-brand-50/80 via-white to-white">
+          <Card className="mt-6 border-brand-200 bg-brand-50">
             <div className="flex flex-wrap items-center justify-between gap-6">
               <div className="min-w-[16rem] flex-1">
                 <Kicker>{t.todayKicker}</Kicker>

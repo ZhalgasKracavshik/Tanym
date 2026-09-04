@@ -40,7 +40,7 @@ export function StudentOnlyNotice({ role }: { role: 'teacher' | 'admin' }) {
   return (
     <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
       <div className="mb-3 flex justify-center">
-        <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-ink-200 bg-white text-ink-400">
+        <span className="flex h-12 w-12 items-center justify-center rounded-[var(--radius-card)] border border-ink-200 bg-white text-ink-400">
           <Icon name={role === 'admin' ? 'building' : 'cap'} size={24} />
         </span>
       </div>

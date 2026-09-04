@@ -159,7 +159,7 @@ export function SocialLinks({
             <PressButton
               onClick={add}
               className="h-11 rounded-[var(--radius-control)] px-5 text-sm font-medium text-white shadow-[var(--shadow-rest)]"
-              style={{ background: 'var(--gradient-brand)' }}
+              style={{ background: 'var(--surface-brand)' }}
             >
               Добавить
             </PressButton>

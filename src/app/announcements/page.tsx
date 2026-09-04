@@ -271,7 +271,7 @@ export default function AnnouncementsPage() {
           {/* Иконка стоит рядом с блоком: проп icon в EmptyState принимает строку,
               а строкой иконку из набора не передать. */}
           <div className="mb-3 flex justify-center">
-            <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-ink-200 bg-white text-ink-400">
+            <span className="flex h-12 w-12 items-center justify-center rounded-[var(--radius-card)] border border-ink-200 bg-white text-ink-400">
               <Icon name="megaphone" size={24} />
             </span>
           </div>

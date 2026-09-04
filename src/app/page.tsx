@@ -106,7 +106,7 @@ const TEXT: Dict<{
       {
         href: '/for-schools',
         badge: 'Пилот на один класс',
-        tint: 'linear-gradient(150deg, #fff6ec 0%, #ffeddc 100%)',
+        tint: '#fdf3ee',
         glow: '#e57545',
         border: '#f6c0a8',
         icon: 'school',
@@ -117,7 +117,7 @@ const TEXT: Dict<{
       {
         href: '/for-centers',
         badge: 'Размещение с проверкой',
-        tint: 'linear-gradient(150deg, #f2f7fb 0%, #e6eff7 100%)',
+        tint: '#f0f4f8',
         glow: '#4d6b85',
         border: '#c9dcea',
         icon: 'building',
@@ -187,7 +187,7 @@ const TEXT: Dict<{
       {
         href: '/for-schools',
         badge: 'Бір сыныпқа пилот',
-        tint: 'linear-gradient(150deg, #fff6ec 0%, #ffeddc 100%)',
+        tint: '#fdf3ee',
         glow: '#e57545',
         border: '#f6c0a8',
         icon: 'school',
@@ -198,7 +198,7 @@ const TEXT: Dict<{
       {
         href: '/for-centers',
         badge: 'Тексерумен орналастыру',
-        tint: 'linear-gradient(150deg, #f2f7fb 0%, #e6eff7 100%)',
+        tint: '#f0f4f8',
         glow: '#4d6b85',
         border: '#c9dcea',
         icon: 'building',
@@ -265,7 +265,7 @@ const TEXT: Dict<{
       {
         href: '/for-schools',
         badge: 'Pilot with one class',
-        tint: 'linear-gradient(150deg, #fff6ec 0%, #ffeddc 100%)',
+        tint: '#fdf3ee',
         glow: '#e57545',
         border: '#f6c0a8',
         icon: 'school',
@@ -276,7 +276,7 @@ const TEXT: Dict<{
       {
         href: '/for-centers',
         badge: 'Vetted listing',
-        tint: 'linear-gradient(150deg, #f2f7fb 0%, #e6eff7 100%)',
+        tint: '#f0f4f8',
         glow: '#4d6b85',
         border: '#c9dcea',
         icon: 'building',
@@ -516,7 +516,7 @@ export default function HomePage() {
           <Reveal>
             <div
               className="relative overflow-hidden rounded-[var(--radius-card)] p-10 text-white sm:p-14"
-              style={{ background: 'var(--gradient-ink)' }}
+              style={{ background: 'var(--surface-ink)' }}
             >
               {/* Размытое цветное пятно в углу убрано: тёмная карточка на
                   белой странице и так самый заметный объект экрана, а пятно

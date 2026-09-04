@@ -456,7 +456,7 @@ export function AchievementForm({
             setOpen(true);
           }}
           className="flex h-12 items-center gap-2 rounded-[var(--radius-control)] px-6 text-sm font-medium text-white shadow-[var(--shadow-rest)]"
-          style={{ background: 'var(--gradient-brand)' }}
+          style={{ background: 'var(--surface-brand)' }}
         >
           <Icon name="plus" size={17} />
           Добавить достижение
@@ -538,7 +538,7 @@ export function AchievementForm({
           onClick={submit}
           disabled={status === 'sending'}
           className="flex h-12 items-center gap-2 rounded-[var(--radius-control)] px-6 text-sm font-medium text-white shadow-[var(--shadow-rest)] disabled:opacity-60"
-          style={{ background: 'var(--gradient-brand)' }}
+          style={{ background: 'var(--surface-brand)' }}
         >
           {status === 'sending' ? <Spinner /> : null}
           Отправить на проверку

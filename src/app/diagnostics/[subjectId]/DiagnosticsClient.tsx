@@ -130,7 +130,7 @@ export function DiagnosticsClient({ subjectId }: { subjectId: string }) {
   if (!subject) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-ink-100 text-ink-400">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-[var(--radius-card)] bg-ink-100 text-ink-400">
           <Icon name="compass" size={28} />
         </div>
         <div className="mt-4">

@@ -106,8 +106,8 @@ export const CLAY = {
  * картинка, а трёхточечный градиент — как освещённая поверхность.
  */
 const TONE_FILL: Record<AchievementCardTone, string> = {
-  brand: 'var(--gradient-brand)',
-  ink: 'var(--gradient-ink)',
+  brand: 'var(--surface-brand)',
+  ink: 'var(--surface-ink)',
   accent:
     'linear-gradient(135deg, var(--color-accent-400) 0%, var(--color-accent-600) 55%, var(--color-brand-700) 100%)',
   success:
