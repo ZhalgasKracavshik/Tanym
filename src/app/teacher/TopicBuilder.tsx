@@ -154,6 +154,22 @@ function emptyTask(skillId: string): TaskDraft {
   };
 }
 
+/*
+  Полный вид поля: коробка, отступы, фон, скругление.
+
+  Раньше здесь стоял один класс `t-input`, и поля были не видны вовсе. Он
+  задаёт только ЦВЕТ рамки — её толщину обнуляет сброс Tailwind
+  (`* { border: 0px solid }`), а размеров, фона и скругления в нём нет
+  по замыслу: `t-input` написан для полей входа, где рамка одна снизу и
+  подпись всплывает над текстом. Учительский конструктор переиспользовал
+  класс, ожидая от него коробку, и получал подпись над пустотой.
+
+  `t-input` остаётся рядом: он и дальше красит рамку при ошибке и в
+  фокусе, а размеры теперь задаются здесь.
+*/
+const FIELD =
+  't-input mt-1.5 w-full rounded-[var(--radius-control)] border border-ink-200 bg-white px-3.5 py-2.5 text-[15px] text-ink-900 outline-none';
+
 export function TopicBuilder({ subject, onPublished }: { subject: Subject; onPublished?: () => void }) {
   const { state } = useStore();
   const t = TEXT[state.language];
@@ -240,7 +256,7 @@ export function TopicBuilder({ subject, onPublished }: { subject: Subject; onPub
         <label className="sm:col-span-2">
           <span className="block text-sm font-medium text-ink-800">{t.title}</span>
           <input
-            className="t-input mt-1.5 w-full"
+            className={FIELD}
             value={title}
             maxLength={160}
             onChange={(event) => setTitle(event.target.value)}
@@ -250,7 +266,7 @@ export function TopicBuilder({ subject, onPublished }: { subject: Subject; onPub
         <label className="sm:col-span-2">
           <span className="block text-sm font-medium text-ink-800">{t.summary}</span>
           <textarea
-            className="t-input mt-1.5 w-full"
+            className={FIELD}
             rows={2}
             value={summary}
             maxLength={600}
@@ -262,7 +278,7 @@ export function TopicBuilder({ subject, onPublished }: { subject: Subject; onPub
         <label>
           <span className="block text-sm font-medium text-ink-800">{t.grade}</span>
           <select
-            className="t-input mt-1.5 w-full"
+            className={FIELD}
             value={grade}
             onChange={(event) => setGrade(Number(event.target.value) as Grade)}
           >
@@ -277,7 +293,7 @@ export function TopicBuilder({ subject, onPublished }: { subject: Subject; onPub
         <label>
           <span className="block text-sm font-medium text-ink-800">{t.difficulty}</span>
           <select
-            className="t-input mt-1.5 w-full"
+            className={FIELD}
             value={difficulty}
             onChange={(event) => setDifficulty(Number(event.target.value) as Difficulty)}
           >
@@ -295,7 +311,7 @@ export function TopicBuilder({ subject, onPublished }: { subject: Subject; onPub
             type="number"
             min={5}
             max={180}
-            className="t-input mt-1.5 w-full"
+            className={FIELD}
             value={minutes}
             onChange={(event) => setMinutes(Number(event.target.value))}
           />
@@ -320,7 +336,13 @@ export function TopicBuilder({ subject, onPublished }: { subject: Subject; onPub
           const showProblems = check.touched && check.problems.length > 0;
 
           return (
-            <div key={index} className="rounded-[var(--radius-card)] border border-ink-200 p-4">
+            /*
+              Задание лежит на тёплой подложке, а не на том же белом, что
+              и вся форма. Пять заданий подряд на одном белом листе читались
+              как один длинный список полей: границу между «Заданием 1» и
+              «Заданием 2» держала только тонкая рамка.
+            */
+            <div key={index} className="rounded-[var(--radius-card)] border border-ink-200 bg-ink-50/60 p-5">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-ink-700">
                   {t.task} {index + 1}
@@ -348,7 +370,7 @@ export function TopicBuilder({ subject, onPublished }: { subject: Subject; onPub
                 <label>
                   <span className="block text-sm font-medium text-ink-800">{t.kind}</span>
                   <select
-                    className="t-input mt-1.5 w-full"
+                    className={FIELD}
                     value={task.kind}
                     onChange={(event) => patch(index, { kind: event.target.value as TaskDraft['kind'] })}
                   >
@@ -360,7 +382,7 @@ export function TopicBuilder({ subject, onPublished }: { subject: Subject; onPub
                 <label>
                   <span className="block text-sm font-medium text-ink-800">{t.skill}</span>
                   <select
-                    className="t-input mt-1.5 w-full"
+                    className={FIELD}
                     value={task.skillId}
                     onChange={(event) => patch(index, { skillId: event.target.value })}
                   >
@@ -377,7 +399,7 @@ export function TopicBuilder({ subject, onPublished }: { subject: Subject; onPub
               <label className="mt-3 block">
                 <span className="block text-sm font-medium text-ink-800">{t.prompt}</span>
                 <textarea
-                  className="t-input mt-1.5 w-full"
+                  className={FIELD}
                   rows={2}
                   value={task.prompt}
                   maxLength={TASK_LIMITS.prompt}
@@ -406,7 +428,7 @@ export function TopicBuilder({ subject, onPublished }: { subject: Subject; onPub
                           className="h-4 w-4 shrink-0 accent-[var(--color-brand-600)]"
                         />
                         <input
-                          className="t-input w-full"
+                          className={`${FIELD} mt-0`}
                           value={option}
                           maxLength={TASK_LIMITS.option}
                           placeholder={`${optionIndex + 1}`}
@@ -436,7 +458,7 @@ export function TopicBuilder({ subject, onPublished }: { subject: Subject; onPub
                 <label className="mt-3 block">
                   <span className="block text-sm font-medium text-ink-800">{t.value}</span>
                   <input
-                    className="t-input mt-1.5 w-full"
+                    className={FIELD}
                     value={task.correctValue}
                     maxLength={TASK_LIMITS.option}
                     onChange={(event) => patch(index, { correctValue: event.target.value })}
@@ -448,7 +470,7 @@ export function TopicBuilder({ subject, onPublished }: { subject: Subject; onPub
               <label className="mt-3 block">
                 <span className="block text-sm font-medium text-ink-800">{t.explanation}</span>
                 <textarea
-                  className="t-input mt-1.5 w-full"
+                  className={FIELD}
                   rows={3}
                   value={task.explanation}
                   maxLength={TASK_LIMITS.explanation}
@@ -460,7 +482,7 @@ export function TopicBuilder({ subject, onPublished }: { subject: Subject; onPub
               <label className="mt-3 block">
                 <span className="block text-sm font-medium text-ink-800">{t.hint}</span>
                 <input
-                  className="t-input mt-1.5 w-full"
+                  className={FIELD}
                   value={task.hint}
                   maxLength={TASK_LIMITS.hint}
                   onChange={(event) => patch(index, { hint: event.target.value })}

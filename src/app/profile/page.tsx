@@ -1064,7 +1064,7 @@ function ProfileContent() {
                       setStudyDraft((prev) => ({ ...prev, goalCustom: event.target.value }))
                     }
                     placeholder="Например: пересдать геометрию за 9 класс"
-                    className="t-input mt-2 w-full"
+                    className="t-input mt-2 w-full rounded-[var(--radius-control)] border border-ink-200 bg-white px-3.5 py-2.5 text-[15px] text-ink-900 outline-none"
                   />
                   <p className="mt-2 text-xs text-ink-400">
                     Наставник будет опираться на эту формулировку.
