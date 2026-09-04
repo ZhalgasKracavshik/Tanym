@@ -18,7 +18,7 @@ import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
 import { useOwnStreakPoints, useSchoolLeaderboard } from '@/lib/supabase/leaderboard';
 import { rankEntries } from '@/lib/leaderboard';
 import { summarize } from '@/lib/personalization';
-import { AchievementForm, PortfolioGrid, portfolioPoints, usePortfolio } from '@/components/Portfolio';
+import { portfolioPoints, usePortfolio } from '@/components/Portfolio';
 import { Avatar } from '@/components/Avatar';
 import { SocialLinks } from '@/components/SocialLinks';
 import { parseSocialLinks } from '@/lib/social';
@@ -28,7 +28,7 @@ import { Icon, type IconName } from '@/components/Icon';
 import { Reveal } from '@/components/motion';
 import { SuccessCheckMark } from '@/components/SuccessCheckMark';
 import { TIER_LABEL, levelFromPoints, pointsWord } from '@/lib/level';
-import { Button, Card, Kicker, Skeleton } from '@/components/ui';
+import { Button, ButtonLink, Card, Kicker, Skeleton } from '@/components/ui';
 import { PasswordField, SubmitButton } from '@/components/auth-ui';
 import { COVER_TYPES, coverError } from '@/components/ImageField';
 import { avatarPhotoUrl } from '@/lib/supabase/avatarPhoto';
@@ -68,6 +68,22 @@ interface StudyDraft {
   knowledgeLevel?: string | null;
   interests?: string[];
   subjectIds?: string[];
+}
+
+/**
+ * «1 достижение», «2 достижения», «5 достижений».
+ *
+ * Отдельной функцией, а не через pointsWord: та склоняет именно «балл» и
+ * подстановка другого слова в неё сделала бы её общей ровно наполовину —
+ * правила совпадают, а слова нет.
+ */
+function achievementsWord(n: number): string {
+  const abs = Math.abs(n) % 100;
+  if (abs >= 11 && abs <= 14) return 'достижений';
+  const last = abs % 10;
+  if (last === 1) return 'достижение';
+  if (last >= 2 && last <= 4) return 'достижения';
+  return 'достижений';
 }
 
 /**
@@ -187,7 +203,12 @@ function ProfileContent() {
     }
   }
 
-  const [refreshKey, setRefreshKey] = useState(0);
+  /*
+    Ключ только читается: обновлять список из профиля больше нечем —
+    добавление достижения переехало на свою страницу. Оставлен затем, что
+    usePortfolio принимает его аргументом.
+  */
+  const [refreshKey] = useState(0);
   const [savedAlert, setSavedAlert] = useState(false);
   const [savedTick, setSavedTick] = useState(0);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -1277,36 +1298,35 @@ function ProfileContent() {
               </Card>
             </div>
 
-            {/* Портфолио достижений */}
-            {isStudent ? (
-              <div className="space-y-6">
-                <div>
-                  <Kicker>Портфолио</Kicker>
-                  <h2 className="mt-1 text-xl font-medium text-ink-900">Достижения и олимпиады</h2>
-                  <p className="mt-1 text-xs text-ink-500">
-                    Добавляйте грамоты, сертификаты и участие в олимпиадах — они начисляют баллы в рейтинг школы.
-                  </p>
-                </div>
+            {/*
+              Портфолио живёт на своей странице, а не здесь.
 
-                <AchievementForm
-                  studentId={schoolProfile?.id ?? ''}
-                  language={state.language}
-                  onSubmitted={() => setRefreshKey((k) => k + 1)}
-                />
+              Одна и та же форма подачи с той же сеткой карточек стояла в
+              трёх местах: на странице достижений, в её разделе «моё» и
+              тут. Три копии одного экрана расходятся при первом же новом
+              поле, а ученик, добавив достижение в одной из них, шёл
+              искать его в другой.
 
-                <PortfolioGrid
-                  items={achievements ?? []}
-                  language={state.language}
-                  emptyText="У вас пока нет добавленных достижений. Добавьте первое выше!"
-                />
-              </div>
-            ) : (
-              <Card>
-                <p className="text-sm text-ink-600">
-                  Портфолио ведут ученики. Учителям доступны публикации материалов и мониторинг класса.
+              Осталась ссылка и число — чтобы из профиля было видно, что
+              портфолио вообще есть, и куда за ним идти.
+            */}
+            <Card className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <Kicker>Портфолио</Kicker>
+                <h2 className="mt-1 text-lg font-medium text-ink-900">
+                  {achievements === null
+                    ? 'Достижения и олимпиады'
+                    : `${achievements.length} ${achievementsWord(achievements.length)}`}
+                </h2>
+                <p className="mt-1 text-xs text-ink-500">
+                  Грамоты, сертификаты и участие в олимпиадах приносят баллы в рейтинг школы.
                 </p>
-              </Card>
-            )}
+              </div>
+              <ButtonLink href="/achievements/my" variant="secondary">
+                Открыть портфолио
+                <Icon name="arrow-right" size={15} />
+              </ButtonLink>
+            </Card>
           </div>
         )}
 
