@@ -20,6 +20,7 @@ import { useStore } from '@/components/StoreProvider';
 import { createClient } from '@/lib/supabase/client';
 import { AiBadge } from '@/components/AiBadge';
 import { AiAnswer, AiTextScaleControl, useAiTextScale } from '@/components/AiAnswer';
+import { Scratchpad } from '@/components/Scratchpad';
 import { Icon } from '@/components/Icon';
 import { MathText } from '@/components/MathText';
 import { Badge, Button, ButtonLink, EmptyState, Panel, RailRow, Skeleton } from '@/components/ui';
@@ -335,6 +336,13 @@ export function CommunityMaterialClient({ materialId }: { materialId: string }) 
               </Button>
             </div>
           </RailRow>
+        </div>
+      )}
+
+      {/* Черновик — как и в остальных заданиях: считать приходится самому. */}
+      {!solved && task && (
+        <div className="mt-8">
+          <Scratchpad resetKey={task.id} />
         </div>
       )}
 

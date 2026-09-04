@@ -18,6 +18,7 @@ import type { DiagnosticAnswer, DiagnosticResult, Task } from '@/lib/types';
 import { useStore } from '@/components/StoreProvider';
 import type { Dict } from '@/lib/i18n';
 import { Badge, Button, ButtonLink, EmptyState, Kicker, ProgressBar } from '@/components/ui';
+import { Scratchpad } from '@/components/Scratchpad';
 import { Icon } from '@/components/Icon';
 import { MathText } from '@/components/MathText';
 
@@ -293,7 +294,12 @@ export function DiagnosticsClient({ subjectId }: { subjectId: string }) {
           />
         )}
 
-        <Button className="mt-10 w-full" size="lg" onClick={submit} disabled={answer === ''}>
+        {/* Диагностика — те же задания, и считать в ней приходится так же. */}
+        <div className="mt-8">
+          <Scratchpad resetKey={task.id} />
+        </div>
+
+        <Button className="mt-6 w-full" size="lg" onClick={submit} disabled={answer === ''}>
           {current + 1 === questions.length ? t.finish : t.answer}
         </Button>
       </div>

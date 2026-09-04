@@ -18,6 +18,7 @@ import type { FeedbackRequest, FeedbackResponse } from '@/lib/ai/contracts';
 import { useStore } from '@/components/StoreProvider';
 import { AiBadge } from '@/components/AiBadge';
 import { Badge, Button, ButtonLink, Card, EmptyState, Panel, RailRow, Skeleton } from '@/components/ui';
+import { Scratchpad } from '@/components/Scratchpad';
 import { Icon } from '@/components/Icon';
 import { MathText } from '@/components/MathText';
 
@@ -778,7 +779,17 @@ export function LearnClient({ topicId }: { topicId: string }) {
                 </div>
               )}
 
-              <div className="mt-10">
+              {/*
+                Черновик стоит перед кнопкой ответа, а не после разбора:
+                считают ДО того, как отвечают. Ключ по заданию очищает
+                полотно при переходе к следующему — чужие вычисления под
+                новым условием только мешают.
+              */}
+              <div className="mt-8">
+                <Scratchpad resetKey={task.id} />
+              </div>
+
+              <div className="mt-6">
                 {feedback ? (
                   <Button size="lg" className="w-full" onClick={next}>
                     {index + 1 < tasks.length ? t.nextTask : t.finishTopic}
