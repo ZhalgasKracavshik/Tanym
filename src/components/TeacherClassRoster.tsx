@@ -84,8 +84,21 @@ export function TeacherClassRoster({ language }: { language: Language }) {
       const { data: progress } =
         ids.length > 0
           ? await supabase
-              .from('student_progress')
-              .select('student_id, points, average_mastery, streak_current, total_attempts, updated_at')
+              /*
+                Проверенные сервером итоги, а не то, что прислал браузер.
+
+                student_progress пишет клиент, и учитель, глядя в эту
+                таблицу, видел бы числа, которые ученик может поставить
+                себе сам из консоли. Для панели, по которой учитель
+                решает, кому помочь, это недопустимо.
+
+                Доля верных ответов считается здесь же из попыток:
+                в проверенных итогах готового среднего нет, а correct к
+                total — более честная мера, чем усреднённое владение,
+                потому что за ней стоят конкретные попытки.
+              */
+              .from('verified_progress')
+              .select('student_id, points, correct_attempts, streak_current, total_attempts')
               .in('student_id', ids)
           : { data: [] };
 
@@ -98,10 +111,12 @@ export function TeacherClassRoster({ language }: { language: Language }) {
           name: row.name,
           created_at: row.created_at,
           points: progressById[row.id]?.points ?? 0,
-          average_mastery: progressById[row.id]?.average_mastery ?? 0,
+          average_mastery: progressById[row.id]?.total_attempts
+            ? progressById[row.id].correct_attempts / progressById[row.id].total_attempts
+            : 0,
           streak_current: progressById[row.id]?.streak_current ?? 0,
           total_attempts: progressById[row.id]?.total_attempts ?? 0,
-          updated_at: progressById[row.id]?.updated_at ?? null,
+          updated_at: null,
         })),
       );
     }
