@@ -42,6 +42,10 @@ export interface ServerProfile {
   subject_ids: string[] | null;
   goal: string | null;
   goal_custom: string | null;
+  /** Данные организации. У ученика и учителя пустые. */
+  org_name: string | null;
+  org_site: string | null;
+  org_contact: string | null;
   target_date: string | null;
   target_label: string | null;
 }

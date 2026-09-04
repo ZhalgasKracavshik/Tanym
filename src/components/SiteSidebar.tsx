@@ -38,9 +38,9 @@ import { avatarPhotoUrl } from '@/lib/supabase/avatarPhoto';
  * панель мониторинга класса.
  */
 const HIDDEN_FOR_ROLE: Record<'student' | 'teacher' | 'admin' | 'center', string[]> = {
-  student: ['/teacher', '/admin'],
-  teacher: ['/plan', '/dashboard', '/chat', '/admin'],
-  admin: ['/plan', '/dashboard', '/chat', '/teacher'],
+  student: ['/teacher', '/admin', '/center'],
+  teacher: ['/plan', '/dashboard', '/chat', '/admin', '/center'],
+  admin: ['/plan', '/dashboard', '/chat', '/teacher', '/center'],
   /*
     Внешнему центру оставлен один раздел — «Возможности», где живут его
     объявления. Остальное закрыто не только в меню, но и в самой базе
@@ -62,6 +62,7 @@ const TEXT: Dict<{
   archive: string;
   events: string;
   marketplace: string;
+  myServices: string;
   announcements: string;
   leaderboard: string;
   mentor: string;
@@ -83,6 +84,7 @@ const TEXT: Dict<{
     archive: 'Архив',
     events: 'Афиша',
     marketplace: 'Возможности',
+    myServices: 'Мои услуги',
     announcements: 'Объявления',
     leaderboard: 'Рейтинг',
     mentor: 'Наставник',
@@ -104,6 +106,7 @@ const TEXT: Dict<{
     archive: 'Мұрағат',
     events: 'Афиша',
     marketplace: 'Мүмкіндіктер',
+    myServices: 'Менің қызметтерім',
     announcements: 'Хабарландырулар',
     leaderboard: 'Рейтинг',
     mentor: 'Тәлімгер',
@@ -125,6 +128,7 @@ const TEXT: Dict<{
     archive: 'Archive',
     events: 'Events',
     marketplace: 'Opportunities',
+    myServices: 'My services',
     announcements: 'Announcements',
     leaderboard: 'Leaderboard',
     mentor: 'Mentor',
@@ -276,6 +280,7 @@ export function SiteSidebar() {
     { href: '/announcements', label: t.announcements, icon: 'megaphone', section: 'more' },
     { href: '/events', label: t.events, icon: 'calendar', section: 'more' },
     { href: '/marketplace', label: t.marketplace, icon: 'backpack', section: 'more' },
+    { href: '/center', label: t.myServices, icon: 'building', section: 'study' },
   ];
   /*
     Роль, которой нет в таблице, не должна ронять приложение.

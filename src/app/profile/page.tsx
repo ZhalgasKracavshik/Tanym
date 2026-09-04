@@ -12,6 +12,7 @@
 
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { CenterProfile } from '@/components/CenterProfile';
 import { useStore } from '@/components/StoreProvider';
 import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
 import { useOwnStreakPoints, useSchoolLeaderboard } from '@/lib/supabase/leaderboard';
@@ -259,6 +260,16 @@ function ProfileContent() {
   const displayName = schoolProfile?.name ?? state.profile?.name ?? 'Ученик';
   const role = schoolProfile?.role ?? state.profile?.role ?? 'student';
   const isStudent = role === 'student';
+
+  /*
+    У внешнего центра свой экран, а не ветка внутри ученического.
+
+    Прежде организации показывали «10 А», «О себе — расскажите о своих
+    увлечениях» и вкладки «Учёба и класс» и «Активность и достижения».
+    Половина полей была не про неё, вторая половина — про ученика,
+    которым она не является.
+  */
+  if (role === 'center') return <CenterProfile />;
 
   const summary = summarize(state);
   const achievementPoints = portfolioPoints(achievements);

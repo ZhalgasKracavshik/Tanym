@@ -29,7 +29,7 @@ export default function NewListingPage() {
       backLabel="К возможностям"
       kicker="Возможности"
       title="Разместить карточку"
-      requireRole={['student', 'teacher', 'admin']}
+      requireRole={['student', 'teacher', 'admin', 'center']}
     >
       {(profile) =>
         profile.role === 'admin' ? (

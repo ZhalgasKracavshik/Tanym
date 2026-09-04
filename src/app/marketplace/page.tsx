@@ -222,7 +222,7 @@ export default function MarketplacePage() {
         <PublishAction
           href="/marketplace/new"
           label="Разместить"
-          requireRole={['student', 'teacher', 'admin']}
+          requireRole={['student', 'teacher', 'admin', 'center']}
         />
       </div>
       <p className="mt-4 max-w-2xl text-sm text-ink-500">{t.subtitle}</p>
