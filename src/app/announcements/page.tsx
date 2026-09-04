@@ -19,7 +19,9 @@ import {
 import type { Announcement, AnnouncementCategory } from '@/lib/announcements';
 import type { Dict } from '@/lib/i18n';
 import { useStore } from '@/components/StoreProvider';
+import Link from 'next/link';
 import { Icon } from '@/components/Icon';
+import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
 import { Badge, EmptyState, RailRow, Skeleton } from '@/components/ui';
 import { OwnerActions } from '@/components/OwnerActions';
 import { usePublishedAnnouncements } from '@/lib/supabase/announcements';
@@ -165,6 +167,9 @@ export default function AnnouncementsPage() {
     // реально пришёл из базы, отсюда published в зависимостях.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hydrated, published]);
+
+  const { profile: schoolProfile } = useSchoolAuth();
+  const isAdmin = schoolProfile?.role === 'admin';
 
   if (!hydrated) {
     return (
@@ -368,7 +373,23 @@ export default function AnnouncementsPage() {
                     Возможность там была, но добраться до неё значило уйти
                     со страницы, где ты видишь ошибку.
                   */}
-                  <span className="ml-auto">
+                  <span className="ml-auto inline-flex items-center gap-3">
+                    {/*
+                      Правка стоит рядом с удалением, а не вместо него:
+                      раньше исправить опечатку можно было только удалив
+                      объявление и написав заново — вместе с датой
+                      публикации, местом в ленте и ссылкой, которую уже
+                      кому-то отправили.
+                    */}
+                    {isAdmin && (
+                      <Link
+                        href={`/announcements/${announcement.id}/edit`}
+                        className="inline-flex items-center gap-1.5 text-sm font-medium text-ink-700 underline underline-offset-4 hover:text-ink-900"
+                      >
+                        <Icon name="pencil" size={13} />
+                        Изменить
+                      </Link>
+                    )}
                     <OwnerActions
                       table="published_announcements"
                       id={announcement.id}

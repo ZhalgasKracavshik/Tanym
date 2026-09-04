@@ -1,8 +1,13 @@
 'use client';
 
 /**
- * Публикация объявления — доступно только роли admin: объявление это
- * официальный голос школы, а не сообщение отдельного учителя.
+ * Публикация и правка объявления — доступно только роли admin: объявление
+ * это официальный голос школы, а не сообщение отдельного учителя.
+ *
+ * Правка живёт в этой же форме, а не в отдельной копии. Поля у создания и
+ * у изменения одни и те же, а две формы с одинаковыми полями расходятся
+ * при первом же новом поле: добавишь его в одну — и объявление, созданное
+ * с ним, перестанет открываться на правку без него.
  */
 
 import { useState } from 'react';
@@ -27,24 +32,50 @@ const TEXT = {
   publishing: 'Публикуем…',
   done: 'Объявление опубликовано.',
   error: 'Не получилось опубликовать. Проверьте поля.',
+  save: 'Сохранить изменения',
+  saving: 'Сохраняем…',
+  saved: 'Изменения сохранены.',
+  saveError: 'Не удалось сохранить. Проверьте поля.',
+  coverKept: 'Изображение остаётся прежним. Выберите файл, чтобы заменить его.',
 } as const;
+
+/** Объявление, открытое на правку. */
+export interface AnnouncementDraft {
+  id: string;
+  category: AnnouncementCategory;
+  title: string;
+  body: string;
+  author: string;
+  expires_at: string | null;
+  pinned: boolean;
+  target_grades: number[] | null;
+  cover_path: string | null;
+}
 
 export function AnnouncementPublishForm({
   language,
   adminId,
   onPublished,
+  editing,
 }: {
   language: Language;
   adminId: string;
   onPublished: () => void;
+  /** Если передано — форма правит это объявление, а не создаёт новое. */
+  editing?: AnnouncementDraft;
 }) {
-  const [category, setCategory] = useState<AnnouncementCategory>('general');
-  const [title, setTitle] = useState('');
-  const [body, setBody] = useState('');
-  const [author, setAuthor] = useState('');
-  const [expiresAt, setExpiresAt] = useState('');
-  const [grades, setGrades] = useState('');
-  const [pinned, setPinned] = useState(false);
+  const [category, setCategory] = useState<AnnouncementCategory>(editing?.category ?? 'general');
+  const [title, setTitle] = useState(editing?.title ?? '');
+  const [body, setBody] = useState(editing?.body ?? '');
+  const [author, setAuthor] = useState(editing?.author ?? '');
+  /*
+    Дата приходит из базы как ISO со временем, а input[type=date] принимает
+    только «ГГГГ-ММ-ДД». Без обрезки поле молча оставалось бы пустым, и
+    правка снимала бы срок актуальности с объявления.
+  */
+  const [expiresAt, setExpiresAt] = useState(editing?.expires_at?.slice(0, 10) ?? '');
+  const [grades, setGrades] = useState((editing?.target_grades ?? []).join(','));
+  const [pinned, setPinned] = useState(editing?.pinned ?? false);
   const [cover, setCover] = useState<File | null>(null);
   const [status, setStatus] = useState<'idle' | 'sending' | 'done' | 'error'>('idle');
 
@@ -83,9 +114,7 @@ export function AnnouncementPublishForm({
       return;
     }
 
-    const { error } = await supabase.from('published_announcements').insert({
-      cover_path: coverPath,
-      admin_id: adminId,
+    const fields = {
       category,
       title,
       body,
@@ -94,7 +123,24 @@ export function AnnouncementPublishForm({
       pinned,
       // Пустой список означает «вся школа», а не «ни одному классу».
       target_grades: gradeList.length > 0 ? gradeList : null,
-    });
+    };
+
+    /*
+      При правке обложка переписывается, только если выбрали новый файл.
+      Иначе coverPath здесь null — «картинки нет», — и записать его значило
+      бы стирать существующее изображение каждый раз, когда правят опечатку
+      в заголовке.
+    */
+    const { error } = editing
+      ? await supabase
+          .from('published_announcements')
+          .update(coverPath === null ? fields : { ...fields, cover_path: coverPath })
+          .eq('id', editing.id)
+      : await supabase.from('published_announcements').insert({
+          ...fields,
+          cover_path: coverPath,
+          admin_id: adminId,
+        });
 
     if (error) {
       setStatus('error');
@@ -103,8 +149,10 @@ export function AnnouncementPublishForm({
 
     setStatus('done');
     setCover(null);
-    setTitle('');
-    setBody('');
+    if (!editing) {
+      setTitle('');
+      setBody('');
+    }
     onPublished();
   }
 
@@ -150,14 +198,27 @@ export function AnnouncementPublishForm({
         {TEXT.pinned}
       </label>
 
-      {status === 'done' && <p className="text-sm font-semibold text-success-700">{TEXT.done}</p>}
-      {status === 'error' && <p className="text-sm font-semibold text-danger-600">{TEXT.error}</p>}
+      {status === 'done' && (
+        <p className="text-sm font-semibold text-success-700">{editing ? TEXT.saved : TEXT.done}</p>
+      )}
+      {status === 'error' && (
+        <p className="text-sm font-semibold text-danger-600">{editing ? TEXT.saveError : TEXT.error}</p>
+      )}
 
-
-      <ImageField file={cover} onChange={setCover} />
+      <ImageField
+        file={cover}
+        onChange={setCover}
+        hint={editing?.cover_path ? TEXT.coverKept : undefined}
+      />
 
       <Button onClick={submit} disabled={status === 'sending'}>
-        {status === 'sending' ? TEXT.publishing : TEXT.publish}
+        {status === 'sending'
+          ? editing
+            ? TEXT.saving
+            : TEXT.publishing
+          : editing
+            ? TEXT.save
+            : TEXT.publish}
       </Button>
     </div>
   );
