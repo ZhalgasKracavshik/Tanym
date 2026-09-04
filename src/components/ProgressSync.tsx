@@ -16,6 +16,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useStore } from './StoreProvider';
+import type { DiagnosticResult } from '@/lib/types';
 import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
 import { createClient } from '@/lib/supabase/client';
 import { computeSkillMastery, summarize } from '@/lib/personalization';
@@ -23,9 +24,56 @@ import { computeSkillMastery, summarize } from '@/lib/personalization';
 const SYNC_DELAY_MS = 4000;
 
 export function ProgressSync() {
-  const { state, hydrated } = useStore();
+  const { state, hydrated, hydrateDiagnostics } = useStore();
   const { profile } = useSchoolAuth();
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /*
+    Забираем сохранённые диагностики при входе.
+
+    Раньше синхронизация работала в одну сторону: снимок уходил наверх и
+    не возвращался никогда. Диагностика при этом на сервер не попадала
+    вовсе и жила только в localStorage — ученик проходил её на телефоне,
+    открывал ноутбук, и продукт снова предлагал «пройти диагностику», а
+    план строился по классу и цели вместо измеренного уровня.
+
+    Запрос идёт один раз на вход: перезапрашивать нечего, дальше
+    состояние меняет сам ученик.
+  */
+  const pulledFor = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!hydrated || !profile || profile.role !== 'student') return;
+    if (pulledFor.current === profile.id) return;
+    pulledFor.current = profile.id;
+
+    let cancelled = false;
+    fetch('/api/diagnostics')
+      .then((res) => res.json())
+      .then((data: { diagnostics?: unknown[] }) => {
+        if (cancelled || !Array.isArray(data.diagnostics)) return;
+        const results = data.diagnostics.map((row) => {
+          const r = row as Record<string, unknown>;
+          return {
+            subjectId: r.subject_id,
+            answers: r.answers ?? [],
+            skillMastery: r.skill_mastery ?? {},
+            score: r.score,
+            level: r.level,
+            startingDifficulty: r.starting_difficulty,
+            completedAt: r.completed_at,
+          } as DiagnosticResult;
+        });
+        if (results.length > 0) hydrateDiagnostics(results);
+      })
+      .catch(() => {
+        // Сеть отвалилась — работаем на местной копии, это не повод падать.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [hydrated, profile, hydrateDiagnostics]);
 
   useEffect(() => {
     // Синхронизировать есть смысл только настоящему вошедшему ученику —

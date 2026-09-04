@@ -40,6 +40,14 @@ interface StoreValue {
   setProfile: (profile: Profile) => void;
   updateProfile: (patch: Partial<Profile>) => void;
   saveDiagnostic: (result: DiagnosticResult) => void;
+  /**
+   * Подставить диагностики, сохранённые на сервере.
+   *
+   * Отличается от saveDiagnostic тем, что не затирает более свежую
+   * местную: ученик мог пройти диагностику только что, а ответ сервера
+   * прийти следом и откатить её.
+   */
+  hydrateDiagnostics: (results: DiagnosticResult[]) => void;
   recordAttempt: (attempt: Omit<TaskAttempt, 'at'>, topicTaskCount: number) => void;
   markAchievementsSeen: (ids: string[]) => void;
   toggleEventRegistration: (eventId: string) => void;
@@ -136,6 +144,32 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setState((previous) =>
       previous.profile ? { ...previous, profile: { ...previous.profile, ...patch } } : previous,
     );
+  }, []);
+
+  const hydrateDiagnostics = useCallback((results: DiagnosticResult[]) => {
+    setState((previous) => {
+      const merged = { ...previous.diagnostics };
+      const difficulty = { ...previous.difficulty };
+      let changed = false;
+
+      for (const incoming of results) {
+        const local = merged[incoming.subjectId];
+        /*
+          Побеждает более поздняя. Сервер — единственная копия, пережившая
+          смену устройства, но местная может быть свежее: ученик прошёл
+          диагностику пять секунд назад, а ответ сервера пришёл следом со
+          вчерашним результатом.
+        */
+        if (local && Date.parse(local.completedAt) >= Date.parse(incoming.completedAt)) continue;
+        merged[incoming.subjectId] = incoming;
+        difficulty[incoming.subjectId] = incoming.startingDifficulty;
+        changed = true;
+      }
+
+      // Без изменений возвращаем прежний объект: новый вызвал бы
+      // перерисовку всех подписчиков состояния на пустом месте.
+      return changed ? { ...previous, diagnostics: merged, difficulty } : previous;
+    });
   }, []);
 
   const saveDiagnostic = useCallback((result: DiagnosticResult) => {
@@ -364,6 +398,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setProfile,
       updateProfile,
       saveDiagnostic,
+      hydrateDiagnostics,
       recordAttempt,
       markAchievementsSeen,
       toggleEventRegistration,
@@ -389,6 +424,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setProfile,
       updateProfile,
       saveDiagnostic,
+      hydrateDiagnostics,
       recordAttempt,
       markAchievementsSeen,
       toggleEventRegistration,

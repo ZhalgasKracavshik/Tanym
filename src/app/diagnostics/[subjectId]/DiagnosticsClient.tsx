@@ -163,7 +163,17 @@ export function DiagnosticsClient({ subjectId }: { subjectId: string }) {
       return;
     }
 
-    // Вопросы закончились — считаем итог движком персонализации.
+    /*
+      Вопросы закончились. Итог считаем локально, чтобы показать результат
+      сразу, и параллельно отправляем ответы на сервер — там он
+      пересчитывается заново и сохраняется.
+
+      Почему и то, и другое. Локальный расчёт нужен ради мгновенного
+      экрана результата: ждать сеть после семи минут работы неприятно.
+      Серверный — потому что диагностика задаёт стартовую сложность, и
+      верить браузеру в этом нельзя, а ещё потому, что иначе результат
+      исчезает при входе с другого устройства.
+    */
     const scored = scoreDiagnostic(subject!, updated);
     const diagnosticResult: DiagnosticResult = {
       subjectId: subject!.id,
@@ -186,6 +196,20 @@ export function DiagnosticsClient({ subjectId }: { subjectId: string }) {
     saveDiagnostic(diagnosticResult);
     setResult(diagnosticResult);
     setStage('result');
+
+    /*
+      Отправка не блокирует показ результата и не роняет экран при
+      отсутствии сети: ученик уже увидел свой уровень, а несохранённая
+      строка — меньшая беда, чем ошибка вместо результата.
+    */
+    void fetch('/api/diagnostics', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        subjectId: subject!.id,
+        answers: updated.map((item) => ({ taskId: item.task.id, answer: item.answer })),
+      }),
+    }).catch(() => {});
   }
 
   /* ---------------- Экран 1: вступление ---------------- */
