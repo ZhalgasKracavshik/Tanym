@@ -112,14 +112,66 @@ export async function PATCH(request: Request) {
   if (!body) return NextResponse.json({ error: 'invalid_body' }, { status: 400 });
 
   const patch: Record<string, unknown> = {};
+
   /*
-    Имя проверяется и здесь, а не только на форме регистрации: PATCH можно
-    вызвать напрямую, минуя интерфейс, а имя видно другим ученикам.
+    Роль нужна до проверки имени: у организации и у человека имя устроено
+    по-разному, и правила к ним неприменимы взаимно.
   */
+  const { data: own } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
+  const isCenter = own?.role === 'center';
+
   if (body.name !== undefined) {
-    const checked = checkPersonName(body.name);
-    if (!checked.ok) return NextResponse.json({ error: 'invalid_name', message: checked.reason }, { status: 400 });
-    patch.name = checked.value;
+    if (isCenter) {
+      /*
+        Название организации — не имя человека.
+
+        Здесь стояла общая проверка checkPersonName, требующая две части
+        из букв: «Иванов Пётр». Любое настоящее название её не проходит —
+        «OpenEdu» одно слово, «Учебный центр №5» содержит цифру, — и центр
+        не мог сохранить собственное название вовсе. Ошибка при этом
+        выглядела как «проверьте связь», хотя связь была ни при чём.
+      */
+      const orgName = String(body.name).trim();
+      if (orgName.length < 2 || orgName.length > 120) {
+        return NextResponse.json({ error: 'invalid_org_name' }, { status: 400 });
+      }
+      patch.name = orgName;
+      patch.org_name = orgName;
+    } else {
+      /*
+        У человека имя видно одноклассникам в рейтинге, поэтому проверка
+        строже, чем «поле не пустое». PATCH можно вызвать напрямую, минуя
+        форму, — значит проверка нужна и здесь.
+      */
+      const checked = checkPersonName(body.name);
+      if (!checked.ok) return NextResponse.json({ error: 'invalid_name', message: checked.reason }, { status: 400 });
+      patch.name = checked.value;
+    }
+  }
+
+  /*
+    Контакт и сайт организации меняются только самой организацией:
+    ученику и учителю эти поля не принадлежат, и молча принимать их от
+    них значило бы завести способ записать чужие данные себе в профиль.
+  */
+  if (isCenter) {
+    if (typeof body.orgName === 'string') {
+      const value = body.orgName.trim();
+      if (value.length >= 2 && value.length <= 120) {
+        patch.org_name = value;
+        patch.name = value;
+      }
+    }
+    if (typeof body.orgContact === 'string') {
+      const value = body.orgContact.trim();
+      patch.org_contact = value ? value.slice(0, 200) : null;
+    }
+    if (typeof body.orgSite === 'string') {
+      const value = body.orgSite.trim();
+      // Ссылку пропускаем через ту же проверку, что и остальные внешние
+      // адреса: javascript: и data: в профиле не нужны.
+      patch.org_site = value ? safeExternalUrl(value) : null;
+    }
   }
 
   /*

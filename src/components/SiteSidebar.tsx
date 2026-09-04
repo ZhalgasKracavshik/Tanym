@@ -341,30 +341,39 @@ export function SiteSidebar() {
   */
   const displayName = schoolProfile?.name ?? profile?.name ?? null;
 
+  /*
+    Две обведённые плашки внизу колонки читались как ещё один блок
+    интерфейса, приклеенный к меню: рамка вокруг имени и отдельная
+    квадратная рамка вокруг шестерёнки спорили с пунктами меню, у которых
+    рамок нет вовсе.
+
+    Теперь это одна строка без рамок, отделённая от меню волосяной линией:
+    имя с аватаром — ссылка в профиль, шестерёнка проявляется приглушённой
+    и темнеет при наведении. Низ колонки перестал выглядеть как чужая
+    деталь и стал её краем.
+  */
   const profileRow = displayName && (
-    <div className="flex items-center gap-1.5">
+    <div className="group/user flex items-center gap-2 border-t border-ink-200 pt-3">
       <Link
         href="/profile"
-        className="flex min-w-0 flex-1 items-center gap-2 rounded-[var(--radius-control)] border border-ink-200 py-2 pl-2 pr-3 outline-none transition-all duration-150 hover:border-brand-300 hover:bg-ink-50 focus-visible:ring-2 focus-visible:ring-brand-500"
+        className="flex min-w-0 flex-1 items-center gap-2.5 rounded-[var(--radius-control)] px-2 py-1.5 outline-none transition-colors duration-150 hover:bg-ink-50 focus-visible:ring-2 focus-visible:ring-brand-500"
       >
         <Avatar
           name={displayName}
           colorId={schoolProfile?.avatar_color}
           photoUrl={state.profile?.avatarPhotoUrl || avatarPhotoUrl(schoolProfile?.avatar_photo_path)}
-          size={32}
+          size={30}
         />
-        <span className="truncate text-sm font-semibold text-ink-700">
-          {displayName.split(' ')[0]}
-        </span>
+        <span className="truncate text-sm font-medium text-ink-800">{displayName.split(' ')[0]}</span>
       </Link>
 
       <Link
         href="/profile?tab=settings"
         title={t.settings}
         aria-label={t.settings}
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-control)] border border-ink-200 text-ink-400 outline-none transition-all duration-150 hover:border-brand-300 hover:text-brand-600 focus-visible:ring-2 focus-visible:ring-brand-500"
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-control)] text-ink-300 outline-none transition-colors duration-150 hover:bg-ink-50 hover:text-ink-700 focus-visible:ring-2 focus-visible:ring-brand-500"
       >
-        <Icon name="settings" size={17} />
+        <Icon name="settings" size={16} />
       </Link>
     </div>
   );
