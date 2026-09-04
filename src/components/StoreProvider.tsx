@@ -289,13 +289,28 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (previous.attempts.length >= incoming.length) return previous;
 
       let topicProgress: AppState['topicProgress'] = {};
+      /*
+        Очки пересчитываются здесь же, тем же правилом, что и при обычном
+        решении: сложность × 10 и только за ПЕРВОЕ верное решение задания.
+
+        Без этого восстановление было половинчатым: прогресс по темам
+        возвращался, а очки оставались нулевыми. Ученик видел в кабинете
+        ноль, а в рейтинге двадцать — одно и то же число из двух разных
+        источников, и оба на экране.
+      */
+      let points = 0;
+      const seen: TaskAttempt[] = [];
       for (const attempt of incoming) {
         // Число заданий темы влияет только на признак «тема закрыта»,
         // и при восстановлении оно неизвестно: берём безопасный предел.
         topicProgress = applyAttemptToProgress(topicProgress, attempt, Number.MAX_SAFE_INTEGER);
+        if (awardsPoints(seen, attempt.taskId)) {
+          points += pointsForAttempt(attempt.correct, attempt.difficulty);
+        }
+        seen.push(attempt);
       }
 
-      return { ...previous, attempts: incoming, topicProgress };
+      return { ...previous, attempts: incoming, topicProgress, points };
     });
   }, []);
 
