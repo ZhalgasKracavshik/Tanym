@@ -454,12 +454,24 @@ export function StudyPlan() {
       */}
       <section className="mt-16">
         <h2 className="text-lg font-medium text-ink-900">{t.recommendedTopics}</h2>
+        {/*
+          Строки пронумерованы, и это не украшение: план — последовательность,
+          порядок в нём посчитан движком и несёт смысл. Первая тема стоит
+          первой не потому, что так вышло, а потому что владение ею ниже
+          прочих. Номер отвечает на вопрос «с чего начать» раньше, чем
+          человек прочтёт хоть одно название.
+        */}
         <ul className="mt-4 space-y-2">
-          {ranked.slice(0, 5).map((item) => (
+          {ranked.slice(0, 5).map((item, index) => (
             <li key={item.topic.id}>
               <RailRow tone={STATUS[item.status].tone} interactive>
                 <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                  <h3 className="font-medium text-ink-900">{item.topic.title}</h3>
+                  <h3 className="flex items-baseline gap-3 font-medium text-ink-900">
+                    <span className="text-sm tabular-nums text-ink-400">
+                      {String(index + 1).padStart(2, '0')}
+                    </span>
+                    {item.topic.title}
+                  </h3>
                   <span className="text-xs font-semibold uppercase tracking-wide text-ink-500">
                     {t.status[item.status]}
                   </span>

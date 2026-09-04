@@ -190,7 +190,7 @@ function renderBlock(block: Block, index: number, scale: AiTextScale) {
     return (
       <blockquote
         key={key}
-        className="my-2.5 border-l-[3px] border-brand-300 bg-brand-50/50 py-1.5 pl-3 pr-2 text-ink-600"
+        className="my-2.5 rounded-[var(--radius-control)] bg-brand-50 px-3.5 py-2 text-ink-700"
       >
         {renderInline(block.spans, key, s.code)}
       </blockquote>

@@ -117,7 +117,7 @@ export default function AchievementsPage() {
           style={{ background: 'var(--color-ink-900)' }}
         >
           <div className="relative">
-            <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-white/50">Достижения</p>
+            <p className="text-[13px] font-medium text-white/60">Достижения</p>
             <h1 className="mt-2 text-3xl font-medium sm:text-4xl">
               {isStudent ? 'Твоё портфолио' : 'Достижения школы'}
             </h1>

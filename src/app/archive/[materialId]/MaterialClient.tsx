@@ -230,7 +230,7 @@ export function MaterialClient({ materialId }: { materialId: string }) {
 
       {/* Переключатель заданий */}
       <div className="mt-10">
-        <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-ink-400">{t.chooseTask}</p>
+        <p className="text-[13px] font-medium text-ink-500">{t.chooseTask}</p>
         <div className="mt-2 flex flex-wrap gap-2">
           {material.tasks.map((item, index) => (
             <button
@@ -256,7 +256,7 @@ export function MaterialClient({ materialId }: { materialId: string }) {
         страницы глаз цепляется за задачу, а не за оформление.
       */}
       <div className="mt-4 border-y border-ink-200 py-6">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] tabular-nums text-ink-400">
+        <p className="text-xs font-medium tabular-nums tracking-wide text-ink-500">
           {t.taskNumber(taskIndex + 1, material.tasks.length)}
         </p>
         {/* whitespace-pre-line сохраняет переносы: у заданий IELTS отрывок

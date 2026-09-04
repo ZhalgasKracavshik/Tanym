@@ -342,11 +342,14 @@ export default function LeaderboardPage() {
                     entry.isCurrentUser ? 'bg-brand-50' : 'hover:bg-ink-50'
                   }`}
                 >
-                  <td
-                    className={`px-4 py-3 ${
-                      entry.isCurrentUser ? 'border-l-[3px] border-brand-500 pl-[13px]' : ''
-                    }`}
-                  >
+                  {/*
+                    Своя строка выделяется заливкой, а не цветной полосой
+                    вдоль края. Полоса сдвигала содержимое ячейки на три
+                    пикселя, и в плотной таблице этот сдвиг был заметнее
+                    самого выделения. Слово «вы» рядом с именем при этом
+                    остаётся: смысл не держится на одном цвете.
+                  */}
+                  <td className={`px-4 py-3 ${entry.isCurrentUser ? 'bg-brand-50' : ''}`}>
                     <span
                       className={`flex items-center gap-2 tabular-nums ${
                         entry.isCurrentUser

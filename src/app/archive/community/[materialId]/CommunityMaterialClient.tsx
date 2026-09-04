@@ -246,7 +246,7 @@ export function CommunityMaterialClient({ materialId }: { materialId: string }) 
       <p className="mt-2 text-xs text-ink-400">{material.source}</p>
 
       <div className="mt-10">
-        <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-ink-400">{t.chooseTask}</p>
+        <p className="text-[13px] font-medium text-ink-500">{t.chooseTask}</p>
         <div className="mt-2 flex flex-wrap gap-2">
           {material.tasks.map((item, index) => (
             <button
@@ -265,7 +265,7 @@ export function CommunityMaterialClient({ materialId }: { materialId: string }) 
       </div>
 
       <div className="mt-4 border-y border-ink-200 py-6">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] tabular-nums text-ink-400">
+        <p className="text-xs font-medium tabular-nums tracking-wide text-ink-500">
           {t.taskNumber(taskIndex + 1, material.tasks.length)}
         </p>
         <p className="mt-2 whitespace-pre-line text-2xl font-medium leading-snug text-ink-900 sm:text-4xl">

@@ -41,15 +41,17 @@ const TEXT: Dict<{
   partnersText: string;
   partners: {
     href: string;
-    icon: IconName;
     title: string;
     text: string;
     cta: string;
     badge: string;
-    /** Заливка карточки, цвет пятна и рамки — свои у каждой аудитории. */
-    tint: string;
-    glow: string;
-    border: string;
+    /**
+     * Карточка целиком залита цветом — это подпись взятой за образец
+     * системы: не белый прямоугольник с цветной иконкой, а само пятно.
+     * Иконки здесь нет намеренно: скруглённый значок над заголовком —
+     * самый узнаваемый признак шаблонной вёрстки, и смысла он не несёт.
+     */
+    bg: string;
   }[];
   finalTitle: string;
   finalText: string;
@@ -106,10 +108,7 @@ const TEXT: Dict<{
       {
         href: '/for-schools',
         badge: 'Пилот на один класс',
-        tint: '#fdf3ee',
-        glow: '#e57545',
-        border: '#f6c0a8',
-        icon: 'school',
+        bg: '#c9542a',
         title: 'Для школ',
         text: 'Карта пробелов по каждому классу, свои материалы учителей и портфолио учеников в одном месте.',
         cta: 'Условия для школ',
@@ -117,10 +116,7 @@ const TEXT: Dict<{
       {
         href: '/for-centers',
         badge: 'Размещение с проверкой',
-        tint: '#f0f4f8',
-        glow: '#4d6b85',
-        border: '#c9dcea',
-        icon: 'building',
+        bg: '#16293a',
         title: 'Для учебных центров',
         text: 'Размещение в разделе «Возможности» с проверкой школой — ученик приходит, уже зная свой уровень.',
         cta: 'Условия размещения',
@@ -187,10 +183,7 @@ const TEXT: Dict<{
       {
         href: '/for-schools',
         badge: 'Бір сыныпқа пилот',
-        tint: '#fdf3ee',
-        glow: '#e57545',
-        border: '#f6c0a8',
-        icon: 'school',
+        bg: '#c9542a',
         title: 'Мектептерге',
         text: 'Әр сынып бойынша олқылық картасы, мұғалімдердің өз материалдары және оқушы портфолиосы бір жерде.',
         cta: 'Мектептерге шарттар',
@@ -198,10 +191,7 @@ const TEXT: Dict<{
       {
         href: '/for-centers',
         badge: 'Тексерумен орналастыру',
-        tint: '#f0f4f8',
-        glow: '#4d6b85',
-        border: '#c9dcea',
-        icon: 'building',
+        bg: '#16293a',
         title: 'Оқу орталықтарына',
         text: '«Мүмкіндіктер» бөлімінде мектеп тексеруімен орналастыру — оқушы деңгейін біліп келеді.',
         cta: 'Орналастыру шарттары',
@@ -265,10 +255,7 @@ const TEXT: Dict<{
       {
         href: '/for-schools',
         badge: 'Pilot with one class',
-        tint: '#fdf3ee',
-        glow: '#e57545',
-        border: '#f6c0a8',
-        icon: 'school',
+        bg: '#c9542a',
         title: 'For schools',
         text: 'A gap map for every class, teachers’ own materials and student portfolios in one place.',
         cta: 'Terms for schools',
@@ -276,10 +263,7 @@ const TEXT: Dict<{
       {
         href: '/for-centers',
         badge: 'Vetted listing',
-        tint: '#f0f4f8',
-        glow: '#4d6b85',
-        border: '#c9dcea',
-        icon: 'building',
+        bg: '#16293a',
         title: 'For learning centres',
         text: 'A listing under Opportunities, vetted by the school — students arrive already knowing their level.',
         cta: 'Listing terms',
@@ -297,16 +281,6 @@ export default function HomePage() {
   // Цифры берём из самого контента, а не пишем руками: добавится тема,
   // и строка на первом экране обновится сама.
   //
-  // В счёт заданий входят и диагностические: ученик решает их наравне
-  // с остальными, и не показать их значило бы занизить объём продукта.
-  const totalTopics = SUBJECTS.reduce((sum, subject) => sum + subject.topics.length, 0);
-  const totalTasks = SUBJECTS.reduce(
-    (sum, subject) =>
-      sum +
-      subject.diagnostic.length +
-      subject.topics.reduce((count, topic) => count + topic.tasks.length, 0),
-    0,
-  );
 
 
   return (
@@ -564,30 +538,40 @@ export default function HomePage() {
               <StaggerItem key={partner.href}>
                 <Link href={partner.href} className="block h-full">
                   {/*
-                    Карточки партнёров окрашены, а не белые как всё остальное.
-                    Это единственный блок на странице, обращённый не к ученику,
-                    и цвет — самый дешёвый способ показать смену адресата:
-                    пролистывающий мимо школьник видит, что раздел не про него.
+                    Карточка залита цветом целиком — единственный такой
+                    блок на странице, и это её работа: раздел обращён не к
+                    ученику, и пролистывающий мимо школьник должен увидеть
+                    смену адресата раньше, чем прочтёт заголовок.
+
+                    Что убрано и почему. Скруглённый значок над заголовком,
+                    плашка с цветной точкой и стрелка — набор, который
+                    встречается в любой типовой вёрстке и не сообщает
+                    ничего: иконка «школа» рядом со словом «Для школ»
+                    повторяет заголовок картинкой. Работу делает
+                    типографика на плотном цвете.
                   */}
                   <LiftCard
-                    className="group relative h-full overflow-hidden rounded-[var(--radius-card)] border p-8 shadow-[var(--shadow-rest)]"
-                    style={{ background: partner.tint, borderColor: partner.border }}
+                    className="group flex h-full flex-col overflow-hidden rounded-[var(--radius-card)] p-8 sm:p-10"
+                    style={{ background: partner.bg }}
                   >
-                    <span className="relative flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.16em] text-ink-500">
-                      <span className="h-1.5 w-1.5 rounded-full" style={{ background: partner.glow }} />
+                    <span className="text-[11px] font-medium uppercase tracking-[0.16em] text-white/55">
                       {partner.badge}
                     </span>
-                    <span
-                      className="relative mt-5 flex h-12 w-12 items-center justify-center rounded-[var(--radius-control)] text-white"
-                      style={{ background: partner.glow }}
-                    >
-                      <Icon name={partner.icon} size={22} />
-                    </span>
-                    <h3 className="relative mt-5 text-xl font-medium text-ink-900">{partner.title}</h3>
-                    <p className="relative mt-2 text-sm leading-relaxed text-ink-600">{partner.text}</p>
-                    <span className="relative mt-6 inline-flex items-center gap-2 text-sm font-medium text-ink-900">
+
+                    <h3 className="mt-6 text-2xl font-medium leading-tight text-white sm:text-3xl">
+                      {partner.title}
+                    </h3>
+                    <p className="mt-3 max-w-[42ch] text-[15px] leading-relaxed text-white/75">
+                      {partner.text}
+                    </p>
+
+                    {/*
+                      Подпись прижата книзу: у карточек разной длины текста
+                      она иначе встаёт на разной высоте, и пара читается
+                      как две несвязанные плашки.
+                    */}
+                    <span className="mt-auto pt-8 text-sm font-medium text-white underline decoration-white/40 underline-offset-[6px] transition-colors group-hover:decoration-white">
                       {partner.cta}
-                      <Icon name="arrowRight" size={16} />
                     </span>
                   </LiftCard>
                 </Link>

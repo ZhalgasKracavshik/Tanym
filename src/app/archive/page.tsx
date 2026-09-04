@@ -122,7 +122,7 @@ export default function ArchivePage() {
         без коробки фраза читается как утверждение продукта, а не как сноска.
       */}
       <section className="mt-10 border-y border-ink-200 py-8">
-        <p className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.2em] text-brand-600">
+        <p className="flex items-center gap-2 text-[13px] font-medium text-ink-500">
           <Icon name="columns" size={14} />
           {t.socratic}
         </p>

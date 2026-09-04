@@ -365,16 +365,28 @@ export function SectionHeader({
 
 type RailTone = 'brand' | 'accent' | 'success' | 'danger' | 'neutral';
 
+/*
+  Тон задаёт цвет рамки, а не цветной полосы слева.
+
+  Полоса в три пикселя вдоль левого края — приём, который встречается в
+  каждой второй панели управления и ни в одной не выглядит осмысленным.
+  Хуже того, здесь она дублировала подпись: рядом с зелёной полосой тут же
+  стояло слово «Освоено», то есть цвет ничего не добавлял, а места занимал.
+
+  Рамка целиком работает лучше: строка читается как объект, а не как
+  прямоугольник с приклеенной сбоку меткой. Смысл при этом по-прежнему
+  держится на словах, а не на цвете, — это условие доступности.
+*/
 const RAIL_TONES: Record<RailTone, string> = {
-  brand: 'bg-brand-500',
-  accent: 'bg-accent-400',
-  success: 'bg-success-500',
-  danger: 'bg-danger-500',
-  neutral: 'bg-ink-200',
+  brand: 'border-brand-300',
+  accent: 'border-accent-300',
+  success: 'border-success-200',
+  danger: 'border-danger-200',
+  neutral: 'border-ink-200',
 };
 
 /**
- * Строка списка с цветной рейкой слева.
+ * Строка списка.
  *
  * Нужна там, где элементы перечисляются: темы, задания, объявления. Раньше всё
  * это было карточками, и экран превращался в решётку одинаковых прямоугольников,
@@ -399,13 +411,12 @@ export function RailRow({
 }) {
   return (
     <div
-      className={`relative overflow-hidden rounded-[var(--radius-control)] border border-ink-200 bg-white py-4 pl-5 pr-4 sm:pl-6 ${
-        interactive
-          ? 'transition-all duration-150 hover:border-ink-300 hover:shadow-[var(--shadow-lift)]'
-          : ''
+      className={`relative overflow-hidden rounded-[var(--radius-control)] border bg-white px-5 py-4 ${
+        RAIL_TONES[tone]
+      } ${
+        interactive ? 'transition-colors duration-150 hover:border-ink-400' : ''
       } ${className}`}
     >
-      <span aria-hidden className={`absolute inset-y-0 left-0 w-[3px] ${RAIL_TONES[tone]}`} />
       {children}
     </div>
   );
@@ -429,8 +440,19 @@ export function Panel({ className = '', children }: { className?: string; childr
  * одинаковым заголовком с серой строкой под ним, продукт выглядит собранным
  * по шаблону.
  */
+/*
+  Подпись раздела — спокойная, а не оранжевая капслоком с разрядкой.
+
+  Прежний вариант (11 пикселей, всё прописными, разрядка 0.2em, фирменный
+  оранжевый) — самый узнаваемый «надзаголовок» типовых интерфейсов. Он
+  кричит на каждом разделе одинаково громко, и из-за этого перестаёт
+  выделять хоть что-нибудь: страница с шестью такими подписями выглядит
+  как страница без единой.
+
+  Прописные буквы вдобавок плохо служат кириллице: разрядка в 0.2em
+  разваливает казахские слова с диакритикой сильнее, чем латиницу, ради
+  которой этот приём и придуман.
+*/
 export function Kicker({ children }: { children: ReactNode }) {
-  return (
-    <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-brand-600">{children}</p>
-  );
+  return <p className="text-[13px] font-medium text-ink-500">{children}</p>;
 }
