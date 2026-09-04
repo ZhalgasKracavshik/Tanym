@@ -42,12 +42,16 @@ const HIDDEN_FOR_ROLE: Record<'student' | 'teacher' | 'admin' | 'center', string
   teacher: ['/plan', '/dashboard', '/chat', '/admin'],
   admin: ['/plan', '/dashboard', '/chat', '/teacher'],
   /*
-    Внешнему центру закрыта вся учебная часть — и не только в меню: она
-    закрыта в самой базе (см. is_school_member). Прятать здесь нужно
-    затем, чтобы он не видел ссылок, которые всё равно ничего ему не
-    покажут: пустая страница выглядит как поломка, а не как запрет.
+    Внешнему центру оставлен один раздел — «Возможности», где живут его
+    объявления. Остальное закрыто не только в меню, но и в самой базе
+    (см. is_school_member), и показывать ссылки на страницы, которые
+    всё равно ничего ему не покажут, незачем: пустая страница выглядит
+    как поломка, а не как запрет.
   */
-  center: ['/plan', '/dashboard', '/chat', '/teacher', '/admin', '/archive', '/achievements', '/leaderboard', '/events', '/announcements'],
+  center: [
+    '/plan', '/dashboard', '/chat', '/teacher', '/admin',
+    '/archive', '/achievements', '/leaderboard', '/events', '/announcements',
+  ],
 };
 
 const TEXT: Dict<{

@@ -69,7 +69,7 @@ const TEXT: Dict<{
     contactShort: 'Укажите контакт, по которому с вами свяжутся',
     passwordShort: 'Пароль должен быть не короче 6 символов.',
     failed: 'Не удалось зарегистрировать центр.',
-    success: 'Центр зарегистрирован. Открываем панель…',
+    success: 'Центр зарегистрирован. Открываем «Возможности»…',
   },
   kk: {
     heroTitle: 'Орталық қызметтерін орналастыру',
@@ -95,7 +95,7 @@ const TEXT: Dict<{
     contactShort: 'Сізбен байланысатын байланысты көрсетіңіз',
     passwordShort: 'Құпия сөз 6 таңбадан кем болмауы керек.',
     failed: 'Орталықты тіркеу мүмкін болмады.',
-    success: 'Орталық тіркелді. Панель ашылуда…',
+    success: 'Орталық тіркелді. «Мүмкіндіктер» ашылуда…',
   },
   en: {
     heroTitle: 'List your centre',
@@ -121,7 +121,7 @@ const TEXT: Dict<{
     contactShort: 'Enter a contact students can reach you on',
     passwordShort: 'Password must be at least 6 characters.',
     failed: 'Could not register the centre.',
-    success: 'Centre registered. Opening your panel…',
+    success: 'Centre registered. Opening Opportunities…',
   },
 };
 
@@ -186,7 +186,7 @@ export default function RegisterCenterPage() {
     }
 
     setStatus('success');
-    setTimeout(() => router.push('/center'), 900);
+    setTimeout(() => router.push('/marketplace'), 900);
   }
 
   return (

@@ -125,7 +125,7 @@ function ProfileContent() {
   const searchParams = useSearchParams();
   const tabParam = searchParams.get('tab') as ProfileTab | null;
 
-  const { state, hydrated, updateProfile, resetAll, setLanguage } = useStore();
+  const { state, hydrated, updateProfile, setLanguage } = useStore();
   const {
     profile: schoolProfile,
     schoolClass,
@@ -1406,33 +1406,20 @@ function ProfileContent() {
             {/* Выход из аккаунта */}
             <Card className="border-danger-100 bg-danger-50/20">
               <h2 className="text-base font-medium text-ink-900">Управление аккаунтом</h2>
+              {/*
+                Кнопка сброса локальных данных убрана. Прогресс, диагностика
+                и попытки теперь хранятся на сервере и возвращаются при входе
+                с любого устройства, поэтому «очистить локально» перестало
+                что-либо значить: данные вернулись бы через секунду, и
+                человек решил бы, что кнопка сломана.
+              */}
               <p className="mt-1 text-xs text-ink-500">
-                Вы можете завершить текущий сеанс или очистить локальные сохраненные данные.
+                Завершить текущий сеанс на этом устройстве.
               </p>
               <div className="mt-4 flex flex-wrap gap-3">
                 <Button variant="secondary" onClick={() => signOut()}>
                   <Icon name="arrowRight" size={16} />
                   Выйти из аккаунта
-                </Button>
-                <Button
-                  variant="danger"
-                  onClick={() => {
-                    /*
-                      Формулировка честная: после защиты в ProgressSync
-                      сброс действительно остаётся локальным — пустое
-                      состояние наверх больше не уходит, и место в рейтинге
-                      школы сохраняется.
-                    */
-                    if (
-                      window.confirm(
-                        'Очистить прогресс тренировок в этом браузере? Баллы и место в школьном рейтинге сохранятся — они хранятся на сервере.',
-                      )
-                    ) {
-                      resetAll();
-                    }
-                  }}
-                >
-                  Сбросить локальные данные
                 </Button>
               </div>
             </Card>

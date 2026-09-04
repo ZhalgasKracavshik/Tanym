@@ -20,6 +20,7 @@ import { useEffectiveProfile } from '@/lib/useEffectiveProfile';
 import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
 import { StudentOnlyNotice } from '@/components/StudentOnlyNotice';
 import { StudyPlan } from '@/components/StudyPlan';
+import type { Topic, TopicProgress } from '@/lib/types';
 import type { Dict } from '@/lib/i18n';
 import { Icon } from '@/components/Icon';
 import type { IconName } from '@/components/Icon';
@@ -281,7 +282,23 @@ export default function DashboardPage() {
   const nextTopics = primarySubject ? rankTopics(primarySubject, state, state.customTopics).slice(0, 3) : [];
 
   // Темы, к которым ученик уже прикасался.
-  const startedTopics = Object.values(state.topicProgress).filter((item) => item.attempts > 0);
+  /*
+    Тема разрешается сразу здесь, а не при отрисовке.
+
+    Раньше список фильтровался только по числу попыток, а внутри разметки
+    стояло «тема не найдена — вернуть null». В итоге у ученика со старым
+    прогрессом (тема была переименована или удалена из контента) заголовок
+    «Прогресс по темам» стоял над пустотой: список не пуст, значит ветка
+    «пока ничего нет» не показывалась, а рисовать было нечего. Экран
+    выглядел сломанным, хотя данные были в порядке.
+
+    Теперь неизвестные темы отсеиваются до проверки на пустоту, и человек
+    видит честное «пока ничего», а не молчание.
+  */
+  const startedTopics = Object.values(state.topicProgress)
+    .filter((item) => item.attempts > 0)
+    .map((progress) => ({ progress, topic: getTopic(progress.topicId, state.customTopics) }))
+    .filter((item): item is { progress: TopicProgress; topic: Topic } => item.topic !== undefined);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
@@ -425,9 +442,7 @@ export default function DashboardPage() {
                 </Card>
               ) : (
                 <ul className="space-y-3">
-                  {startedTopics.map((progress) => {
-                    const topic = getTopic(progress.topicId, state.customTopics);
-                    if (!topic) return null;
+                  {startedTopics.map(({ progress, topic }) => {
                     return (
                       <Card
                         as="li"
