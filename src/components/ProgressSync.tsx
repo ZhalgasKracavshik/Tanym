@@ -16,7 +16,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useStore } from './StoreProvider';
-import type { DiagnosticResult } from '@/lib/types';
+import type { DiagnosticResult, Topic } from '@/lib/types';
 import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
 import { createClient } from '@/lib/supabase/client';
 import { computeSkillMastery, summarize } from '@/lib/personalization';
@@ -24,9 +24,34 @@ import { computeSkillMastery, summarize } from '@/lib/personalization';
 const SYNC_DELAY_MS = 4000;
 
 export function ProgressSync() {
-  const { state, hydrated, hydrateDiagnostics } = useStore();
+  const { state, hydrated, hydrateDiagnostics, hydrateCustomTopics } = useStore();
   const { profile } = useSchoolAuth();
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /*
+    Темы, составленные учителями, тянем для всех вошедших — и для
+    учеников, и для самих учителей.
+
+    Раньше такие темы жили в localStorage автора: учитель добавлял тему,
+    видел её у себя, и на этом всё — ни один ученик её не получал
+    никогда. Функция выглядела рабочей ровно до проверки с двух устройств.
+  */
+  useEffect(() => {
+    if (!hydrated || !profile) return;
+    let cancelled = false;
+
+    fetch('/api/topics')
+      .then((res) => res.json())
+      .then((data: { topics?: Topic[] }) => {
+        if (cancelled || !Array.isArray(data.topics)) return;
+        hydrateCustomTopics(data.topics);
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, [hydrated, profile, hydrateCustomTopics]);
 
   /*
     Забираем сохранённые диагностики при входе.

@@ -17,7 +17,7 @@ import { Suspense, useState } from 'react';
 import { SUBJECTS } from '@/data';
 import { useStore } from '@/components/StoreProvider';
 import type { Dict } from '@/lib/i18n';
-import { AddTopicForm } from './AddTopicForm';
+import { TopicBuilder } from './TopicBuilder';
 import { Icon } from '@/components/Icon';
 import { Button, Panel, ProgressBar, RailRow, SectionHeader, Skeleton } from '@/components/ui';
 import { SchoolAuthGate } from '@/components/SchoolAuthGate';
@@ -308,7 +308,7 @@ export default function TeacherPage() {
           </ul>
         )}
 
-        <AddTopicForm subject={subject} />
+        <TopicBuilder subject={subject} />
       </div>
     </div>
   );

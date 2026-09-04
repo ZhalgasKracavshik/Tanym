@@ -56,6 +56,14 @@ interface StoreValue {
   setLeaderboardAnonymous: (anonymous: boolean) => void;
   removeListing: (listingId: string) => void;
   addCustomTopic: (topic: Topic) => void;
+  /**
+   * Подставить темы, созданные учителями и лежащие на сервере.
+   *
+   * Полностью заменяет список, а не дополняет: сервер — источник правды,
+   * и тема, удалённая автором, должна исчезнуть, а не остаться жить в
+   * браузере ученика навсегда.
+   */
+  hydrateCustomTopics: (topics: Topic[]) => void;
   removeCustomTopic: (topicId: string) => void;
   cachePlan: (plan: CachedPlan) => void;
   appendChat: (message: ChatMessage) => void;
@@ -262,6 +270,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setState((previous) => ({ ...previous, leaderboardAnonymous: anonymous }));
   }, []);
 
+  const hydrateCustomTopics = useCallback((topics: Topic[]) => {
+    setState((previous) => {
+      const same =
+        previous.customTopics.length === topics.length &&
+        previous.customTopics.every((topic, i) => topic.id === topics[i]?.id);
+      // Тот же список — тот же объект: иначе каждая загрузка вызывала бы
+      // перерисовку плана и кабинета без единого изменения.
+      return same ? previous : { ...previous, customTopics: topics };
+    });
+  }, []);
+
   const addCustomTopic = useCallback((topic: Topic) => {
     setState((previous) => ({ ...previous, customTopics: [...previous.customTopics, topic] }));
   }, []);
@@ -407,6 +426,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       markAnnouncementsRead,
       setLeaderboardAnonymous,
       addCustomTopic,
+      hydrateCustomTopics,
       removeCustomTopic,
       cachePlan,
       appendChat,
@@ -433,6 +453,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       markAnnouncementsRead,
       setLeaderboardAnonymous,
       addCustomTopic,
+      hydrateCustomTopics,
       removeCustomTopic,
       cachePlan,
       appendChat,
