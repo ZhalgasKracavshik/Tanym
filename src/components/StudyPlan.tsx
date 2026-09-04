@@ -13,7 +13,7 @@
  * Если профиля всё же нет, компонент просто ничего не рисует.
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { getSubject } from '@/data';
 import { daysUntil, rankTopics, weakestSkills } from '@/lib/personalization';
 import type { PlanRequest, PlanResponse } from '@/lib/ai/contracts';
@@ -53,6 +53,8 @@ const TEXT: Dict<{
   alertAfter: string;
   mentorSays: string;
   refresh: string;
+  askMentor: string;
+  askHint: string;
   recommendedTopics: string;
   mastered: string;
   minutes: string;
@@ -72,7 +74,9 @@ const TEXT: Dict<{
     alertLink: 'Пройти диагностику',
     alertAfter: ', чтобы он стал точнее.',
     mentorSays: 'Что говорит наставник',
-    refresh: 'Обновить',
+    refresh: 'Спросить заново',
+    askMentor: 'Разобрать мой план',
+    askHint: 'Наставник объяснит, почему темы идут в таком порядке и с чего начать.',
     recommendedTopics: 'Рекомендованные темы',
     mastered: 'Освоено',
     minutes: 'мин',
@@ -104,7 +108,9 @@ const TEXT: Dict<{
     alertLink: 'Диагностикадан өту',
     alertAfter: ', сонда ол дәлірек болады.',
     mentorSays: 'Тәлімгер не дейді',
-    refresh: 'Жаңарту',
+    refresh: 'Қайта сұрау',
+    askMentor: 'Жоспарымды талдау',
+    askHint: 'Тәлімгер тақырыптар неге осы ретпен тұрғанын және неден бастау керегін түсіндіреді.',
     recommendedTopics: 'Ұсынылған тақырыптар',
     mastered: 'Меңгерілді',
     minutes: 'мин',
@@ -130,7 +136,9 @@ const TEXT: Dict<{
     alertLink: 'Take the diagnostic',
     alertAfter: ' to make it more accurate.',
     mentorSays: 'What your mentor says',
-    refresh: 'Refresh',
+    refresh: 'Ask again',
+    askMentor: 'Explain my plan',
+    askHint: 'The mentor will explain why the topics are in this order and where to start.',
     recommendedTopics: 'Recommended topics',
     mastered: 'Mastered',
     minutes: 'min',
@@ -315,24 +323,18 @@ export function StudyPlan() {
     кэше, либо только что загружен. Без этой проверки каждый заход на
     страницу тратил бы квоту ключа заново.
   */
-  useEffect(() => {
-    if (!subject || !subjectId) return;
-    if (cachedPlan) return;
-    if (fetched?.signature === signature) return;
-    /*
-      loadPlan синхронно зажигает индикатор загрузки перед обращением к
-      сети, и правило справедливо это замечает. Убрать его нельзя:
-      индикатор нужен при ручном обновлении плана, когда прежний текст
-      ещё на экране и по одному его наличию отличить «идёт запрос» от
-      «всё готово» невозможно. Это флаг настоящей асинхронной операции,
-      а не досылка вычислимого значения.
-    */
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadPlan();
-    // Намеренно следим только за сигнатурой: остальные поля состояния меняются
-    // часто, а план должен пересобираться лишь при значимых изменениях.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [signature]);
+  /*
+    Автоматического запроса больше нет.
+
+    Раньше разбор плана уходил в модель на каждой загрузке страницы —
+    ученик открывал кабинет, видел три серые полосы скелетона и ждал
+    ответа, которого не просил. Это тратило квоту ключа на каждый заход и
+    задерживало то, ради чего человек пришёл: сам список тем. Сам список
+    считается движком мгновенно и в модели не нуждается.
+
+    Теперь разбор — действие по кнопке. Кто хочет объяснение, нажимает;
+    остальные сразу видят план.
+  */
 
   /* Кабинет уже показал скелетон, проверил роль и наличие профиля. */
   if (!hydrated || !profile) return null;
@@ -405,27 +407,42 @@ export function StudyPlan() {
         и конкретного ученика, перенести его на другой экран целиком нельзя.
       */}
       <section className="mt-10">
-        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-          <Kicker>{t.mentorSays}</Kicker>
-          <div className="flex items-center gap-2">
-            {plan && <AiBadge live={plan.live} reason={plan.fallbackReason} />}
-            <Button size="sm" variant="ghost" onClick={loadPlan} disabled={loading}>
-              {t.refresh}
-            </Button>
-          </div>
-        </div>
-
-        {loading || !plan ? (
-          <div className="mt-4 max-w-3xl space-y-3">
-            <Skeleton className="h-7 w-full" />
-            <Skeleton className="h-7 w-11/12" />
-            <Skeleton className="h-7 w-8/12" />
+        {!plan && !loading ? (
+          /*
+            До нажатия — приглашение, а не пустая рамка и не скелетон.
+            Скелетон означает «данные уже едут», а здесь никто никуда не
+            едет: ждём человека. Показывать полосы загрузки для того, чего
+            не запрашивали, — обман.
+          */
+          <div className="max-w-2xl">
+            <Button onClick={loadPlan}>{t.askMentor}</Button>
+            <p className="mt-3 text-sm text-ink-500">{t.askHint}</p>
           </div>
         ) : (
-          // whitespace-pre-line сохраняет переносы строк из ответа модели
-          <p className="mt-4 max-w-3xl whitespace-pre-line text-xl leading-relaxed text-ink-800 sm:text-2xl sm:leading-[1.55]">
-            {plan.text}
-          </p>
+          <>
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+              <Kicker>{t.mentorSays}</Kicker>
+              <div className="flex items-center gap-2">
+                {plan && <AiBadge live={plan.live} reason={plan.fallbackReason} />}
+                <Button size="sm" variant="ghost" onClick={loadPlan} disabled={loading}>
+                  {t.refresh}
+                </Button>
+              </div>
+            </div>
+
+            {loading || !plan ? (
+              <div className="mt-4 max-w-3xl space-y-3">
+                <Skeleton className="h-7 w-full" />
+                <Skeleton className="h-7 w-11/12" />
+                <Skeleton className="h-7 w-8/12" />
+              </div>
+            ) : (
+              // whitespace-pre-line сохраняет переносы строк из ответа модели
+              <p className="mt-4 max-w-3xl whitespace-pre-line text-xl leading-relaxed text-ink-800 sm:text-2xl sm:leading-[1.55]">
+                {plan.text}
+              </p>
+            )}
+          </>
         )}
       </section>
 
