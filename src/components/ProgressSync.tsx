@@ -16,7 +16,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useStore } from './StoreProvider';
-import type { DiagnosticResult, Topic } from '@/lib/types';
+import type { DiagnosticResult, TaskAttempt, Topic } from '@/lib/types';
 import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
 import { createClient } from '@/lib/supabase/client';
 import { computeSkillMastery, summarize } from '@/lib/personalization';
@@ -24,7 +24,7 @@ import { computeSkillMastery, summarize } from '@/lib/personalization';
 const SYNC_DELAY_MS = 4000;
 
 export function ProgressSync() {
-  const { state, hydrated, hydrateDiagnostics, hydrateCustomTopics } = useStore();
+  const { state, hydrated, hydrateDiagnostics, hydrateCustomTopics, hydrateAttempts } = useStore();
   const { profile } = useSchoolAuth();
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -73,6 +73,21 @@ export function ProgressSync() {
     pulledFor.current = profile.id;
 
     let cancelled = false;
+
+    /*
+      Попытки восстанавливаем вместе с диагностикой: без них кабинет
+      писал «Пока нет данных о прогрессе» ученику, чьи решённые задания
+      лежат на сервере и уже учтены в школьном рейтинге. Один человек
+      видел две разные картины на соседних вкладках.
+    */
+    fetch('/api/attempts')
+      .then((res) => res.json())
+      .then((data: { attempts?: TaskAttempt[] }) => {
+        if (cancelled || !Array.isArray(data.attempts)) return;
+        if (data.attempts.length > 0) hydrateAttempts(data.attempts);
+      })
+      .catch(() => {});
+
     fetch('/api/diagnostics')
       .then((res) => res.json())
       .then((data: { diagnostics?: unknown[] }) => {
@@ -98,7 +113,7 @@ export function ProgressSync() {
     return () => {
       cancelled = true;
     };
-  }, [hydrated, profile, hydrateDiagnostics]);
+  }, [hydrated, profile, hydrateDiagnostics, hydrateAttempts]);
 
   useEffect(() => {
     // Синхронизировать есть смысл только настоящему вошедшему ученику —

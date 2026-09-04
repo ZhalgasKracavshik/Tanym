@@ -64,6 +64,14 @@ interface StoreValue {
    * браузере ученика навсегда.
    */
   hydrateCustomTopics: (topics: Topic[]) => void;
+  /**
+   * Восстановить попытки, проверенные сервером.
+   *
+   * Прогресс по темам пересчитывается из них тем же движком, что и при
+   * обычном решении: второе место, где это считается иначе, разошлось бы
+   * с первым при первой же правке формулы.
+   */
+  hydrateAttempts: (attempts: TaskAttempt[]) => void;
   removeCustomTopic: (topicId: string) => void;
   cachePlan: (plan: CachedPlan) => void;
   appendChat: (message: ChatMessage) => void;
@@ -270,6 +278,27 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setState((previous) => ({ ...previous, leaderboardAnonymous: anonymous }));
   }, []);
 
+  const hydrateAttempts = useCallback((incoming: TaskAttempt[]) => {
+    setState((previous) => {
+      /*
+        Местные попытки главнее по количеству: если в браузере их уже
+        столько же или больше, значит ученик работает именно здесь и
+        подставлять серверную копию нечего. Иначе пришедший ответ
+        откатил бы задание, решённое секунду назад.
+      */
+      if (previous.attempts.length >= incoming.length) return previous;
+
+      let topicProgress: AppState['topicProgress'] = {};
+      for (const attempt of incoming) {
+        // Число заданий темы влияет только на признак «тема закрыта»,
+        // и при восстановлении оно неизвестно: берём безопасный предел.
+        topicProgress = applyAttemptToProgress(topicProgress, attempt, Number.MAX_SAFE_INTEGER);
+      }
+
+      return { ...previous, attempts: incoming, topicProgress };
+    });
+  }, []);
+
   const hydrateCustomTopics = useCallback((topics: Topic[]) => {
     setState((previous) => {
       const same =
@@ -427,6 +456,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setLeaderboardAnonymous,
       addCustomTopic,
       hydrateCustomTopics,
+      hydrateAttempts,
       removeCustomTopic,
       cachePlan,
       appendChat,
@@ -454,6 +484,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setLeaderboardAnonymous,
       addCustomTopic,
       hydrateCustomTopics,
+      hydrateAttempts,
       removeCustomTopic,
       cachePlan,
       appendChat,
