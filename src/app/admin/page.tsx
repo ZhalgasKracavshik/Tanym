@@ -62,9 +62,8 @@ function Overview() {
           {waiting > 0 && (
             <Link
               href="/admin/moderation"
-              className="inline-flex items-center gap-2 rounded-[var(--radius-control)] px-4 py-2.5 text-sm font-semibold text-white shadow-[var(--shadow-lift)]"
-              style={{ background: 'var(--surface-brand)' }}
-            >
+              className="inline-flex items-center gap-2 rounded-[var(--radius-pill)] px-4 py-2.5 text-sm font-semibold bg-ink-900 text-white transition-colors hover:bg-ink-800 shadow-[var(--shadow-lift)]"
+                    >
               Перейти к проверке
               <Icon name="arrowRight" size={16} />
             </Link>

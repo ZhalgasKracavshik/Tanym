@@ -158,9 +158,8 @@ export function SocialLinks({
             />
             <PressButton
               onClick={add}
-              className="h-11 rounded-[var(--radius-control)] px-5 text-sm font-medium text-white shadow-[var(--shadow-rest)]"
-              style={{ background: 'var(--surface-brand)' }}
-            >
+              className="h-11 rounded-[var(--radius-pill)] px-5 text-sm font-medium bg-ink-900 text-white transition-colors hover:bg-ink-800 shadow-[var(--shadow-rest)]"
+                    >
               Добавить
             </PressButton>
             <PressButton

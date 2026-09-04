@@ -505,7 +505,7 @@ export default function OnboardingPage() {
                   }`}
                 >
                   <span
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-control)] text-white"
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-pill)] bg-ink-900 text-white transition-colors hover:bg-ink-800"
                     style={{ backgroundColor: subject.accent }}
                   >
                     <Icon name={subject.icon} size={20} />
@@ -566,7 +566,7 @@ export default function OnboardingPage() {
                   }`}
                 >
                   <span
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-control)] text-white"
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-pill)] bg-ink-900 text-white transition-colors hover:bg-ink-800"
                     style={{ backgroundColor: subject.accent }}
                   >
                     <Icon name={subject.icon} size={20} />
@@ -670,9 +670,8 @@ export default function OnboardingPage() {
           type="button"
           onClick={next}
           disabled={!canContinue || saving}
-          className="flex h-12 flex-1 items-center justify-center gap-2 rounded-[var(--radius-control)] text-[15px] font-medium text-white shadow-[var(--shadow-rest)] transition-all disabled:opacity-45 disabled:shadow-none"
-          style={{ background: 'var(--surface-brand)' }}
-        >
+          className="flex h-12 flex-1 items-center justify-center gap-2 rounded-[var(--radius-pill)] text-[15px] font-medium bg-ink-900 text-white transition-colors hover:bg-ink-800 shadow-[var(--shadow-rest)] transition-all disabled:opacity-45 disabled:shadow-none"
+            >
           {saving ? <Spinner /> : stepIndex === steps.length - 1 ? 'Готово' : 'Далее'}
           {!saving && <Icon name="arrowRight" size={17} />}
         </button>

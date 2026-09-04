@@ -455,9 +455,8 @@ export function AchievementForm({
             setStatus('idle');
             setOpen(true);
           }}
-          className="flex h-12 items-center gap-2 rounded-[var(--radius-control)] px-6 text-sm font-medium text-white shadow-[var(--shadow-rest)]"
-          style={{ background: 'var(--surface-brand)' }}
-        >
+          className="flex h-12 items-center gap-2 rounded-[var(--radius-pill)] px-6 text-sm font-medium bg-ink-900 text-white transition-colors hover:bg-ink-800 shadow-[var(--shadow-rest)]"
+            >
           <Icon name="plus" size={17} />
           Добавить достижение
         </PressButton>
@@ -537,9 +536,8 @@ export function AchievementForm({
         <PressButton
           onClick={submit}
           disabled={status === 'sending'}
-          className="flex h-12 items-center gap-2 rounded-[var(--radius-control)] px-6 text-sm font-medium text-white shadow-[var(--shadow-rest)] disabled:opacity-60"
-          style={{ background: 'var(--surface-brand)' }}
-        >
+          className="flex h-12 items-center gap-2 rounded-[var(--radius-pill)] px-6 text-sm font-medium bg-ink-900 text-white transition-colors hover:bg-ink-800 shadow-[var(--shadow-rest)] disabled:opacity-60"
+            >
           {status === 'sending' ? <Spinner /> : null}
           Отправить на проверку
         </PressButton>

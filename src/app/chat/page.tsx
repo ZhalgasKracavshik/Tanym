@@ -551,9 +551,8 @@ export default function ChatPage() {
             onClick={() => send(question)}
             disabled={loading || question.trim() === ''}
             aria-label={t.send}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] text-white shadow-[var(--shadow-rest)] transition-opacity disabled:opacity-40 disabled:shadow-none"
-            style={{ background: 'var(--surface-brand)' }}
-          >
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-pill)] bg-ink-900 text-white transition-colors hover:bg-ink-800 shadow-[var(--shadow-rest)] transition-opacity disabled:opacity-40 disabled:shadow-none"
+                >
             <Icon name="arrowRight" size={19} />
           </PressButton>
         </div>

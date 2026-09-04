@@ -490,8 +490,7 @@ export function SubmitButton({
       type={type}
       onClick={onClick}
       disabled={disabled || loading || success}
-      className="group flex h-12 w-full items-center justify-center gap-2 rounded-[var(--radius-control)] text-[15px] font-semibold text-white shadow-[var(--shadow-rest)] transition-all duration-300 hover:brightness-105 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:ring-offset-2 focus:ring-offset-white disabled:opacity-60"
-      style={{ background: 'var(--surface-brand)' }}
+      className="group flex h-12 w-full items-center justify-center gap-2 rounded-[var(--radius-pill)] text-[15px] font-semibold bg-ink-900 text-white transition-colors hover:bg-ink-800 shadow-[var(--shadow-rest)] transition-all duration-300 hover:brightness-105 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:ring-offset-2 focus:ring-offset-white disabled:opacity-60"
     >
       <AnimatePresence mode="wait" initial={false}>
         {success ? (

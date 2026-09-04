@@ -87,9 +87,8 @@ export function PartnerPage({
             <div className="mt-9 flex flex-wrap justify-center gap-3">
               <PressLink
                 href={`mailto:${contactEmail}`}
-                className="inline-flex h-14 items-center gap-2 rounded-[var(--radius-control)] px-8 text-base font-medium text-white shadow-[var(--shadow-rest)]"
-                style={{ background: 'var(--surface-brand)' }}
-              >
+                className="inline-flex h-14 items-center gap-2 rounded-[var(--radius-pill)] px-8 text-base font-medium bg-ink-900 text-white transition-colors hover:bg-ink-800 shadow-[var(--shadow-rest)]"
+                        >
                 Обсудить сотрудничество
                 <Icon name="arrowRight" size={18} />
               </PressLink>
@@ -135,9 +134,8 @@ export function PartnerPage({
               <StaggerItem key={item.title}>
                 <LiftCard className="h-full rounded-[var(--radius-card)] border border-ink-200/80 bg-white p-7 shadow-[var(--shadow-rest)]">
                   <span
-                    className="flex h-12 w-12 items-center justify-center rounded-[var(--radius-control)] text-white"
-                    style={{ background: 'var(--surface-brand)' }}
-                  >
+                    className="flex h-12 w-12 items-center justify-center rounded-[var(--radius-pill)] bg-ink-900 text-white transition-colors hover:bg-ink-800"
+                                >
                     <Icon name={item.icon} size={22} />
                   </span>
                   <h3 className="mt-5 font-medium text-ink-900">{item.title}</h3>
