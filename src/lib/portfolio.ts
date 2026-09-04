@@ -27,6 +27,10 @@ export interface PortfolioAchievement {
   level: AchievementLevel;
   place: AchievementPlace;
   happenedOn: string;
+  /** Кто проводил: по нему школа отличит городской этап от школьного тура. */
+  organizer?: string | null;
+  /** Ссылка на протокол или страницу с итогами. */
+  proofLink?: string | null;
   proofPath: string | null;
   status: AchievementStatus;
   points: number;

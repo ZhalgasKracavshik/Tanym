@@ -27,6 +27,7 @@ import {
   AchievementCard as AchievementPhotoCard,
   type AchievementCardTone,
 } from './AchievementCard';
+import { normalizeSocialUrl } from '@/lib/social';
 import { Icon } from './Icon';
 import { PressButton, Spinner, StaggerGroup, StaggerItem } from './motion';
 
@@ -39,6 +40,8 @@ interface Row {
   level: AchievementLevel;
   place: AchievementPlace;
   happened_on: string;
+  organizer: string | null;
+  proof_url: string | null;
   proof_path: string | null;
   status: AchievementStatus;
   points: number;
@@ -55,6 +58,8 @@ function rowToAchievement(row: Row): PortfolioAchievement {
     level: row.level,
     place: row.place,
     happenedOn: row.happened_on,
+    organizer: row.organizer,
+    proofLink: row.proof_url,
     proofPath: row.proof_path,
     status: row.status,
     points: row.points,
@@ -328,11 +333,18 @@ export function AchievementCard({
     PLACE_TITLES[achievement.place][language],
     LEVEL_TITLES[achievement.level][language],
     achievement.category.trim(),
+    achievement.organizer?.trim(),
   ]
     .filter(Boolean)
     .join(' · ');
 
-  const hasActions = Boolean(proofUrl || onDelete);
+  /*
+    Ссылка на протокол проверяется здесь ещё раз. Записи в базе старше
+    проверки в форме, и доверять им как безопасным нельзя: href с чужой
+    схемой — это исполняемый код на странице проверяющего.
+  */
+  const resultsUrl = achievement.proofLink ? normalizeSocialUrl(achievement.proofLink) : null;
+  const hasActions = Boolean(proofUrl || resultsUrl || onDelete);
 
   return (
     <AchievementPhotoCard
@@ -357,6 +369,17 @@ export function AchievementCard({
                 className={ACHIEVEMENT_ACTION_CLASS}
               >
                 Диплом
+              </a>
+            )}
+
+            {resultsUrl && (
+              <a
+                href={resultsUrl}
+                target="_blank"
+                rel="noopener noreferrer nofollow"
+                className={ACHIEVEMENT_ACTION_CLASS}
+              >
+                Результаты
               </a>
             )}
 
@@ -392,6 +415,8 @@ export function AchievementForm({
   const [level, setLevel] = useState<AchievementLevel>('city');
   const [place, setPlace] = useState<AchievementPlace>('first');
   const [happenedOn, setHappenedOn] = useState('');
+  const [organizer, setOrganizer] = useState('');
+  const [proofUrl, setProofUrl] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [status, setStatus] = useState<'idle' | 'sending' | 'done' | 'error'>('idle');
 
@@ -425,6 +450,13 @@ export function AchievementForm({
       level,
       place,
       happened_on: happenedOn,
+      organizer: organizer.trim() === '' ? null : organizer.trim(),
+      /*
+        Ссылка нормализуется при сохранении: «olympiad.kz» без схемы
+        браузер считает путём внутри Tanym, а чужая схема в href — это
+        исполняемый код на странице проверяющего.
+      */
+      proof_url: proofUrl.trim() === '' ? null : normalizeSocialUrl(proofUrl.trim()),
       proof_path: proofPath,
     });
 
@@ -437,6 +469,8 @@ export function AchievementForm({
     setTitle('');
     setDescription('');
     setCategory('');
+    setOrganizer('');
+    setProofUrl('');
     setFile(null);
     setOpen(false);
     onSubmitted();
@@ -468,14 +502,27 @@ export function AchievementForm({
     <div className="space-y-4 rounded-[var(--radius-card)] border border-ink-200 bg-white p-6 shadow-[var(--shadow-rest)]">
       <h3 className="font-medium text-ink-900">Новое достижение</h3>
 
-      <input
-        value={title}
-        onChange={(event) => setTitle(event.target.value)}
-        placeholder="Например: Городская олимпиада по математике"
-        className={INPUT}
-      />
+      {/*
+        У каждого поля своя подпись, а не только placeholder.
+
+        Подпись в placeholder исчезает, как только начали печатать: человек
+        дописывает третье поле и уже не помнит, что в нём. Хуже всего это
+        было с датой — там placeholder невозможен в принципе, и поле стояло
+        вообще без объяснения, какую дату спрашивают.
+      */}
+      <label className="block">
+        <span className="mb-1.5 block text-sm font-medium text-ink-800">Название</span>
+        <input
+          value={title}
+          onChange={(event) => setTitle(event.target.value)}
+          placeholder="Например: Городская олимпиада по математике"
+          className={INPUT}
+        />
+      </label>
 
       <div className="grid gap-3 sm:grid-cols-2">
+        <label className="block">
+          <span className="mb-1.5 block text-sm font-medium text-ink-800">Уровень</span>
         <select
           value={level}
           onChange={(event) => setLevel(event.target.value as AchievementLevel)}
@@ -487,7 +534,10 @@ export function AchievementForm({
             </option>
           ))}
         </select>
+        </label>
 
+        <label className="block">
+          <span className="mb-1.5 block text-sm font-medium text-ink-800">Результат</span>
         <select
           value={place}
           onChange={(event) => setPlace(event.target.value as AchievementPlace)}
@@ -499,30 +549,76 @@ export function AchievementForm({
             </option>
           ))}
         </select>
+        </label>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <input
-          value={category}
-          onChange={(event) => setCategory(event.target.value)}
-          placeholder="Направление: математика, спорт…"
-          className={INPUT}
-        />
-        <input
-          type="date"
-          value={happenedOn}
-          onChange={(event) => setHappenedOn(event.target.value)}
-          className={INPUT}
-        />
+        <label className="block">
+          <span className="mb-1.5 block text-sm font-medium text-ink-800">Направление</span>
+          <input
+            value={category}
+            onChange={(event) => setCategory(event.target.value)}
+            placeholder="Математика, спорт, робототехника…"
+            className={INPUT}
+          />
+        </label>
+        <label className="block">
+          <span className="mb-1.5 block text-sm font-medium text-ink-800">Когда прошло</span>
+          <input
+            type="date"
+            value={happenedOn}
+            onChange={(event) => setHappenedOn(event.target.value)}
+            className={INPUT}
+          />
+        </label>
       </div>
 
-      <textarea
-        value={description}
-        onChange={(event) => setDescription(event.target.value)}
-        rows={2}
-        placeholder="Пара слов: что за конкурс, сколько было участников"
-        className={`${INPUT} h-auto py-3`}
-      />
+      {/*
+        Организатор и ссылка на протокол нужны проверяющему, а не витрине.
+        У одного названия бывают и школьный тур, и настоящий городской этап
+        от управления образования — по фотографии грамоты их не различить.
+      */}
+      <label className="block">
+        <span className="mb-1.5 block text-sm font-medium text-ink-800">Кто проводил</span>
+        <input
+          value={organizer}
+          onChange={(event) => setOrganizer(event.target.value)}
+          placeholder="Например: Управление образования Астаны, НИШ, Дарын"
+          maxLength={160}
+          className={INPUT}
+        />
+        <span className="mt-1.5 block text-xs text-ink-400">
+          По организатору школа отличит городской этап от школьного тура.
+        </span>
+      </label>
+
+      <label className="block">
+        <span className="mb-1.5 block text-sm font-medium text-ink-800">
+          Ссылка на результаты (необязательно)
+        </span>
+        <input
+          type="url"
+          value={proofUrl}
+          onChange={(event) => setProofUrl(event.target.value)}
+          placeholder="https://"
+          maxLength={300}
+          className={INPUT}
+        />
+        <span className="mt-1.5 block text-xs text-ink-400">
+          Протокол или страница с итогами — по ней проверят быстрее всего.
+        </span>
+      </label>
+
+      <label className="block">
+        <span className="mb-1.5 block text-sm font-medium text-ink-800">Описание</span>
+        <textarea
+          value={description}
+          onChange={(event) => setDescription(event.target.value)}
+          rows={2}
+          placeholder="Пара слов: что за конкурс, сколько было участников"
+          className={`${INPUT} h-auto py-3`}
+        />
+      </label>
 
       <ProofField file={file} onChange={setFile} />
 
