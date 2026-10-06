@@ -12,6 +12,7 @@ import Link from 'next/link';
 import { SUBJECTS } from '@/data';
 import { Icon, type IconName } from '@/components/Icon';
 import { useLang, type Dict } from '@/lib/i18n';
+import { isDisabledPath } from '@/lib/pilot';
 import { LiftCard, PressLink, Reveal, StaggerGroup, StaggerItem, motion } from '@/components/motion';
 
 /** Подписи лендинга на трёх языках. Ключи одинаковые — за этим следит TypeScript. */
@@ -101,9 +102,9 @@ const TEXT: Dict<{
     teacherText:
       'Видно, кто отстал и по какой теме, без проверки тридцати тетрадей. Свои темы и задания добавляются прямо в панели.',
     teacherCta: 'Открыть панель учителя',
-    partnersTitle: 'Школам и учебным центрам',
+    partnersTitle: 'Школам',
     partnersText:
-      'Для учеников Tanym бесплатен. Платят школы и центры — за инструменты и за доступ к аудитории.',
+      'Для учеников Tanym бесплатен. Школам — инструменты для учителя и класса.',
     partners: [
       {
         href: '/for-schools',
@@ -176,9 +177,9 @@ const TEXT: Dict<{
     teacherText:
       'Отыз дәптерді тексермей-ақ кімнің қай тақырыптан қалып қойғаны көрініп тұрады. Өз тақырыптарың мен тапсырмаларыңды панельдің өзінде қосасың.',
     teacherCta: 'Мұғалім панелін ашу',
-    partnersTitle: 'Мектептер мен оқу орталықтарына',
+    partnersTitle: 'Мектептерге',
     partnersText:
-      'Оқушыларға Tanym тегін. Мектептер мен орталықтар төлейді — құралдар мен аудиторияға қолжетімділік үшін.',
+      'Оқушыларға Tanym тегін. Мектептерге — мұғалім мен сыныпқа арналған құралдар.',
     partners: [
       {
         href: '/for-schools',
@@ -248,9 +249,9 @@ const TEXT: Dict<{
     teacherText:
       'See who fell behind and on which topic without grading thirty notebooks. Your own topics and tasks are added right in the dashboard.',
     teacherCta: 'Open the teacher dashboard',
-    partnersTitle: 'For schools and learning centres',
+    partnersTitle: 'For schools',
     partnersText:
-      'Tanym is free for students. Schools and centres pay — for the tools and for access to the audience.',
+      'Tanym is free for students. Schools get tools for teachers and their classes.',
     partners: [
       {
         href: '/for-schools',
@@ -534,7 +535,7 @@ export default function HomePage() {
           </Reveal>
 
           <StaggerGroup className="mt-12 grid gap-5 md:grid-cols-2">
-            {t.partners.map((partner) => (
+            {t.partners.filter((partner) => !isDisabledPath(partner.href)).map((partner) => (
               <StaggerItem key={partner.href}>
                 <Link href={partner.href} className="block h-full">
                   {/*

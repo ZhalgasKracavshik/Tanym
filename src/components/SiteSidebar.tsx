@@ -28,6 +28,7 @@ import { useSidebarCollapsed } from '@/lib/localSetting';
 import { MobileTabBar } from './MobileTabBar';
 import { useSlidingPill } from './useSlidingPill';
 import { avatarPhotoUrl } from '@/lib/supabase/avatarPhoto';
+import { isDisabledPath } from '@/lib/pilot';
 
 /**
  * Пункты, скрытые от роли.
@@ -296,7 +297,8 @@ export function SiteSidebar() {
     меню несравнимо лучше, чем не показать ничего.
   */
   const hidden = schoolProfile ? (HIDDEN_FOR_ROLE[schoolProfile.role] ?? []) : [];
-  const NAV = ALL_NAV.filter((item) => !hidden.includes(item.href));
+  // Разделы, выключенные на пилот, не показываются никому (см. lib/pilot.ts).
+  const NAV = ALL_NAV.filter((item) => !hidden.includes(item.href) && !isDisabledPath(item.href));
 
   /*
     Отдельным компонентом, а не общей переменной с разметкой: список

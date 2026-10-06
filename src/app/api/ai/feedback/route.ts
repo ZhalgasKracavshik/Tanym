@@ -165,7 +165,7 @@ export async function POST(request: Request): Promise<NextResponse<FeedbackRespo
       explained: true,
       text: feedbackFallback(input),
       live: false,
-      fallbackReason: 'AI-ключ не настроен на сервере',
+      fallbackReason: 'Живая модель выключена',
     });
   }
 

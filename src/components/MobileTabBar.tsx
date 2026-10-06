@@ -20,6 +20,7 @@ import { useStore } from './StoreProvider';
 import type { Dict } from '@/lib/i18n';
 import { Icon } from './Icon';
 import { useSlidingPill } from './useSlidingPill';
+import { isDisabledPath } from '@/lib/pilot';
 import type { IconName } from './Icon';
 
 const TEXT: Dict<{
@@ -27,6 +28,7 @@ const TEXT: Dict<{
   dashboard: string;
   achievements: string;
   mentor: string;
+  events: string;
   leaderboard: string;
   profile: string;
   teacher: string;
@@ -38,6 +40,7 @@ const TEXT: Dict<{
     dashboard: 'Кабинет',
     achievements: 'Портфолио',
     mentor: 'Наставник',
+    events: 'Афиша',
     leaderboard: 'Рейтинг',
     profile: 'Профиль',
     teacher: 'Класс',
@@ -49,6 +52,7 @@ const TEXT: Dict<{
     dashboard: 'Кабинет',
     achievements: 'Портфолио',
     mentor: 'Тәлімгер',
+    events: 'Афиша',
     leaderboard: 'Рейтинг',
     profile: 'Профиль',
     teacher: 'Сынып',
@@ -60,6 +64,7 @@ const TEXT: Dict<{
     dashboard: 'Home',
     achievements: 'Portfolio',
     mentor: 'Mentor',
+    events: 'Events',
     leaderboard: 'Ranking',
     profile: 'Profile',
     teacher: 'Class',
@@ -84,6 +89,7 @@ export function MobileTabBar({ onMore }: { onMore: () => void }) {
     profile?.role === 'teacher'
       ? [
           { href: '/teacher', label: t.teacher, icon: 'cap' },
+          { href: '/events', label: t.events, icon: 'calendar' },
           { href: '/achievements', label: t.achievements, icon: 'trophy' },
           { href: '/leaderboard', label: t.leaderboard, icon: 'medal' },
           { href: '/profile', label: t.profile, icon: 'user' },
@@ -91,23 +97,26 @@ export function MobileTabBar({ onMore }: { onMore: () => void }) {
       : profile?.role === 'admin'
         ? [
             { href: '/admin', label: t.admin, icon: 'building' },
+            { href: '/events', label: t.events, icon: 'calendar' },
             { href: '/achievements', label: t.achievements, icon: 'trophy' },
             { href: '/leaderboard', label: t.leaderboard, icon: 'medal' },
             { href: '/profile', label: t.profile, icon: 'user' },
           ]
         : [
             /*
-              Порядок повторяет учебный путь: кабинет с прогрессом, план
-              занятий, наставник, достижения, рейтинг. Раньше первой стояла
-              лента школы — то есть на самом видном месте мобильной панели
-              был раздел, к учёбе отношения не имеющий.
+              Порядок повторяет путь ученика в пилоте: кабинет с прогрессом,
+              афиша (ради неё пилот и затевался), архив, достижения, рейтинг.
+              Наставник выключен на пилот — см. lib/pilot.ts; фильтр ниже
+              всё равно снял бы его, но держать в списке мёртвую вкладку
+              незачем.
             */
             { href: '/dashboard', label: t.dashboard, icon: 'columns' },
+            { href: '/events', label: t.events, icon: 'calendar' },
             { href: '/archive', label: t.archive, icon: 'folder' },
-            { href: '/chat', label: t.mentor, icon: 'chat' },
             { href: '/achievements', label: t.achievements, icon: 'trophy' },
             { href: '/leaderboard', label: t.leaderboard, icon: 'medal' },
           ];
+  const visibleTabs = tabs.filter((tab) => !isDisabledPath(tab.href));
 
   return (
     <nav
@@ -137,7 +146,7 @@ export function MobileTabBar({ onMore }: { onMore: () => void }) {
           className="t-tabs-pill rounded-[var(--radius-pill)] shadow-[var(--shadow-rest)]"
           style={{ background: 'var(--surface-brand)' }}
         />
-        {tabs.map((tab) => {
+        {visibleTabs.map((tab) => {
           const active = pathname === tab.href || pathname.startsWith(`${tab.href}/`);
           return (
             <li key={tab.href} className="flex-1">
