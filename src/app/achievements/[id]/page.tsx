@@ -34,6 +34,7 @@ import { AchievementCard, ACHIEVEMENT_ACTION_CLASS, type AchievementCardTone } f
 import { Avatar } from '@/components/Avatar';
 import { Icon } from '@/components/Icon';
 import { Button, EmptyState, Skeleton } from '@/components/ui';
+import { useProofUrl } from '@/lib/supabase/proofUrl';
 
 /** Тот же выбор заливки без фото, что и в портфолио: место определяет тон. */
 const PLACE_FILL: Record<ReturnType<typeof placeTone>, AchievementCardTone> = {
@@ -78,6 +79,8 @@ export default function AchievementPage({ params }: PageProps<'/achievements/[id
   const [student, setStudent] = useState<StudentInfo | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [deciding, setDeciding] = useState(false);
+  // До ранних return: порядок хуков не должен зависеть от загрузки строки.
+  const proofUrl = useProofUrl(row?.proof_path);
 
   useEffect(() => {
     let cancelled = false;
@@ -138,9 +141,6 @@ export default function AchievementPage({ params }: PageProps<'/achievements/[id
     );
   }
 
-  const proofUrl = row.proof_path
-    ? createClient().storage.from('achievement-proofs').getPublicUrl(row.proof_path).data.publicUrl
-    : null;
   const isAdmin = profile?.role === 'admin';
   const isPending = row.status === 'pending';
   const willGivePoints = achievementPoints(row.level, row.place);

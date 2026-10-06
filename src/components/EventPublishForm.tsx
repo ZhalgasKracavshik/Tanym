@@ -13,6 +13,7 @@ import { normalizeSocialUrl } from '@/lib/social';
 import { Button } from './ui';
 import { Icon } from './Icon';
 import { ImageGalleryField } from './ImageGalleryField';
+import { coverExtension } from '@/lib/storageKey';
 
 const TEXT = {
   ru: {
@@ -70,9 +71,10 @@ export function EventPublishForm({ language, adminId, onPublished }: { language:
 
     const paths: string[] = [];
     for (const [position, file] of covers.entries()) {
-      const extension = file.name.split('.').pop()?.toLowerCase() ?? 'jpg';
+      const extension = coverExtension(file.name);
       // Позиция в имени — чтобы порядок читался прямо по бакету при разборе.
-      const path = `${Date.now()}-${position}-${Math.round(Math.random() * 1e6)}.${extension}`;
+      // Папка автора: политика бакета пускает запись только в <uid>/.
+      const path = `${adminId}/${Date.now()}-${position}-${Math.round(Math.random() * 1e6)}.${extension}`;
       const { error } = await supabase.storage.from('card-covers').upload(path, file);
       if (error) return undefined;
       paths.push(path);

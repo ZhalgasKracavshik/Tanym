@@ -219,7 +219,7 @@ function LoginForm() {
           label={t.email}
           type="email"
           autoComplete="email"
-          placeholder="name@binom.edu.kz"
+          placeholder="name@mail.kz"
           value={email}
           onChange={(event) => {
             setEmail(event.target.value);

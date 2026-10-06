@@ -34,7 +34,6 @@ import {
   canBeTeacher,
   domainRejectionMessage,
   fetchAllowedDomainRows,
-  isEmailDomainAllowed,
   teacherDomainMessage,
 } from '@/lib/supabase/allowedDomains';
 
@@ -325,15 +324,12 @@ export default function RegisterPage() {
       войти может, пользоваться ничем не может, а повторная регистрация
       отвечает ему «почта уже зарегистрирована». Выбраться из этого
       состояния самостоятельно нельзя — в базе такой пользователь уже есть.
+
+      На пилоте ученик регистрируется с любой почтой (миграция
+      pilot_open_student_registration), поэтому домен важен только учителю.
     */
     const domainRows = await fetchAllowedDomainRows();
     const allowedDomains = domainRows.map((row) => row.domain);
-    if (!isEmailDomainAllowed(email, allowedDomains)) {
-      setStatus('idle');
-      setEmailError(domainRejectionMessage(allowedDomains));
-      setShakeKey((k) => k + 1);
-      return;
-    }
 
     /*
       Роль учителя открывает панель класса и данные детей, поэтому её
@@ -495,7 +491,7 @@ export default function RegisterPage() {
           label={t.email}
           type="email"
           autoComplete="email"
-          placeholder="name@binom.edu.kz"
+          placeholder="name@mail.kz"
           value={email}
           onChange={(event) => {
             setEmail(event.target.value);

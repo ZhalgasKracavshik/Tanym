@@ -30,6 +30,8 @@ import { normalizeSocialUrl } from '@/lib/social';
 import { Button } from './ui';
 import { Icon } from './Icon';
 import { ImageGalleryField, MAX_IMAGES } from './ImageGalleryField';
+import { coverExtension } from '@/lib/storageKey';
+import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
 
 const TEXT = {
   ru: {
@@ -99,6 +101,8 @@ export function EventEditForm({
   onCancel: () => void;
 }) {
   const t = TEXT.ru;
+  const { profile } = useSchoolAuth();
+  const editorId = profile?.id ?? '';
 
   const [type, setType] = useState<EventType>(initial.type);
   const [title, setTitle] = useState(initial.title);
@@ -147,8 +151,9 @@ export function EventEditForm({
 
     const paths: string[] = [];
     for (const [position, file] of newFiles.entries()) {
-      const extension = file.name.split('.').pop()?.toLowerCase() ?? 'jpg';
-      const path = `${Date.now()}-${position}-${Math.round(Math.random() * 1e6)}.${extension}`;
+      const extension = coverExtension(file.name);
+      // Папка того, кто правит (автор или админ): см. политику card-covers.
+      const path = `${editorId}/${Date.now()}-${position}-${Math.round(Math.random() * 1e6)}.${extension}`;
       const { error } = await supabase.storage.from('card-covers').upload(path, file);
       if (error) return undefined;
       paths.push(path);

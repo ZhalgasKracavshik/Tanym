@@ -26,6 +26,7 @@ import {
   type AchievementPlace,
 } from '@/lib/portfolio';
 import { ADMIN_TEXT, AdminShell, Row, Section, useRows } from '../parts';
+import { useProofUrl } from '@/lib/supabase/proofUrl';
 
 const TEXT = {
   pendingAchievements: 'Достижения на проверке',
@@ -105,11 +106,6 @@ function ModerationPanel({ language }: { language: Language }) {
           pendingAchievements.map((row) => {
             const level = row.level as AchievementLevel;
             const place = row.place as AchievementPlace;
-            const proofUrl = row.proof_path
-              ? createClient()
-                  .storage.from('achievement-proofs')
-                  .getPublicUrl(String(row.proof_path)).data.publicUrl
-              : null;
 
             return (
               <Row
@@ -127,18 +123,7 @@ function ModerationPanel({ language }: { language: Language }) {
                   <Icon name="arrow-right" size={12} />
                 </Link>
 
-                {proofUrl ? (
-                  <a
-                    href={proofUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-xs font-semibold text-brand-600 hover:underline"
-                  >
-                    {TEXT.proof}
-                  </a>
-                ) : (
-                  <span className="text-xs text-danger-600">{TEXT.noProof}</span>
-                )}
+                <ProofLink path={row.proof_path ? String(row.proof_path) : null} />
 
                 <Button size="sm" onClick={() => reviewAchievement(row.id, 'approved', level, place)}>
                   <Icon name="check" size={14} />
@@ -200,5 +185,20 @@ export default function AdminModerationPage() {
         </SchoolAuthGate>
       </Suspense>
     </AdminShell>
+  );
+}
+
+/**
+ * Ссылка на скан для проверяющего. Отдельный компонент, потому что
+ * подписанная ссылка получается хуком, а хуки нельзя звать внутри map.
+ */
+function ProofLink({ path }: { path: string | null }) {
+  const url = useProofUrl(path);
+  if (!path) return <span className="text-xs text-danger-600">{TEXT.noProof}</span>;
+  if (!url) return <span className="text-xs text-ink-400">{TEXT.proof}…</span>;
+  return (
+    <a href={url} target="_blank" rel="noreferrer" className="text-xs font-semibold text-brand-600 hover:underline">
+      {TEXT.proof}
+    </a>
   );
 }

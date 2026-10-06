@@ -27,6 +27,7 @@ import type { Grade } from '@/lib/types';
 import { checkPersonName } from '@/lib/personName';
 import { safeExternalUrl } from '@/lib/safeUrl';
 import { SUBJECTS } from '@/data';
+import { isDisabledPath } from '@/lib/pilot';
 
 function randomClassCode(): string {
   // Без похожих символов (0/O, 1/I) — код читают и вводят руками с доски.
@@ -347,6 +348,12 @@ export async function POST(request: Request) {
   const role = body?.role;
   if (role !== 'student' && role !== 'teacher' && role !== 'center') {
     return NextResponse.json({ error: 'invalid_role' }, { status: 400 });
+  }
+
+  // Регистрация центров выключена на пилот (lib/pilot.ts); в базе политика
+  // самосоздания профиля центра тоже снята — это вторая линия.
+  if (role === 'center' && isDisabledPath('/register/center')) {
+    return NextResponse.json({ error: 'centers_disabled' }, { status: 403 });
   }
 
   const name: string = user.user_metadata?.full_name || user.user_metadata?.name || user.email || 'Без имени';
