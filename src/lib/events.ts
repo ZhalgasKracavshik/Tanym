@@ -80,3 +80,21 @@ export function formatEventDate(dateIso: string, language: Language): string {
     timeZone: 'Asia/Almaty',
   }).format(new Date(`${dateIso}T12:00:00+05:00`));
 }
+
+/** Ближайший открытый дедлайн: сначала среди сохранённых, затем среди всех. */
+export function pickNearestDeadline(
+  events: SchoolEvent[],
+  savedIds: Set<string> | null,
+  today: string = almatyDateIso(),
+): { event: SchoolEvent; fromSaved: boolean } | null {
+  const open = events
+    .filter((event) => {
+      const status = eventStatus(event, today);
+      return status === 'open' || status === 'closing-soon';
+    })
+    .sort((a, b) => a.registrationDeadline.localeCompare(b.registrationDeadline));
+
+  const saved = savedIds ? open.find((event) => savedIds.has(event.id)) : undefined;
+  if (saved) return { event: saved, fromSaved: true };
+  return open[0] ? { event: open[0], fromSaved: false } : null;
+}

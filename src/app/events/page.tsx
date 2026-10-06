@@ -17,8 +17,10 @@ import type { Dict } from '@/lib/i18n';
 import { useStore } from '@/components/StoreProvider';
 import { Icon } from '@/components/Icon';
 import { EmptyState, Kicker } from '@/components/ui';
-import { usePublishedEvents } from '@/lib/supabase/events';
+import { usePublishedEvents, useSavedEvents } from '@/lib/supabase/events';
+import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
 import { PublishAction } from '@/components/PublishAction';
+import { NearestDeadline } from '@/components/NearestDeadline';
 
 /**
  * «день / дня / дней» по числу.
@@ -48,10 +50,11 @@ const TEXT: Dict<{
   kicker: string;
   title: string;
   subtitle: string;
-  nearestDeadline: string;
-  daysWord: (n: number) => string;
   all: string;
   myEvents: string;
+  myGrade: (grade: number) => string;
+  add: string;
+  propose: string;
   deadline: string;
   daysLeft: (n: number) => string;
   lastDay: string;
@@ -62,6 +65,7 @@ const TEXT: Dict<{
   paid: string;
   empty: string;
   emptyMine: string;
+  emptyGrade: string;
   statusOpen: string;
   statusClosing: string;
   details: string;
@@ -72,10 +76,11 @@ const TEXT: Dict<{
     kicker: 'Олимпиады и конкурсы',
     title: 'Афиша',
     subtitle: 'Олимпиады, конкурсы и события. Главное: не пропустить срок регистрации.',
-    nearestDeadline: 'Ближайший дедлайн',
-    daysWord: daysWordRu,
     all: 'Все',
-    myEvents: 'Отмеченные',
+    myEvents: 'Мои события',
+    myGrade: (grade) => `Для ${grade} класса`,
+    add: 'Добавить событие',
+    propose: 'Предложить событие',
     deadline: 'Регистрация до',
     // Глагол согласуется вместе с существительным: «остался 21 день», но
     // «осталось 22 дня». Отдельная ветка на единицу этого не покрывала.
@@ -93,7 +98,8 @@ const TEXT: Dict<{
     free: 'Бесплатно',
     paid: 'Платное участие',
     empty: 'В этой категории пока нет событий.',
-    emptyMine: 'Вы пока ничего не отметили. Загляните в другие категории.',
+    emptyMine: 'Здесь будут события, которые вы сохраните. Откройте событие и нажмите «Сохранить в мои события».',
+    emptyGrade: 'Для вашего класса в этой категории пока ничего нет.',
     statusOpen: 'Идёт запись',
     statusClosing: 'Скоро закрытие',
     details: 'Подробнее',
@@ -104,10 +110,11 @@ const TEXT: Dict<{
     kicker: 'Олимпиадалар мен байқаулар',
     title: 'Афиша',
     subtitle: 'Олимпиадалар, байқаулар және іс-шаралар. Ең бастысы: тіркелу мерзімін өткізіп алмау.',
-    nearestDeadline: 'Жақын мерзім',
-    daysWord: () => 'күн қалды',
     all: 'Барлығы',
-    myEvents: 'Белгіленгендер',
+    myEvents: 'Менің іс-шараларым',
+    myGrade: (grade) => `${grade}-сыныпқа`,
+    add: 'Іс-шара қосу',
+    propose: 'Іс-шара ұсыну',
     deadline: 'Тіркелу мерзімі',
     daysLeft: (n) => `${n} күн қалды`,
     lastDay: 'бүгін соңғы күн',
@@ -117,7 +124,8 @@ const TEXT: Dict<{
     free: 'Тегін',
     paid: 'Ақылы қатысу',
     empty: 'Бұл санатта әзірге іс-шара жоқ.',
-    emptyMine: 'Сіз әзірге ештеңе белгілеген жоқсыз. Басқа санаттарды қараңыз.',
+    emptyMine: 'Мұнда сіз сақтаған іс-шаралар болады. Іс-шараны ашып, «Менің іс-шараларыма сақтау» батырмасын басыңыз.',
+    emptyGrade: 'Бұл санатта сіздің сыныпқа әзірге ештеңе жоқ.',
     statusOpen: 'Тіркеу ашық',
     statusClosing: 'Жабылады',
     details: 'Толығырақ',
@@ -128,10 +136,11 @@ const TEXT: Dict<{
     kicker: 'Olympiads and contests',
     title: 'Events',
     subtitle: 'Olympiads, contests and events. The point is not to miss the registration deadline.',
-    nearestDeadline: 'Closest deadline',
-    daysWord: (n) => (n === 1 ? 'day left' : 'days left'),
     all: 'All',
-    myEvents: 'Marked',
+    myEvents: 'My events',
+    myGrade: (grade) => `For grade ${grade}`,
+    add: 'Add event',
+    propose: 'Suggest an event',
     deadline: 'Register by',
     daysLeft: (n) => (n === 1 ? '1 day left' : `${n} days left`),
     lastDay: 'today is the last day',
@@ -141,7 +150,8 @@ const TEXT: Dict<{
     free: 'Free',
     paid: 'Paid entry',
     empty: 'No events in this category yet.',
-    emptyMine: "You haven't marked anything yet. Take a look at the other categories.",
+    emptyMine: 'Events you save will appear here. Open an event and tap “Save to my events”.',
+    emptyGrade: 'Nothing for your grade in this category yet.',
     statusOpen: 'Sign-up open',
     statusClosing: 'Closing soon',
     details: 'Details',
@@ -171,15 +181,18 @@ const TYPE_BANNER: Record<EventType, string> = {
 };
 
 export default function EventsPage() {
-  /*
-    Записи из хранилища здесь только читаются: фильтр «мои» и счётчик рядом
-    с ним. Переключать запись отсюда больше нечем — это делает страница
-    события.
-  */
   const { state } = useStore();
   const t = TEXT[state.language];
+  const { profile } = useSchoolAuth();
+  /*
+    «Мои события» — из базы (event_saves), а не из localStorage: отметка
+    переживает смену устройства, и ближайший дедлайн считается по ней.
+  */
+  const { ids: savedIds, toggle: toggleSaved } = useSavedEvents();
+  const grade = profile?.role === 'student' ? profile.grade : null;
 
   const [filter, setFilter] = useState<EventType | 'all' | 'mine'>('all');
+  const [gradeOnly, setGradeOnly] = useState(false);
   /*
     Сеттер убран: публикация ушла на отдельную страницу и возвращает сюда
     обычным переходом, а список перечитывается при монтировании. Значение
@@ -193,8 +206,12 @@ export default function EventsPage() {
   }
 
   const visible = events.filter((event) => {
+    // Пустой список классов у события значит «для всех».
+    if (gradeOnly && grade && event.grades.length > 0 && !event.grades.includes(grade as SchoolEvent['grades'][number])) {
+      return false;
+    }
     if (filter === 'all') return true;
-    if (filter === 'mine') return state.eventRegistrations.includes(event.id);
+    if (filter === 'mine') return savedIds?.has(event.id) ?? false;
     return event.type === filter;
   });
 
@@ -222,17 +239,6 @@ export default function EventsPage() {
     past: t.past,
   };
 
-  /**
-   * Событие, до закрытия регистрации которого осталось меньше всего времени.
-   *
-   * Считается по всей афише, а не по отфильтрованному списку: срок не перестаёт
-   * гореть оттого, что ученик переключил вкладку категории.
-   */
-  const nearest = events.filter((event) => {
-    const status = eventStatus(event);
-    return status === 'open' || status === 'closing-soon';
-  }).sort((a, b) => a.registrationDeadline.localeCompare(b.registrationDeadline))[0];
-  const nearestDays = nearest ? daysLeftUntil(nearest.registrationDeadline) : 0;
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
@@ -241,36 +247,27 @@ export default function EventsPage() {
           <Kicker>{t.kicker}</Kicker>
           <h1 className="mt-2 text-3xl font-medium text-ink-900 sm:text-4xl">{t.title}</h1>
         </div>
-        <PublishAction href="/events/new" label="Добавить событие" requireRole="admin" />
+        {/* Админ публикует сразу, учитель — предлагает: событие ждёт проверки. */}
+        <PublishAction
+          href="/events/new"
+          label={profile?.role === 'teacher' ? t.propose : t.add}
+          requireRole={['admin', 'teacher']}
+        />
       </div>
 
       {/*
-        Обратный отсчёт вынесен из списка наверх и набран крупнее всего на экране.
-
-        Ученик проигрывает олимпиаду не в задачах, а в том, что узнаёт о ней после
-        закрытия регистрации. Поэтому первое, за что цепляется глаз, это число
-        оставшихся дней, а не заголовок страницы и не сетка карточек.
-        Число лежит на голом фоне между волосяными линиями: ещё одна карточка
-        здесь сравняла бы срок по весу с обычным событием.
+        Обратный отсчёт — первое, за что цепляется глаз: срок важнее
+        заголовка и сетки. Считается по всей афише, а не по фильтру: срок не
+        перестаёт гореть оттого, что ученик переключил вкладку. Если есть
+        сохранённые события — по ним (см. NearestDeadline).
       */}
-      {nearest && (
-        <div className="mt-10 flex flex-wrap items-end gap-x-10 gap-y-4 border-y border-ink-200 py-6">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-ink-400">{t.nearestDeadline}</p>
-            <p className="mt-2 flex items-baseline gap-2 text-5xl font-medium tabular-nums text-ink-900 sm:text-6xl">
-              {nearestDays}
-              <span className="text-base font-medium text-ink-400">{t.daysWord(nearestDays)}</span>
-            </p>
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="font-semibold text-ink-900">{nearest.title}</p>
-            <p className="mt-2 text-sm tabular-nums text-ink-500">
-              {t.deadline} {formatEventDate(nearest.registrationDeadline, state.language)}
-            </p>
-            {nearestDays === 0 && <p className="mt-2 text-sm font-semibold text-danger-600">{t.lastDay}</p>}
-          </div>
-        </div>
-      )}
+      <NearestDeadline
+        events={events}
+        savedIds={savedIds}
+        onToggleSave={toggleSaved}
+        language={state.language}
+        className="mt-10"
+      />
 
       {/* Вводный абзац: на голом фоне, отдельно от заголовка */}
       <p className="mt-4 max-w-2xl text-sm text-ink-500">{t.subtitle}</p>
@@ -290,14 +287,24 @@ export default function EventsPage() {
           <Icon name="star" size={16} />
           <span className="tabular-nums">
             {t.myEvents}
-            {state.eventRegistrations.length > 0 && ` (${state.eventRegistrations.length})`}
+            {savedIds && savedIds.size > 0 && ` (${savedIds.size})`}
           </span>
         </button>
+        {grade && (
+          <button
+            onClick={() => setGradeOnly((value) => !value)}
+            aria-pressed={gradeOnly}
+            className={chip(gradeOnly)}
+          >
+            <Icon name="users" size={16} />
+            {t.myGrade(grade)}
+          </button>
+        )}
       </div>
 
       {sorted.length === 0 ? (
         <div className="mt-4">
-          <EmptyState title={filter === 'mine' ? t.emptyMine : t.empty} description="" />
+          <EmptyState title={filter === 'mine' ? t.emptyMine : gradeOnly ? t.emptyGrade : t.empty} description="" />
         </div>
       ) : (
         <div className="mt-4 grid auto-rows-fr gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -333,8 +340,7 @@ export default function EventsPage() {
         </div>
       )}
 
-      {/* Публикация доступна только роли admin — учителя сюда не допущены,
-          в отличие от материалов архива. */}    </div>
+    </div>
   );
 }
 

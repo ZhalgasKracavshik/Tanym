@@ -31,17 +31,36 @@ const TEXT = {
     registrationUrl: 'Ссылка для записи (необязательно)',
     registrationUrlPlaceholder: 'Google-форма, чат или страница курса',
     registrationUrlHint:
-      'Если оставить пустым, на странице события останется только личная отметка «иду», без перехода куда-либо.',
+      'Если оставить пустым, на странице события будет только кнопка «Сохранить в мои события», без перехода к организатору.',
     registrationUrlError: 'Проверьте ссылку для записи — она должна быть настоящим адресом.',
     publish: 'Опубликовать',
-    publishing: 'Публикуем…',
+    propose: 'Отправить на проверку',
+    publishing: 'Отправляем…',
     done: 'Событие опубликовано и видно в афише.',
     error: 'Не получилось опубликовать. Проверьте поля.',
+    titleTooShort: 'Название — от 3 до 200 символов.',
+    datesOrder: 'Регистрация должна закрываться не позже даты проведения.',
+    reviewHint: 'Событие появится в афише после проверки администратором.',
   },
 } as const;
 
-export function EventPublishForm({ language, adminId, onPublished }: { language: Language; adminId: string; onPublished: () => void }) {
+export function EventPublishForm({
+  language,
+  adminId,
+  role,
+  onPublished,
+}: {
+  language: Language;
+  adminId: string;
+  /**
+   * Админ публикует сразу, учитель — отправляет на проверку (status
+   * 'pending'). Политика INSERT в базе пускает учителя только так.
+   */
+  role: 'admin' | 'teacher';
+  onPublished: (eventId: string) => void;
+}) {
   const t = TEXT.ru;
+  const needsReview = role !== 'admin';
   const [type, setType] = useState<EventType>('olympiad');
   const [title, setTitle] = useState('');
   const [organizer, setOrganizer] = useState('');
@@ -55,7 +74,9 @@ export function EventPublishForm({ language, adminId, onPublished }: { language:
   const [free, setFree] = useState(true);
   const [registrationUrl, setRegistrationUrl] = useState('');
   const [covers, setCovers] = useState<File[]>([]);
-  const [status, setStatus] = useState<'idle' | 'sending' | 'done' | 'error' | 'bad-url'>('idle');
+  const [status, setStatus] = useState<
+    'idle' | 'sending' | 'done' | 'error' | 'bad-url' | 'title-length' | 'dates-order'
+  >('idle');
 
 
   /**
@@ -87,6 +108,15 @@ export function EventPublishForm({ language, adminId, onPublished }: { language:
       setStatus('error');
       return;
     }
+    // Те же правила, что и CHECK в базе: объяснить заранее, а не получить отказ.
+    if (title.trim().length < 3 || title.trim().length > 200) {
+      setStatus('title-length');
+      return;
+    }
+    if (deadline > startsAt) {
+      setStatus('dates-order');
+      return;
+    }
 
     /*
       Пустая ссылка допустима — событие может быть без внешней записи, тогда
@@ -114,11 +144,12 @@ export function EventPublishForm({ language, adminId, onPublished }: { language:
       return;
     }
 
-    const { error } = await supabase.from('published_events').insert({
+    const { data: inserted, error } = await supabase.from('published_events').insert({
       cover_paths: coverPaths,
       admin_id: adminId,
+      status: needsReview ? 'pending' : 'approved',
       type,
-      title,
+      title: title.trim(),
       organizer,
       description,
       starts_at: startsAt,
@@ -129,9 +160,9 @@ export function EventPublishForm({ language, adminId, onPublished }: { language:
       prize: prize || null,
       free,
       registration_url: safeRegistrationUrl,
-    });
+    }).select('id').single();
 
-    if (error) {
+    if (error || !inserted) {
       setStatus('error');
       return;
     }
@@ -142,7 +173,7 @@ export function EventPublishForm({ language, adminId, onPublished }: { language:
     setDescription('');
     setPrize('');
     setRegistrationUrl('');
-    onPublished();
+    onPublished(inserted.id as string);
   }
 
   return (
@@ -212,11 +243,15 @@ export function EventPublishForm({ language, adminId, onPublished }: { language:
       {status === 'done' && <p className="text-sm font-semibold text-success-700">{t.done}</p>}
       {status === 'error' && <p className="text-sm font-semibold text-danger-600">{t.error}</p>}
       {status === 'bad-url' && <p className="text-sm font-semibold text-danger-600">{t.registrationUrlError}</p>}
+      {status === 'title-length' && <p className="text-sm font-semibold text-danger-600">{t.titleTooShort}</p>}
+      {status === 'dates-order' && <p className="text-sm font-semibold text-danger-600">{t.datesOrder}</p>}
 
       <ImageGalleryField files={covers} onChange={setCovers} />
 
+      {needsReview && <p className="text-sm text-ink-500">{t.reviewHint}</p>}
+
       <Button onClick={submit} disabled={status === 'sending'}>
-        {status === 'sending' ? t.publishing : t.publish}
+        {status === 'sending' ? t.publishing : needsReview ? t.propose : t.publish}
       </Button>
     </div>
   );

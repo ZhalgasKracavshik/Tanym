@@ -57,7 +57,11 @@ export function buildCsp(nonce: string): string {
     `report-uri /api/csp-report`,
   ];
 
-  if (!dev) directives.push('upgrade-insecure-requests');
+  /*
+    upgrade-insecure-requests здесь нет: на Vercel https и так обеспечивает
+    HSTS (next.config.ts), а локальный `next start` по http эта директива
+    ломала бы — браузер переводил бы ресурсы localhost на https.
+  */
 
   return directives.join('; ');
 }

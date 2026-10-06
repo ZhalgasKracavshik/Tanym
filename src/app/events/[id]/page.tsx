@@ -30,6 +30,7 @@ import { normalizeSocialUrl } from '@/lib/social';
 import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
 import { useStore } from '@/components/StoreProvider';
 import { EventEditForm } from '@/components/EventEditForm';
+import { useSavedEvents } from '@/lib/supabase/events';
 import type { EventEditInitial } from '@/components/EventEditForm';
 import { Icon } from '@/components/Icon';
 import type { IconName } from '@/components/Icon';
@@ -94,6 +95,9 @@ const TEXT: Dict<{
   statusClosing: string;
   statusClosed: string;
   statusPast: string;
+  /** Заявка учителя, которую ещё не проверил админ. Видят только автор и админ. */
+  pendingNote: string;
+  rejectedNote: string;
   prevImage: string;
   nextImage: string;
   imageOf: (shown: number, total: number) => string;
@@ -120,17 +124,19 @@ const TEXT: Dict<{
     lastDay: 'Сегодня последний день',
     closedNote: 'Регистрация закрыта',
     pastNote: 'Событие уже прошло',
-    register: 'Записаться',
-    markGoing: 'Отметить, что иду',
-    going: 'Вы отметили, что идёте',
-    unmark: 'Убрать отметку',
-    confirmUnmark: (title) => `Убрать отметку «иду» с «${title}»?`,
+    register: 'Перейти к регистрации',
+    markGoing: 'Сохранить в мои события',
+    going: 'В ваших событиях',
+    unmark: 'Убрать',
+    confirmUnmark: (title) => `Убрать «${title}» из ваших событий?`,
     edit: 'Редактировать',
     editTitle: 'Правка события',
     statusOpen: 'Регистрация открыта',
     statusClosing: 'Регистрация закрывается',
     statusClosed: 'Регистрация закрыта',
     statusPast: 'Уже прошло',
+    pendingNote: 'На проверке: событие увидят все после одобрения администратором.',
+    rejectedNote: 'Администратор отклонил это событие. Его видите только вы.',
     prevImage: 'Предыдущее фото',
     nextImage: 'Следующее фото',
     imageOf: (shown, total) => `${shown} из ${total}`,
@@ -157,17 +163,19 @@ const TEXT: Dict<{
     lastDay: 'Бүгін соңғы күн',
     closedNote: 'Тіркелу жабық',
     pastNote: 'Іс-шара өтіп кетті',
-    register: 'Тіркелу',
-    markGoing: 'Баратынымды белгілеу',
-    going: 'Сіз баратыныңызды белгіледіңіз',
-    unmark: 'Белгіні алып тастау',
-    confirmUnmark: (title) => `«${title}» іс-шарасына «барамын» белгісі алынсын ба?`,
+    register: 'Тіркелуге өту',
+    markGoing: 'Менің іс-шараларыма сақтау',
+    going: 'Сіздің іс-шараларыңызда',
+    unmark: 'Алып тастау',
+    confirmUnmark: (title) => `«${title}» сіздің іс-шараларыңыздан алынсын ба?`,
     edit: 'Өңдеу',
     editTitle: 'Іс-шараны өңдеу',
     statusOpen: 'Тіркелу ашық',
     statusClosing: 'Тіркелу жабылып жатыр',
     statusClosed: 'Тіркелу жабық',
     statusPast: 'Өтіп кетті',
+    pendingNote: 'Тексерілуде: әкімші мақұлдағаннан кейін іс-шараны бәрі көреді.',
+    rejectedNote: 'Әкімші бұл іс-шараны қабылдамады. Оны тек сіз көресіз.',
     prevImage: 'Алдыңғы сурет',
     nextImage: 'Келесі сурет',
     imageOf: (shown, total) => `${total} суреттің ${shown}-і`,
@@ -194,17 +202,19 @@ const TEXT: Dict<{
     lastDay: 'Today is the last day',
     closedNote: 'Registration closed',
     pastNote: 'The event is over',
-    register: 'Register',
-    markGoing: "Mark that I'm going",
-    going: "You marked you're going",
-    unmark: 'Remove mark',
-    confirmUnmark: (title) => `Remove your "going" mark for "${title}"?`,
+    register: 'Go to registration',
+    markGoing: 'Save to my events',
+    going: 'In your events',
+    unmark: 'Remove',
+    confirmUnmark: (title) => `Remove "${title}" from your events?`,
     edit: 'Edit',
     editTitle: 'Edit event',
     statusOpen: 'Registration open',
     statusClosing: 'Registration closing',
     statusClosed: 'Registration closed',
     statusPast: 'Already held',
+    pendingNote: 'Under review: everyone will see this event once an admin approves it.',
+    rejectedNote: 'An admin rejected this event. Only you can see it.',
     prevImage: 'Previous image',
     nextImage: 'Next image',
     imageOf: (shown, total) => `${shown} of ${total}`,
@@ -257,6 +267,7 @@ interface EventRow {
   registration_url: string | null;
   cover_path: string | null;
   cover_paths: string[] | null;
+  status: 'pending' | 'approved' | 'rejected';
 }
 
 /** Пути обложек по порядку. Легаси-колонка — запасной источник, как в афише. */
@@ -289,7 +300,9 @@ function rowToEvent(row: EventRow): SchoolEvent {
 
 export default function EventPage({ params }: PageProps<'/events/[id]'>) {
   const { id } = use(params);
-  const { state, toggleEventRegistration } = useStore();
+  const { state } = useStore();
+  // Сохранение — в базе (event_saves), см. useSavedEvents.
+  const { ids: savedIds, toggle: toggleSaved } = useSavedEvents();
   const { profile } = useSchoolAuth();
   const t = TEXT[state.language];
 
@@ -354,14 +367,18 @@ export default function EventPage({ params }: PageProps<'/events/[id]'>) {
           row={row}
           t={t}
           language={state.language}
-          registered={state.eventRegistrations.includes(row.id)}
-          onToggleRegistration={() => toggleEventRegistration(row.id)}
+          registered={savedIds?.has(row.id) ?? false}
+          canSave={savedIds !== null && row.status === 'approved'}
+          onToggleRegistration={() => toggleSaved(row.id)}
           /*
-            Правка доступна автору публикации и администратору — ровно тем,
-            кого пропускает политика UPDATE в базе. Показать кнопку шире
+            Правка доступна администратору и автору, пока событие на проверке, —
+            ровно тем, кого пропускает политика UPDATE в базе. Показать кнопку шире
             политики значило бы обещать действие, которое закончится отказом.
           */
-          canEdit={profile !== null && (profile.id === row.admin_id || profile.role === 'admin')}
+          canEdit={
+            profile !== null &&
+            (profile.role === 'admin' || (profile.id === row.admin_id && row.status === 'pending'))
+          }
           editing={editing}
           onEdit={() => setEditing(true)}
           onCancelEdit={() => setEditing(false)}
@@ -382,6 +399,7 @@ function EventBody({
   t,
   language,
   registered,
+  canSave,
   onToggleRegistration,
   canEdit,
   editing,
@@ -393,6 +411,8 @@ function EventBody({
   t: PageText;
   language: Language;
   registered: boolean;
+  /** Сохранять можно только одобренное — так же решает политика event_saves. */
+  canSave: boolean;
   onToggleRegistration: () => void;
   canEdit: boolean;
   editing: boolean;
@@ -480,6 +500,19 @@ function EventBody({
           )}
         </div>
       </Reveal>
+
+      {row.status !== 'approved' && (
+        <p
+          role="status"
+          className={`mt-6 rounded-[var(--radius-control)] border px-4 py-3 text-sm font-medium ${
+            row.status === 'pending'
+              ? 'border-accent-200 bg-accent-50 text-accent-700'
+              : 'border-danger-200 bg-danger-50 text-danger-700'
+          }`}
+        >
+          {row.status === 'pending' ? t.pendingNote : t.rejectedNote}
+        </p>
+      )}
 
       <div className="mt-6 flex flex-wrap gap-2">
         <Badge tone={STATUS_TONE[status]}>{statusLabel[status]}</Badge>
@@ -597,9 +630,10 @@ function EventBody({
               </Button>
             </div>
           ) : (
-            registrationRuns && (
+            registrationRuns &&
+            canSave && (
               <Button variant="secondary" size="sm" onClick={onToggleRegistration}>
-                <Icon name="pin" size={14} />
+                <Icon name="star" size={14} />
                 {t.markGoing}
               </Button>
             )
