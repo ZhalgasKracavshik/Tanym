@@ -89,6 +89,8 @@ const TEXT: Dict<{
   going: string;
   unmark: string;
   guestSave: string;
+  share: string;
+  shareText: (title: string, date: string) => string;
   confirmUnmark: (title: string) => string;
   edit: string;
   editTitle: string;
@@ -130,6 +132,8 @@ const TEXT: Dict<{
     going: 'В ваших событиях',
     unmark: 'Убрать',
     guestSave: 'Войти и сохранить',
+    share: 'Отправить в WhatsApp',
+    shareText: (title, date) => `${title} — регистрация до ${date}`,
     confirmUnmark: (title) => `Убрать «${title}» из ваших событий?`,
     edit: 'Редактировать',
     editTitle: 'Правка события',
@@ -170,6 +174,8 @@ const TEXT: Dict<{
     going: 'Сіздің іс-шараларыңызда',
     unmark: 'Алып тастау',
     guestSave: 'Кіріп, сақтау',
+    share: 'WhatsApp-қа жіберу',
+    shareText: (title, date) => `${title} — тіркелу ${date} дейін`,
     confirmUnmark: (title) => `«${title}» сіздің іс-шараларыңыздан алынсын ба?`,
     edit: 'Өңдеу',
     editTitle: 'Іс-шараны өңдеу',
@@ -210,6 +216,8 @@ const TEXT: Dict<{
     going: 'In your events',
     unmark: 'Remove',
     guestSave: 'Log in to save',
+    share: 'Share on WhatsApp',
+    shareText: (title, date) => `${title} — register by ${date}`,
     confirmUnmark: (title) => `Remove "${title}" from your events?`,
     edit: 'Edit',
     editTitle: 'Edit event',
@@ -398,6 +406,13 @@ export default function EventPage({ params }: PageProps<'/events/[id]'>) {
 }
 
 type PageText = (typeof TEXT)['ru'];
+
+/**
+ * Адрес сайта для ссылки «Отправить в WhatsApp». Из окружения, а не из
+ * window.location: href считается и на сервере, и разный адрес в двух
+ * рендерах дал бы расхождение при гидратации.
+ */
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://tanym-alpha.vercel.app').replace(/\/+$/, '');
 
 function EventBody({
   row,
@@ -652,6 +667,22 @@ function EventBody({
               </Button>
             )
           )}
+
+          {/*
+            Ссылку на олимпиаду пересылают в чат класса — так афиша и
+            расходится. wa.me открывает WhatsApp с готовым текстом.
+          */}
+          <ButtonLink
+            href={`https://wa.me/?text=${encodeURIComponent(
+              `${t.shareText(event.title, formatEventDate(event.registrationDeadline, language))}\n${SITE_URL}/events/${event.id}`,
+            )}`}
+            external
+            variant="ghost"
+            size="sm"
+          >
+            <Icon name="link" size={14} />
+            {t.share}
+          </ButtonLink>
         </div>
       </div>
 

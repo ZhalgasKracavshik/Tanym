@@ -66,6 +66,8 @@ const TEXT: Dict<{
   empty: string;
   emptyMine: string;
   emptyGrade: string;
+  showPast: (n: number) => string;
+  hidePast: string;
   statusOpen: string;
   statusClosing: string;
   details: string;
@@ -100,6 +102,8 @@ const TEXT: Dict<{
     empty: 'В этой категории пока нет событий.',
     emptyMine: 'Здесь будут события, которые вы сохраните. Откройте событие и нажмите «Сохранить в мои события».',
     emptyGrade: 'Для вашего класса в этой категории пока ничего нет.',
+    showPast: (n) => `Показать прошедшие (${n})`,
+    hidePast: 'Скрыть прошедшие',
     statusOpen: 'Идёт запись',
     statusClosing: 'Скоро закрытие',
     details: 'Подробнее',
@@ -126,6 +130,8 @@ const TEXT: Dict<{
     empty: 'Бұл санатта әзірге іс-шара жоқ.',
     emptyMine: 'Мұнда сіз сақтаған іс-шаралар болады. Іс-шараны ашып, «Менің іс-шараларыма сақтау» батырмасын басыңыз.',
     emptyGrade: 'Бұл санатта сіздің сыныпқа әзірге ештеңе жоқ.',
+    showPast: (n) => `Өткендерін көрсету (${n})`,
+    hidePast: 'Өткендерін жасыру',
     statusOpen: 'Тіркеу ашық',
     statusClosing: 'Жабылады',
     details: 'Толығырақ',
@@ -152,6 +158,8 @@ const TEXT: Dict<{
     empty: 'No events in this category yet.',
     emptyMine: 'Events you save will appear here. Open an event and tap “Save to my events”.',
     emptyGrade: 'Nothing for your grade in this category yet.',
+    showPast: (n) => `Show past events (${n})`,
+    hidePast: 'Hide past events',
     statusOpen: 'Sign-up open',
     statusClosing: 'Closing soon',
     details: 'Details',
@@ -195,6 +203,11 @@ export default function EventsPage() {
   const [filter, setFilter] = useState<EventType | 'all' | 'mine'>('all');
   const [gradeOnly, setGradeOnly] = useState(false);
   /*
+    Прошедшие по умолчанию скрыты: «Прошло» на первом экране читается как
+    заброшенная афиша. В «Моих событиях» они видны — это личная история.
+  */
+  const [showPast, setShowPast] = useState(false);
+  /*
     Сеттер убран: публикация ушла на отдельную страницу и возвращает сюда
     обычным переходом, а список перечитывается при монтировании. Значение
     остаётся как стабильный аргумент хука.
@@ -221,7 +234,10 @@ export default function EventsPage() {
    * дедлайна. Прошедшие и закрытые уходят вниз: они полезны как справка,
    * но не должны занимать первый экран.
    */
-  const sorted = [...visible].sort((a, b) => {
+  const pastCount = visible.filter((event) => eventStatus(event) === 'past').length;
+  const shown = filter === 'mine' || showPast ? visible : visible.filter((event) => eventStatus(event) !== 'past');
+
+  const sorted = [...shown].sort((a, b) => {
     const rank = (event: SchoolEvent) => {
       const status = eventStatus(event);
       if (status === 'closing-soon') return 0;
@@ -304,7 +320,7 @@ export default function EventsPage() {
         )}
       </div>
 
-      {sorted.length === 0 ? (
+      {sorted.length === 0 && pastCount === 0 ? (
         <div className="mt-4">
           <EmptyState title={filter === 'mine' ? t.emptyMine : gradeOnly ? t.emptyGrade : t.empty} description="" />
         </div>
@@ -339,6 +355,14 @@ export default function EventsPage() {
               />
             );
           })}
+        </div>
+      )}
+
+      {filter !== 'mine' && pastCount > 0 && (
+        <div className="mt-6 flex justify-center">
+          <button onClick={() => setShowPast((value) => !value)} className={chip(false)}>
+            {showPast ? t.hidePast : t.showPast(pastCount)}
+          </button>
         </div>
       )}
 

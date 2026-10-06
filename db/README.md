@@ -28,10 +28,13 @@ order by version;
 | `20261006100100_pilot_storage_hardening.sql` | Бакет сканов грамот становится приватным. Загрузка во все бакеты разрешена только в папку `<uid>/`. |
 | `20261006100200_pilot_views_and_functions.sql` | Вьюхи работают с правами читающего, рейтинг идёт через `leaderboard_progress()`. У `anon` отозваны лишние права. |
 | `20261006100300_pilot_event_moderation_and_saves.sql` | `published_events.status` (модерация событий учителей), CHECK-ограничения, таблица `event_saves` («Мои события»). |
+| `20261006100400_pilot_event_saves_policies.sql` | Доводка предыдущей миграции: в SQL Editor не применился её хвост, у `event_saves` не было политик и прав. |
+| `20261006100500_pilot_public_events.sql` | Гость читает одобренные события (афиша без входа). |
+| `20261006100600_pilot_teacher_requests_and_event_proposals.sql` | Заявка «Я учитель» (`request_teacher_role`), её видно в `admin_list_users`. Предложить событие на проверку может любой вошедший. |
 
 Как применить (любой способ):
 
-- **SQL Editor** в дашборде Supabase: вставить файлы по порядку и выполнить.
+- **SQL Editor** в дашборде Supabase: вставить файлы по порядку и выполнить. Каждый файл вставляйте целиком и проверьте, что SQL Editor не обрезал хвост.
 - **Supabase CLI**: `supabase db push` (если проект подключён через `supabase link`).
 - **MCP** `apply_migration`: по одному файлу, имя миграции — часть имени файла после версии.
 
@@ -40,6 +43,6 @@ order by version;
 
 ## Настройки, которые меняются только в дашборде
 
-- **Authentication → Providers → Email → Confirm email** — включено. Без подтверждения почты открытая регистрация пускает ботов.
+- **Authentication → Providers → Email → Confirm email** — **включить**. Проверено 2026-10-06: сейчас выключено (`mailer_autoconfirm: true`). Без подтверждения почты открытая регистрация пускает ботов и чужие адреса.
 - **Authentication → Attack Protection → Leaked password protection** — включить (проверка пароля по HaveIBeenPwned).
 - **Authentication → Rate Limits** — проверить лимиты на вход, регистрацию и письма. Вход идёт из браузера напрямую в Supabase, мимо сервера приложения, поэтому это единственный лимит на перебор паролей.

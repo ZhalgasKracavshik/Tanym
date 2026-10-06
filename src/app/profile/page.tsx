@@ -36,6 +36,7 @@ import { createClient } from '@/lib/supabase/client';
 import { CUSTOM_GOAL_MAX, GRADES, LEARNING_GOALS } from '@/lib/types';
 import type { Grade, LearningGoal } from '@/lib/types';
 import { SUBJECTS } from '@/data';
+import { LEARNING_ENABLED } from '@/lib/pilot';
 import {
   INTERESTS,
   KNOWLEDGE_LEVELS,
@@ -108,6 +109,10 @@ function tabsForRole(role: string): { id: ProfileTab; label: string; icon: IconN
   }
   if (role === 'admin') {
     return [personal, settings];
+  }
+  // Пилот: достижения и рейтинг выключены — вкладки активности нет.
+  if (!LEARNING_ENABLED) {
+    return [personal, { id: 'study', label: 'Класс', icon: 'cap' }, settings];
   }
   return [
     personal,
@@ -638,8 +643,7 @@ function ProfileContent() {
       {/* Шапка профиля */}
       <Reveal immediate>
         <div
-          className="relative overflow-hidden rounded-[var(--radius-card)] p-6 text-white shadow-[var(--shadow-float)] sm:p-8"
-          style={{ background: 'var(--color-ink-900)' }}
+          className="relative overflow-hidden rounded-[var(--radius-card)] bg-brand-50 p-6 text-ink-900 sm:p-8"
         >
 
           <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center">
@@ -650,7 +654,7 @@ function ProfileContent() {
                 colorId={schoolProfile?.avatar_color}
                 photoUrl={currentPhotoUrl}
                 size={84}
-                className="border-2 border-white/20 shadow-md"
+                className="border-2 border-white shadow-md"
               />
               <label
                 title="Загрузить фото"
@@ -681,7 +685,7 @@ function ProfileContent() {
                     placeholder="Ваше имя или никнейм"
                     maxLength={60}
                     autoFocus
-                    className="rounded-lg border border-white/30 bg-white/10 px-3 py-1.5 text-xl font-medium text-white outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-400/40"
+                    className="rounded-lg border border-ink-200 bg-white px-3 py-1.5 text-xl font-medium text-ink-900 outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-400/40"
                   />
                   <Button size="sm" onClick={saveName}>
                     Сохранить
@@ -692,26 +696,26 @@ function ProfileContent() {
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
-                  <h1 className="truncate text-2xl font-medium text-white sm:text-3xl">{displayName}</h1>
+                  <h1 className="truncate text-2xl font-medium text-ink-900 sm:text-3xl">{displayName}</h1>
                   <button
                     onClick={() => {
                       setNameDraft(displayName);
                       setEditingName(true);
                     }}
                     title="Изменить имя"
-                    className="rounded p-1 text-white/50 transition-colors hover:bg-white/10 hover:text-white"
+                    className="rounded p-1 text-ink-400 transition-colors hover:bg-white hover:text-ink-700"
                   >
                     <Icon name="edit" size={16} />
                   </button>
                 </div>
               )}
 
-              <div className="mt-2 flex flex-wrap items-center gap-2 text-xs font-medium text-white/70">
-                <span className="rounded-full bg-white/15 px-2.5 py-0.5 font-semibold text-white">
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-xs font-medium text-ink-500">
+                <span className="rounded-full bg-white px-2.5 py-0.5 font-semibold text-ink-700">
                   {ROLE_TITLE[role]}
                 </span>
                 {isStudent && (
-                  <span className="rounded-full bg-white/10 px-2.5 py-0.5">
+                  <span className="rounded-full bg-white px-2.5 py-0.5">
                     {currentGrade} класс
                   </span>
                 )}
@@ -722,16 +726,16 @@ function ProfileContent() {
                   администратора, никогда ни в каком классе не состоявшего.
                 */}
                 {schoolClass && (
-                  <span className="rounded-full bg-brand-500/30 px-2.5 py-0.5 text-brand-200">
+                  <span className="rounded-full bg-brand-100 px-2.5 py-0.5 text-brand-700">
                     «{schoolClass.name}»
                   </span>
                 )}
-                {email && <span className="truncate text-white/50">{email}</span>}
+                {email && <span className="truncate text-ink-400">{email}</span>}
               </div>
 
               {/* Кнопки управления фото */}
-              <div className="mt-3 flex items-center gap-3 text-xs text-white/60">
-                <label className="cursor-pointer font-semibold text-brand-300 transition-colors hover:text-brand-200 hover:underline">
+              <div className="mt-3 flex items-center gap-3 text-xs text-ink-500">
+                <label className="cursor-pointer font-semibold text-brand-600 transition-colors hover:text-brand-700 hover:underline">
                   {photoStatus === 'uploading' ? 'Загрузка…' : 'Загрузить фото'}
                   <input
                     type="file"
@@ -750,19 +754,21 @@ function ProfileContent() {
                     <span>·</span>
                     <button
                       onClick={handleRemovePhoto}
-                      className="text-white/50 transition-colors hover:text-danger-300 hover:underline"
+                      className="text-ink-400 transition-colors hover:text-danger-600 hover:underline"
                     >
                       Удалить фото
                     </button>
                   </>
                 )}
               </div>
-              {photoError && <p className="mt-1 text-xs text-danger-300">{photoError}</p>}
+              {photoError && <p className="mt-1 text-xs text-danger-600">{photoError}</p>}
             </div>
           </div>
 
-          {/* Статистика */}
-          {isStudent && (
+          {/* Статистика — баллы, серия, место и уровень. На пилоте их нет:
+              учебный модуль и рейтинг выключены, и ряд нулей у новичка
+              читался бы как отчёт о несделанном (см. lib/pilot.ts). */}
+          {isStudent && LEARNING_ENABLED && (
             <>
               <div className="relative mt-6 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
                 <StatCard icon="trophy" value={totalPoints} label="всего баллов" />
@@ -911,14 +917,14 @@ function ProfileContent() {
             <Card className="space-y-4">
               <h2 className="text-base font-medium text-ink-900">Контакты</h2>
 
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 sm:grid-cols-2 [&>*]:min-w-0">
                 {/* Почта */}
                 <div>
                   <span className="text-xs font-semibold uppercase tracking-wider text-ink-400">Почта</span>
-                  <div className="mt-1.5 flex items-center justify-between rounded-xl border border-ink-200 bg-ink-50/70 px-3.5 py-2.5 text-sm">
+                  <div className="mt-1.5 flex min-w-0 items-center justify-between gap-2 rounded-xl border border-ink-200 bg-ink-50/70 px-3.5 py-2.5 text-sm">
                     <span className="truncate text-ink-700 font-medium">{email ?? 'Без почты'}</span>
                     {emailConfirmed ? (
-                      <span className="flex items-center gap-1 text-xs font-semibold text-success-600">
+                      <span className="flex shrink-0 items-center gap-1 text-xs font-semibold text-success-600">
                         <Icon name="check" size={14} /> Подтверждена
                       </span>
                     ) : (
@@ -963,6 +969,8 @@ function ProfileContent() {
             {/* Уровень подготовки и интересы */}
             {isStudent && (
               <Card className="space-y-6">
+                {/* Самооценка уровня нужна была плану обучения — на пилоте его нет. */}
+                {LEARNING_ENABLED && (
                 <div>
                   <h2 className="text-base font-medium text-ink-900">Уровень подготовки</h2>
                   <p className="mt-1 text-xs text-ink-500">Ваша текущая самооценка владения школьной программой.</p>
@@ -988,8 +996,9 @@ function ProfileContent() {
                     })}
                   </div>
                 </div>
+                )}
 
-                <div className="border-t border-ink-100 pt-5">
+                <div className={LEARNING_ENABLED ? 'border-t border-ink-100 pt-5' : ''}>
                   <h2 className="text-base font-medium text-ink-900">Интересы</h2>
                   <p className="mt-1 text-xs text-ink-500">По ним подбираются конкурсы, кружки и дополнительные темы.</p>
                   <div className="mt-3 flex flex-wrap gap-2">
@@ -1073,6 +1082,9 @@ function ProfileContent() {
               )}
             </Card>
 
+            {/* Предметы, цель и свой срок нужны учебному модулю — на пилоте он выключен. */}
+            {LEARNING_ENABLED && (
+            <>
             {/* Предметы */}
             <Card>
               <h2 className="text-base font-medium text-ink-900">Изучаемые предметы</h2>
@@ -1221,6 +1233,8 @@ function ProfileContent() {
                 </div>
               </div>
             </Card>
+            </>
+            )}
 
               </>
             )}
@@ -1333,6 +1347,9 @@ function ProfileContent() {
         {/* ВКЛАДКА 4: НАСТРОЙКИ И БЕЗОПАСНОСТЬ */}
         {activeTab === 'settings' && (
           <div className="space-y-6">
+            {/* Учителем становятся заявкой, а не выбором на регистрации. */}
+            {isStudent && <TeacherRequestCard />}
+
             {/* Смена пароля */}
             {email && (
               <Card className="space-y-4">
@@ -1385,6 +1402,8 @@ function ProfileContent() {
             {isStudent && (
               <Card className="space-y-3">
                 <h2 className="text-base font-medium text-ink-900">Приватность</h2>
+                {/* Рейтинг и оценки на пилоте выключены — переключатели к ним тоже. */}
+                {LEARNING_ENABLED && (
                 <Toggle
                   checked={schoolProfile?.leaderboard_anonymous ?? state.leaderboardAnonymous ?? false}
                   onChange={(val) => {
@@ -1394,18 +1413,21 @@ function ProfileContent() {
                   title="Скрыть моё имя в рейтинге (Анонимный режим)"
                   hint="Одноклассники увидят псевдоним. Ваши баллы и место сохраняются."
                 />
+                )}
                 <Toggle
                   checked={schoolProfile?.profile_visible ?? true}
                   onChange={(val) => save({}, { profileVisible: val })}
                   title="Показывать профиль другим ученикам"
                   hint="Разрешить одноклассникам просматривать ваше портфолио."
                 />
+                {LEARNING_ENABLED && (
                 <Toggle
                   checked={schoolProfile?.progress_visible ?? false}
                   onChange={(val) => save({}, { progressVisible: val })}
                   title="Показывать оценки и решённые темы"
                   hint="Открыть доступ к вашей детальной успеваемости для одноклассников."
                 />
+                )}
               </Card>
             )}
 
@@ -1426,8 +1448,8 @@ function ProfileContent() {
               />
             </Card>
 
-            {/* Расписание занятий */}
-            {isStudent && (
+            {/* Расписание занятий — для учебного плана; на пилоте его нет. */}
+            {isStudent && LEARNING_ENABLED && (
               <Card className="space-y-4">
                 <div>
                   <h2 className="text-base font-medium text-ink-900">Расписание и напоминания</h2>
@@ -1533,5 +1555,56 @@ export default function ProfilePage() {
     >
       <ProfileContent />
     </Suspense>
+  );
+}
+
+/**
+ * Заявка на роль учителя.
+ *
+ * На регистрации роль больше не спрашивают — все входят учениками. Учитель
+ * отправляет заявку здесь (request_teacher_role), админ видит её в
+ * /admin/users и подтверждает одним кликом. Ни домен почты, ни выбор на
+ * первом экране для этого не нужны.
+ */
+function TeacherRequestCard() {
+  const { profile, refresh } = useSchoolAuth();
+  const [status, setStatus] = useState<'idle' | 'sending' | 'error'>('idle');
+  const requested = Boolean(profile?.teacher_requested_at);
+
+  async function request() {
+    setStatus('sending');
+    const { error } = await createClient().rpc('request_teacher_role');
+    if (error) {
+      setStatus('error');
+      return;
+    }
+    await refresh(true);
+    setStatus('idle');
+  }
+
+  return (
+    <Card className="space-y-3">
+      <div>
+        <h2 className="text-base font-medium text-ink-900">Вы учитель?</h2>
+        <p className="mt-1 text-sm text-ink-500">
+          Учитель может предлагать события в афишу и выкладывать материалы в архив. Заявку проверит администратор.
+        </p>
+      </div>
+      {requested ? (
+        <p className="flex items-center gap-2 text-sm font-semibold text-success-700">
+          <Icon name="check" size={16} />
+          Заявка отправлена — администратор её проверит.
+        </p>
+      ) : (
+        <div className="flex flex-wrap items-center gap-3">
+          <Button variant="secondary" onClick={request} disabled={status === 'sending'}>
+            {status === 'sending' ? 'Отправляем…' : 'Я учитель — отправить заявку'}
+          </Button>
+          {status === 'error' && (
+            <span className="text-sm text-danger-600">Не получилось. Попробуйте ещё раз.</span>
+          )}
+        </div>
+      )}
+    </Card>
   );
 }

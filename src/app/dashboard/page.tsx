@@ -13,6 +13,8 @@ import { daysUntil, rankTopics, summarize, weakestSkills } from '@/lib/personali
 import { almatyDateIso, almatyYesterdayIso } from '@/lib/date';
 import { usePublishedEvents, useSavedEvents } from '@/lib/supabase/events';
 import { NearestDeadline } from '@/components/NearestDeadline';
+import { MyPath } from '@/components/MyPath';
+import { LEARNING_ENABLED } from '@/lib/pilot';
 import { reasonText } from '@/lib/reasons';
 import { useStore } from '@/components/StoreProvider';
 import { useEffectiveProfile } from '@/lib/useEffectiveProfile';
@@ -202,7 +204,16 @@ function Metric({
   );
 }
 
+/**
+ * На пилоте домашний экран — «Мой путь» (сохранённые события и дедлайны).
+ * Учебный кабинет ниже остаётся в коде и возвращается вместе с учебным
+ * модулем (LEARNING_ENABLED в lib/pilot.ts).
+ */
 export default function DashboardPage() {
+  return LEARNING_ENABLED ? <LearningDashboard /> : <MyPath />;
+}
+
+function LearningDashboard() {
   const { state, hydrated } = useStore();
   const publishedEvents = usePublishedEvents();
   const { ids: savedEventIds, toggle: toggleSavedEvent } = useSavedEvents();
