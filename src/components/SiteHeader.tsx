@@ -19,15 +19,21 @@ import { avatarPhotoUrl } from '@/lib/supabase/avatarPhoto';
 const TEXT: Dict<{
   profile: string;
   language: string;
+  events: string;
+  login: string;
+  signup: string;
 }> = {
-  ru: { profile: 'Мой профиль', language: 'Язык интерфейса' },
-  kk: { profile: 'Менің профилім', language: 'Интерфейс тілі' },
-  en: { profile: 'My profile', language: 'Interface language' },
+  ru: { profile: 'Мой профиль', language: 'Язык интерфейса', events: 'Афиша', login: 'Войти', signup: 'Регистрация' },
+  kk: { profile: 'Менің профилім', language: 'Интерфейс тілі', events: 'Афиша', login: 'Кіру', signup: 'Тіркелу' },
+  en: { profile: 'My profile', language: 'Interface language', events: 'Events', login: 'Log in', signup: 'Sign up' },
 };
 
 export function SiteHeader() {
   const { state, setLanguage } = useStore();
-  const { profile: schoolProfile } = useSchoolAuth();
+  const { profile: schoolProfile, isSignedIn, loading } = useSchoolAuth();
+  // Гостю вместо аватара — вход: афиша открыта без регистрации, и шапка
+  // должна вести либо в неё, либо к созданию аккаунта.
+  const guest = !loading && !isSignedIn;
   const t = TEXT[state.language];
   const profile = state.profile;
   const displayName = schoolProfile?.name ?? profile?.name ?? '';
@@ -43,6 +49,12 @@ export function SiteHeader() {
         </Link>
 
         <div className="flex shrink-0 items-center gap-3">
+          <Link
+            href="/events"
+            className="hidden rounded-lg px-2 py-1 text-sm font-semibold text-ink-600 outline-none hover:text-brand-600 focus-visible:ring-2 focus-visible:ring-brand-500 sm:block"
+          >
+            {t.events}
+          </Link>
           <div className="flex rounded-lg border border-ink-200 p-0.5" role="group" aria-label={t.language}>
             {LANGUAGES.map((item) => (
               <button
@@ -59,19 +71,36 @@ export function SiteHeader() {
             ))}
           </div>
 
-          <Link
-            href="/profile"
-            title={displayName ? `${t.profile}: ${displayName}` : t.profile}
-            className="group relative flex items-center justify-center rounded-full p-0.5 transition-transform duration-150 hover:scale-105 outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
-          >
-            <Avatar
-              name={displayName}
-              colorId={schoolProfile?.avatar_color}
-              photoUrl={state.profile?.avatarPhotoUrl || avatarPhotoUrl(schoolProfile?.avatar_photo_path)}
-              size={38}
-              className="ring-2 ring-transparent transition-all group-hover:ring-brand-400 shadow-sm"
-            />
-          </Link>
+          {guest ? (
+            <>
+              <Link
+                href="/login"
+                className="hidden rounded-lg px-2 py-1 text-sm font-semibold text-ink-600 outline-none hover:text-ink-900 focus-visible:ring-2 focus-visible:ring-brand-500 sm:block"
+              >
+                {t.login}
+              </Link>
+              <Link
+                href="/register"
+                className="rounded-[var(--radius-pill)] bg-ink-900 px-4 py-2 text-sm font-semibold text-white outline-none transition-colors hover:bg-ink-800 focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
+              >
+                {t.signup}
+              </Link>
+            </>
+          ) : (
+            <Link
+              href="/profile"
+              title={displayName ? `${t.profile}: ${displayName}` : t.profile}
+              className="group relative flex items-center justify-center rounded-full p-0.5 transition-transform duration-150 hover:scale-105 outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            >
+              <Avatar
+                name={displayName}
+                colorId={schoolProfile?.avatar_color}
+                photoUrl={state.profile?.avatarPhotoUrl || avatarPhotoUrl(schoolProfile?.avatar_photo_path)}
+                size={38}
+                className="ring-2 ring-transparent transition-all group-hover:ring-brand-400 shadow-sm"
+              />
+            </Link>
+          )}
         </div>
       </div>
     </header>

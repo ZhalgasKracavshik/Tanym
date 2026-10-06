@@ -47,8 +47,20 @@ const PUBLIC_PATHS = new Set([
  */
 const PUBLIC_PREFIXES = ['/auth/callback', '/api/profile', '/api/csp-report'];
 
+/**
+ * Афиша открыта гостям: ссылку на олимпиаду пересылают в чат класса, и
+ * требовать вход, чтобы увидеть срок, значит потерять человека на первом
+ * шаге. Открыт список и страницы событий, но не форма публикации.
+ * В базе гостю видны только одобренные события (pilot_public_events).
+ */
+function isPublicEventsPath(pathname: string): boolean {
+  if (pathname === '/events') return true;
+  return /^\/events\/[0-9a-f-]{36}$/i.test(pathname);
+}
+
 function isPublic(pathname: string): boolean {
   if (PUBLIC_PATHS.has(pathname)) return true;
+  if (isPublicEventsPath(pathname)) return true;
   return PUBLIC_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 }
 

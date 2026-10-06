@@ -43,6 +43,7 @@ const TEXT: Dict<{
   details: string;
   save: string;
   saved: string;
+  guestSave: string;
 }> = {
   ru: {
     nearest: 'Ближайший дедлайн',
@@ -54,6 +55,7 @@ const TEXT: Dict<{
     details: 'Открыть событие',
     save: 'Сохранить в мои события',
     saved: 'В ваших событиях',
+    guestSave: 'Войти и сохранить',
   },
   kk: {
     nearest: 'Жақын мерзім',
@@ -65,6 +67,7 @@ const TEXT: Dict<{
     details: 'Іс-шараны ашу',
     save: 'Менің іс-шараларыма сақтау',
     saved: 'Сіздің іс-шараларыңызда',
+    guestSave: 'Кіріп, сақтау',
   },
   en: {
     nearest: 'Closest deadline',
@@ -76,6 +79,7 @@ const TEXT: Dict<{
     details: 'Open event',
     save: 'Save to my events',
     saved: 'In your events',
+    guestSave: 'Log in to save',
   },
 };
 
@@ -84,12 +88,15 @@ export function NearestDeadline({
   savedIds,
   onToggleSave,
   language,
+  guest = false,
   className = '',
 }: {
   events: SchoolEvent[];
   savedIds: Set<string> | null;
   onToggleSave: (eventId: string) => void;
   language: Language;
+  /** Гость на открытой афише: вместо «Сохранить» — вход. */
+  guest?: boolean;
   className?: string;
 }) {
   const t = TEXT[language];
@@ -158,6 +165,13 @@ export function NearestDeadline({
           </ButtonLink>
         )}
 
+        {/* Гость: сохранять некуда — ведём на регистрацию с возвратом к событию. */}
+        {guest && (
+          <ButtonLink href={`/register?next=/events/${event.id}`} variant="secondary">
+            <Icon name="star" size={16} />
+            {t.guestSave}
+          </ButtonLink>
+        )}
         {savedIds &&
           (isSaved ? (
             <span className="flex items-center gap-2 text-sm font-semibold text-success-700">

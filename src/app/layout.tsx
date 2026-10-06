@@ -4,6 +4,7 @@ import './globals.css';
 import { StoreProvider } from '@/components/StoreProvider';
 import { AppShell } from '@/components/AppShell';
 import { ProgressSync } from '@/components/ProgressSync';
+import { LEARNING_ENABLED } from '@/lib/pilot';
 import { SchoolAuthProvider } from '@/lib/supabase/useSchoolAuth';
 import { getServerProfile } from '@/lib/supabase/serverProfile';
 
@@ -64,7 +65,7 @@ export default async function RootLayout({ children }: LayoutProps<'/'>) {
             initialEmailConfirmed={emailConfirmed}
             initialSchoolClass={schoolClass}
           >
-            <ProgressSync />
+            {LEARNING_ENABLED && <ProgressSync />}
             <AppShell>{children}</AppShell>
           </SchoolAuthProvider>
         </StoreProvider>

@@ -19,17 +19,17 @@ export default function NewEventPage() {
       backLabel="К афише"
       kicker="Афиша"
       title="Новое событие"
-      description="Олимпиада, конкурс или мероприятие. Событие от учителя появится в афише после проверки администратором."
-      requireRole={['admin', 'teacher']}
+      description="Знаете олимпиаду, конкурс или курс, которого нет в афише? Расскажите — после проверки событие увидят все."
+      requireRole={['admin', 'teacher', 'student']}
     >
       {(profile) => (
         <EventPublishForm
           language={state.language}
           adminId={profile.id}
-          role={profile.role === 'admin' ? 'admin' : 'teacher'}
+          role={profile.role === 'admin' ? 'admin' : 'member'}
           /*
-            Админа возвращаем к афише: событие уже там. Учителя — на
-            страницу его события: в афише заявки на проверке нет, и только
+            Админа возвращаем к афише: событие уже там. Остальных — на
+            страницу их события: в афише заявки на проверке нет, и только
             там видно, что она дошла и ждёт одобрения.
           */
           onPublished={(eventId) =>

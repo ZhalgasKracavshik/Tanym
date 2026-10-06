@@ -17,25 +17,17 @@ import { useRouter } from 'next/navigation';
 import {
   AuthLink,
   AuthShell,
-  ClassCodeField,
   Field,
   FormMessage,
-  InfoBanner,
   PasswordField,
   ProviderButtons,
-  SegmentedToggle,
   SubmitButton,
 } from '@/components/auth-ui';
 import type { IconName } from '@/components/Icon';
 import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
 import { checkPersonName } from '@/lib/personName';
 import { useLang, type Dict } from '@/lib/i18n';
-import {
-  canBeTeacher,
-  domainRejectionMessage,
-  fetchAllowedDomainRows,
-  teacherDomainMessage,
-} from '@/lib/supabase/allowedDomains';
+import { domainRejectionMessage, fetchAllowedDomainRows } from '@/lib/supabase/allowedDomains';
 
 /*
   Значки фактов о продукте не зависят от языка — меняется только текст,
@@ -224,8 +216,15 @@ export default function RegisterPage() {
   const heroFeatures = HERO_ICONS.map((icon, i) => ({ icon, text: t.heroFeatures[i] }));
 
   const [name, setName] = useState('');
-  const [role, setRole] = useState<'student' | 'teacher'>('student');
-  const [classCode, setClassCode] = useState('');
+  /*
+    Роль на регистрации больше не спрашивается: все входят учениками.
+    Выбор «ученик / учитель» на первом экране путал (зачем меня спрашивают?),
+    а проверка учителя по домену почты отсекала настоящих учителей с gmail.
+    Учителем становятся позже, заявкой из профиля, — её одобряет админ.
+    Код класса тоже переехал: его вводят в профиле, когда он появится.
+  */
+  const role = 'student' as const;
+  const classCode = '';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
@@ -235,7 +234,6 @@ export default function RegisterPage() {
 
   /* Ошибки конкретных полей — см. пояснение в login/page.tsx. */
   const [nameError, setNameError] = useState<string | undefined>();
-  const [classCodeError, setClassCodeError] = useState<string | undefined>();
   const [emailError, setEmailError] = useState<string | undefined>();
   const [passwordError, setPasswordError] = useState<string | undefined>();
   const [shakeKey, setShakeKey] = useState(0);
@@ -273,7 +271,6 @@ export default function RegisterPage() {
     setFormError(null);
     setNotice(null);
     setNameError(undefined);
-    setClassCodeError(undefined);
     setEmailError(undefined);
     setPasswordError(undefined);
   }
@@ -340,12 +337,6 @@ export default function RegisterPage() {
       Настоящая проверка всё равно стоит в политике базы: эта нужна, чтобы
       объяснить причину, а не чтобы защитить.
     */
-    if (role === 'teacher' && !canBeTeacher(email, domainRows)) {
-      setStatus('idle');
-      setEmailError(teacherDomainMessage(domainRows));
-      setShakeKey((k) => k + 1);
-      return;
-    }
 
     const signUp = await signUpWithPassword(email.trim(), password, checkedName.value);
 
@@ -395,12 +386,9 @@ export default function RegisterPage() {
         setShakeKey((k) => k + 1);
         return;
       }
-      const classMessage = classCodeErrorText(profile.error);
-      if (classMessage) {
-        setClassCodeError(classMessage);
-      } else {
-        setFormError(translateSignUpError(profile.error ?? t.genericProfileError));
-      }
+      setFormError(
+        classCodeErrorText(profile.error) ?? translateSignUpError(profile.error ?? t.genericProfileError),
+      );
       setShakeKey((k) => k + 1);
       return;
     }
@@ -413,7 +401,7 @@ export default function RegisterPage() {
       создан». Раньше редирект шёл прямо в кабинет, и первым, что видел
       новый ученик, была именно эта заглушка. Учителю те же поля не нужны.
     */
-    router.replace(role === 'teacher' ? '/teacher' : '/onboarding');
+    router.replace('/onboarding');
     router.refresh();
   }
 
@@ -460,32 +448,6 @@ export default function RegisterPage() {
           shakeKey={shakeKey}
         />
 
-        <SegmentedToggle
-          label={t.roleLabel}
-          value={role}
-          onChange={setRole}
-          options={[
-            { value: 'student', label: t.student, icon: 'cap' },
-            { value: 'teacher', label: t.teacher, icon: 'building' },
-          ]}
-        />
-
-        {/* Код класса только у ученика: учитель класс создаёт, а не входит в него */}
-        {role === 'student' && (
-          <ClassCodeField
-            label={t.classCode}
-            value={classCode}
-            onValueChange={(value) => {
-              setClassCode(value);
-              if (classCodeError) setClassCodeError(undefined);
-            }}
-            hint={t.classCodeHint}
-            error={classCodeError}
-            shakeKey={shakeKey}
-          />
-        )}
-
-        {role === 'teacher' && <InfoBanner>{t.teacherBanner}</InfoBanner>}
 
         <Field
           label={t.email}

@@ -58,6 +58,8 @@ export interface SchoolProfile {
   study_days: number[];
   study_time: string | null;
   reminder_lead_minutes: number | null;
+  /** Ученик попросил роль учителя; снимается, когда админ назначит роль. */
+  teacher_requested_at?: string | null;
 
   social_links: unknown;
   subject_ids: string[] | null;

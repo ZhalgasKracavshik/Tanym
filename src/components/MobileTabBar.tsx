@@ -37,7 +37,7 @@ const TEXT: Dict<{
 }> = {
   ru: {
     archive: 'Архив',
-    dashboard: 'Кабинет',
+    dashboard: 'Мой путь',
     achievements: 'Портфолио',
     mentor: 'Наставник',
     events: 'Афиша',
@@ -49,7 +49,7 @@ const TEXT: Dict<{
   },
   kk: {
     archive: 'Мұрағат',
-    dashboard: 'Кабинет',
+    dashboard: 'Менің жолым',
     achievements: 'Портфолио',
     mentor: 'Тәлімгер',
     events: 'Афиша',
@@ -61,7 +61,7 @@ const TEXT: Dict<{
   },
   en: {
     archive: 'Archive',
-    dashboard: 'Home',
+    dashboard: 'My path',
     achievements: 'Portfolio',
     mentor: 'Mentor',
     events: 'Events',
@@ -85,37 +85,19 @@ export function MobileTabBar({ onMore }: { onMore: () => void }) {
     наставника, зато есть класс. Гость сюда не попадает вообще —
     middleware разворачивает его на вход раньше.
   */
-  const tabs: { href: string; label: string; icon: IconName }[] =
-    profile?.role === 'teacher'
-      ? [
-          { href: '/teacher', label: t.teacher, icon: 'cap' },
-          { href: '/events', label: t.events, icon: 'calendar' },
-          { href: '/achievements', label: t.achievements, icon: 'trophy' },
-          { href: '/leaderboard', label: t.leaderboard, icon: 'medal' },
-          { href: '/profile', label: t.profile, icon: 'user' },
-        ]
-      : profile?.role === 'admin'
-        ? [
-            { href: '/admin', label: t.admin, icon: 'building' },
-            { href: '/events', label: t.events, icon: 'calendar' },
-            { href: '/achievements', label: t.achievements, icon: 'trophy' },
-            { href: '/leaderboard', label: t.leaderboard, icon: 'medal' },
-            { href: '/profile', label: t.profile, icon: 'user' },
-          ]
-        : [
-            /*
-              Порядок повторяет путь ученика в пилоте: кабинет с прогрессом,
-              афиша (ради неё пилот и затевался), архив, достижения, рейтинг.
-              Наставник выключен на пилот — см. lib/pilot.ts; фильтр ниже
-              всё равно снял бы его, но держать в списке мёртвую вкладку
-              незачем.
-            */
-            { href: '/dashboard', label: t.dashboard, icon: 'columns' },
-            { href: '/events', label: t.events, icon: 'calendar' },
-            { href: '/archive', label: t.archive, icon: 'folder' },
-            { href: '/achievements', label: t.achievements, icon: 'trophy' },
-            { href: '/leaderboard', label: t.leaderboard, icon: 'medal' },
-          ];
+  const tabs: { href: string; label: string; icon: IconName }[] = [
+    /*
+      Один набор для всех ролей на пилоте: «Мой путь» (сохранённые события
+      и дедлайны), афиша, архив и профиль. Админу — ещё панель.
+      Разделы, выключенные на пилот (наставник, рейтинг, достижения),
+      фильтр ниже всё равно снял бы — поэтому их здесь просто нет.
+    */
+    { href: '/dashboard', label: t.dashboard, icon: 'columns' },
+    { href: '/events', label: t.events, icon: 'calendar' },
+    { href: '/archive', label: t.archive, icon: 'folder' },
+    ...(profile?.role === 'admin' ? [{ href: '/admin', label: t.admin, icon: 'building' as IconName }] : []),
+    { href: '/profile', label: t.profile, icon: 'user' },
+  ];
   const visibleTabs = tabs.filter((tab) => !isDisabledPath(tab.href));
 
   return (

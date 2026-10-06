@@ -183,7 +183,8 @@ const TYPE_BANNER: Record<EventType, string> = {
 export default function EventsPage() {
   const { state } = useStore();
   const t = TEXT[state.language];
-  const { profile } = useSchoolAuth();
+  const { profile, isSignedIn, loading: authLoading } = useSchoolAuth();
+  const guest = !authLoading && !isSignedIn;
   /*
     «Мои события» — из базы (event_saves), а не из localStorage: отметка
     переживает смену устройства, и ближайший дедлайн считается по ней.
@@ -247,11 +248,11 @@ export default function EventsPage() {
           <Kicker>{t.kicker}</Kicker>
           <h1 className="mt-2 text-3xl font-medium text-ink-900 sm:text-4xl">{t.title}</h1>
         </div>
-        {/* Админ публикует сразу, учитель — предлагает: событие ждёт проверки. */}
+        {/* Админ публикует сразу, остальные — предлагают: событие ждёт проверки. */}
         <PublishAction
           href="/events/new"
-          label={profile?.role === 'teacher' ? t.propose : t.add}
-          requireRole={['admin', 'teacher']}
+          label={profile?.role === 'admin' ? t.add : t.propose}
+          requireRole={['admin', 'teacher', 'student']}
         />
       </div>
 
@@ -266,6 +267,7 @@ export default function EventsPage() {
         savedIds={savedIds}
         onToggleSave={toggleSaved}
         language={state.language}
+        guest={guest}
         className="mt-10"
       />
 

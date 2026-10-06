@@ -88,6 +88,7 @@ const TEXT: Dict<{
   markGoing: string;
   going: string;
   unmark: string;
+  guestSave: string;
   confirmUnmark: (title: string) => string;
   edit: string;
   editTitle: string;
@@ -128,6 +129,7 @@ const TEXT: Dict<{
     markGoing: 'Сохранить в мои события',
     going: 'В ваших событиях',
     unmark: 'Убрать',
+    guestSave: 'Войти и сохранить',
     confirmUnmark: (title) => `Убрать «${title}» из ваших событий?`,
     edit: 'Редактировать',
     editTitle: 'Правка события',
@@ -167,6 +169,7 @@ const TEXT: Dict<{
     markGoing: 'Менің іс-шараларыма сақтау',
     going: 'Сіздің іс-шараларыңызда',
     unmark: 'Алып тастау',
+    guestSave: 'Кіріп, сақтау',
     confirmUnmark: (title) => `«${title}» сіздің іс-шараларыңыздан алынсын ба?`,
     edit: 'Өңдеу',
     editTitle: 'Іс-шараны өңдеу',
@@ -206,6 +209,7 @@ const TEXT: Dict<{
     markGoing: 'Save to my events',
     going: 'In your events',
     unmark: 'Remove',
+    guestSave: 'Log in to save',
     confirmUnmark: (title) => `Remove "${title}" from your events?`,
     edit: 'Edit',
     editTitle: 'Edit event',
@@ -303,7 +307,7 @@ export default function EventPage({ params }: PageProps<'/events/[id]'>) {
   const { state } = useStore();
   // Сохранение — в базе (event_saves), см. useSavedEvents.
   const { ids: savedIds, toggle: toggleSaved } = useSavedEvents();
-  const { profile } = useSchoolAuth();
+  const { profile, isSignedIn, loading: authLoading } = useSchoolAuth();
   const t = TEXT[state.language];
 
   /*
@@ -369,6 +373,7 @@ export default function EventPage({ params }: PageProps<'/events/[id]'>) {
           language={state.language}
           registered={savedIds?.has(row.id) ?? false}
           canSave={savedIds !== null && row.status === 'approved'}
+          guest={!authLoading && !isSignedIn}
           onToggleRegistration={() => toggleSaved(row.id)}
           /*
             Правка доступна администратору и автору, пока событие на проверке, —
@@ -400,6 +405,7 @@ function EventBody({
   language,
   registered,
   canSave,
+  guest,
   onToggleRegistration,
   canEdit,
   editing,
@@ -413,6 +419,8 @@ function EventBody({
   registered: boolean;
   /** Сохранять можно только одобренное — так же решает политика event_saves. */
   canSave: boolean;
+  /** Гость: сохранить нельзя, вместо кнопки — вход. */
+  guest: boolean;
   onToggleRegistration: () => void;
   canEdit: boolean;
   editing: boolean;
@@ -631,6 +639,12 @@ function EventBody({
             </div>
           ) : (
             registrationRuns &&
+            guest ? (
+              <ButtonLink href="/register" variant="secondary" size="sm">
+                <Icon name="star" size={14} />
+                {t.guestSave}
+              </ButtonLink>
+            ) : registrationRuns &&
             canSave && (
               <Button variant="secondary" size="sm" onClick={onToggleRegistration}>
                 <Icon name="star" size={14} />

@@ -28,7 +28,33 @@ export const DISABLED_PREFIXES: readonly string[] = [
   // детерминированно — см. isAiLive ниже.
   '/chat',
   '/api/ai/chat',
+  // AI-обучение целиком: диагностика, персональный план, задания по темам
+  // и панель учителя с картой класса (она строится по этим заданиям).
+  // Архив материалов остаётся — см. /archive и /api/ai/socratic.
+  '/diagnostics',
+  '/plan',
+  '/learn',
+  '/teacher',
+  '/api/ai/feedback',
+  '/api/ai/plan',
+  '/api/diagnostics',
+  '/api/topics',
+  '/api/sync',
+  // Достижения и рейтинг: текущая логика (баллы за сканы грамот и общий
+  // рейтинг) снята; новая описана в docs/achievements-and-progress.md.
+  '/achievements',
+  '/leaderboard',
 ];
+
+/**
+ * Учебный модуль (диагностика, план, задания) включён ли. Пока он выключен,
+ * не нужна и фоновая синхронизация прогресса (ProgressSync).
+ */
+export const LEARNING_ENABLED = !isDisabledPathStatic('/learn');
+
+function isDisabledPathStatic(pathname: string): boolean {
+  return DISABLED_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+}
 
 /**
  * Живая модель (Gemini) для разбора ответа и объяснения плана.
@@ -44,5 +70,5 @@ export function isAiLive(): boolean {
 }
 
 export function isDisabledPath(pathname: string): boolean {
-  return DISABLED_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+  return isDisabledPathStatic(pathname);
 }

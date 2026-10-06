@@ -27,6 +27,16 @@ for (const path of [
   '/register/center',
   '/chat',
   '/api/ai/chat',
+  '/diagnostics/math',
+  '/plan',
+  '/learn/topic-1',
+  '/teacher',
+  '/achievements',
+  '/achievements/my',
+  '/leaderboard',
+  '/api/ai/feedback',
+  '/api/ai/plan',
+  '/api/sync',
 ]) {
   expect(isDisabledPath(path), `${path} должен быть закрыт на пилот`);
 }
@@ -38,14 +48,15 @@ for (const path of [
   '/events/123',
   '/register',
   '/archive',
+  '/archive/ent-math-2024',
   '/marketplace',
-  '/achievements',
-  '/leaderboard',
   '/dashboard',
+  '/profile',
   '/centers-of-excellence',
   '/chatroom',
-  '/api/ai/feedback',
+  '/planet',
   '/api/ai/socratic',
+  '/api/profile',
 ]) {
   expect(!isDisabledPath(path), `${path} НЕ должен закрываться`);
 }

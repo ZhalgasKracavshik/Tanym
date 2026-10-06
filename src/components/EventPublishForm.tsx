@@ -53,10 +53,10 @@ export function EventPublishForm({
   language: Language;
   adminId: string;
   /**
-   * Админ публикует сразу, учитель — отправляет на проверку (status
-   * 'pending'). Политика INSERT в базе пускает учителя только так.
+   * Админ публикует сразу; все остальные (ученик, учитель) отправляют на
+   * проверку (status 'pending'). Политика INSERT в базе пускает их только так.
    */
-  role: 'admin' | 'teacher';
+  role: 'admin' | 'member';
   onPublished: (eventId: string) => void;
 }) {
   const t = TEXT.ru;

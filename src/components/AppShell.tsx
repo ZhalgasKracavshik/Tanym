@@ -8,14 +8,15 @@
  * десять и вертикальный список читается без прокрутки.
  */
 
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { SiteHeader } from './SiteHeader';
 import { SiteSidebar } from './SiteSidebar';
 import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
 import { useStore } from './StoreProvider';
-import { LandingAuthBanner } from './LandingAuthBanner';
+import { describeRoleError } from '@/lib/supabase/roleErrors';
 import { MatrixLoader } from './MatrixLoader';
+import { LEARNING_ENABLED } from '@/lib/pilot';
 
 /**
  * Экраны без навигации приложения вообще.
@@ -66,9 +67,11 @@ function needsOnboarding(profile: { role: string; grade: number | null; subject_
     класса открывается на первом предмете из общего списка, а не на его
     собственном. Класс обучения и цель у него не спрашиваются вовсе.
   */
-  if (profile.role === 'teacher') return !profile.subject_ids?.length;
+  if (profile.role === 'teacher') return LEARNING_ENABLED && !profile.subject_ids?.length;
 
   if (profile.role !== 'student') return false;
+  // Пилот: учебный модуль выключен, предметы не спрашиваются — хватит класса.
+  if (!LEARNING_ENABLED) return profile.grade == null;
   return profile.grade == null || !profile.subject_ids?.length;
 }
 
@@ -76,7 +79,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { loading, isSignedIn, profile } = useSchoolAuth();
-  const { state, hydrated } = useStore();
+  const { hydrated } = useStore();
   const isLanding = pathname === '/';
 
   /*
@@ -107,7 +110,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return <main className="flex-1">{children}</main>;
   }
 
-  if (isLanding) {
+  /*
+    Гость на открытой афише — без бокового меню приложения: в нём одни
+    разделы, закрытые для него входом. Вместо меню — шапка лендинга с
+    кнопками «Войти» и «Регистрация».
+  */
+  const guestOnPublicPage = !loading && !isSignedIn && pathname.startsWith('/events');
+
+  if (isLanding || guestOnPublicPage) {
     return (
       <>
         <SiteHeader />
@@ -152,8 +162,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   */
   if (pendingRoleChoice) {
     return (
-      <main className="flex-1">
-        <LandingAuthBanner language={state.language} />
+      <main className="flex flex-1 items-center justify-center px-6 py-24">
+        <AutoStudentProfile />
       </main>
     );
   }
@@ -193,4 +203,48 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </div>
     </div>
   );
+}
+
+/**
+ * Вошёл, а профиля ещё нет (обычно — первый вход через Google).
+ *
+ * Раньше здесь был голый вопрос «вы ученик или учитель?». Он путал: на
+ * пилоте все входят учениками, а учителем становятся заявкой из профиля
+ * (её одобряет админ). Поэтому профиль ученика создаётся сам, а дальше
+ * AppShell отправляет в короткий мастер — класс и интересы.
+ */
+function AutoStudentProfile() {
+  const { chooseRole } = useSchoolAuth();
+  const [error, setError] = useState<string | null>(null);
+  const started = useRef(false);
+
+  async function create() {
+    setError(null);
+    const result = await chooseRole('student', '');
+    if (!result.ok) setError(describeRoleError(result.error, result.domains));
+  }
+
+  useEffect(() => {
+    if (started.current) return;
+    started.current = true;
+    void create();
+    // create стабилен по смыслу: вызывается ровно один раз при монтировании.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  if (error) {
+    return (
+      <div className="max-w-sm text-center">
+        <p className="text-sm text-danger-600">{error}</p>
+        <button
+          onClick={() => void create()}
+          className="mt-4 rounded-[var(--radius-pill)] bg-ink-900 px-5 py-2.5 text-sm font-semibold text-white"
+        >
+          Попробовать ещё раз
+        </button>
+      </div>
+    );
+  }
+
+  return <MatrixLoader variant="scan" rounded />;
 }
