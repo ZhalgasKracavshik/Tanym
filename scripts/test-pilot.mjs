@@ -13,6 +13,7 @@ const { isDisabledPath, isAiLive } = await load('src/lib/pilot.ts');
 const { buildCsp, generateNonce } = await load('src/lib/security/csp.ts');
 const { pickNearestDeadline, deadlineIcs } = await load('src/lib/events.ts');
 const { reminderKindFor, addDaysIso, buildReminderEmail } = await load('src/lib/notifications/deadlineReminder.ts');
+const { pickDigest, buildDigestEmail, buildTelegramDigest } = await load('src/lib/notifications/digest.ts');
 
 const problems = [];
 const expect = (condition, message) => {
@@ -129,6 +130,23 @@ const ics = deadlineIcs({ id: 'e1', title: 'Олимпиада; этап, 1', re
 expect(ics.includes('DTSTART;VALUE=DATE:20261231') && ics.includes('DTEND;VALUE=DATE:20270101'), 'ics: событие на весь день дедлайна');
 expect(ics.includes('TRIGGER:-P1D'), 'ics: сигнал за сутки');
 expect(ics.includes('Олимпиада\\; этап\\, 1'), 'ics: ; и , экранированы');
+
+/* Дайджест: закрывающееся важнее нового, прошедшее не попадает, класс фильтрует. */
+const dToday = '2026-10-12';
+const dEvents = [
+  { id: 'soon', title: 'Скоро', organizer: 'РНПЦ', registrationDeadline: '2026-10-20', publishedAt: '2026-10-10T08:00:00Z', grades: [] },
+  { id: 'fresh', title: 'Новое', organizer: '', registrationDeadline: '2026-12-01', publishedAt: '2026-10-09T08:00:00Z', grades: [9, 10] },
+  { id: 'old', title: 'Старое', organizer: '', registrationDeadline: '2026-12-15', publishedAt: '2026-09-01T08:00:00Z', grades: [] },
+  { id: 'past', title: 'Прошло', organizer: '', registrationDeadline: '2026-10-01', publishedAt: '2026-10-11T08:00:00Z', grades: [] },
+];
+const dAll = pickDigest(dEvents, dToday);
+expect(dAll.closing.map((e) => e.id).join() === 'soon', 'дайджест: «закрывается» — только в окне 14 дней');
+expect(dAll.opened.map((e) => e.id).join() === 'fresh', 'дайджест: «открылось» — за неделю, без дублей и прошедших');
+expect(pickDigest(dEvents, dToday, 7).opened.length === 0, 'дайджест: событие для 9–10 класса не уходит семикласснику');
+const dMail = buildDigestEmail('Айгерим', dAll, dToday, 'https://tanym.kz');
+expect(dMail.text.includes('https://tanym.kz/events/soon') && dMail.subject.includes('закрывается'), 'письмо дайджеста со ссылками и темой');
+const dTg = buildTelegramDigest({ opened: [{ ...dEvents[1], title: 'A <b>&' }], closing: [] }, dToday, 'https://tanym.kz');
+expect(dTg.includes('A &lt;b&gt;&amp;') && !dTg.includes('A <b>&'), 'Telegram: название экранировано');
 
 if (problems.length > 0) {
   console.error('✗ Проверка пилота не прошла:');

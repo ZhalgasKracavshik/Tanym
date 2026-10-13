@@ -17,7 +17,6 @@
  */
 
 import { NextResponse } from 'next/server';
-import { timingSafeEqual } from 'node:crypto';
 import { adminClient } from '@/lib/supabase/admin';
 import { almatyDateIso } from '@/lib/date';
 import {
@@ -26,50 +25,16 @@ import {
   reminderKindFor,
   type ReminderItem,
 } from '@/lib/notifications/deadlineReminder';
+import { SITE_URL, confirmedEmails, cronAuthorized, emailEnabled, sendEmail } from '@/lib/notifications/server';
 
 export const dynamic = 'force-dynamic';
-
-const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://tanym-alpha.vercel.app').replace(/\/+$/, '');
-
-function authorized(request: Request): boolean {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return false;
-  const expected = Buffer.from(`Bearer ${secret}`);
-  const provided = Buffer.from(request.headers.get('authorization') ?? '');
-  return provided.length === expected.length && timingSafeEqual(provided, expected);
-}
-
-async function sendEmail(to: string, subject: string, html: string, text: string): Promise<boolean> {
-  const key = process.env.RESEND_API_KEY;
-  if (!key) return false;
-  try {
-    const response = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        from: process.env.RESEND_FROM ?? 'Taným <onboarding@resend.dev>',
-        to: [to],
-        subject,
-        html,
-        text,
-      }),
-    });
-    if (!response.ok) {
-      console.error('[deadline-reminders] Resend отказал:', response.status, await response.text().catch(() => ''));
-    }
-    return response.ok;
-  } catch (error) {
-    console.error('[deadline-reminders] Resend недоступен:', error);
-    return false;
-  }
-}
 
 export async function GET(request: Request) {
   if (!process.env.CRON_SECRET) {
     console.error('[deadline-reminders] CRON_SECRET не задан');
     return NextResponse.json({ error: 'cron_not_configured' }, { status: 500 });
   }
-  if (!authorized(request)) {
+  if (!cronAuthorized(request)) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
 
@@ -128,21 +93,9 @@ export async function GET(request: Request) {
     .in('id', [...pending.keys()]);
   const profileById = new Map((profiles ?? []).map((row) => [row.id as string, row]));
 
-  // Почта живёт в auth.users: постранично, пока не найдём всех адресатов.
-  const emailById = new Map<string, string>();
-  for (let page = 1; page <= 10 && emailById.size < pending.size; page++) {
-    const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 1000 });
-    if (error) {
-      console.error('[deadline-reminders] listUsers:', error);
-      break;
-    }
-    for (const user of data.users) {
-      if (pending.has(user.id) && user.email && user.email_confirmed_at) emailById.set(user.id, user.email);
-    }
-    if (data.users.length < 1000) break;
-  }
+  const emailById = await confirmedEmails(admin, pending.keys(), '[deadline-reminders]');
 
-  const dryRun = !process.env.RESEND_API_KEY;
+  const dryRun = !emailEnabled();
   let sentCount = 0;
   const log: { user_id: string; event_id: string; kind: string }[] = [];
 
@@ -157,7 +110,7 @@ export async function GET(request: Request) {
       sentCount += 1;
       continue;
     }
-    if (await sendEmail(email, message.subject, message.html, message.text)) {
+    if (await sendEmail(email, message, '[deadline-reminders]')) {
       sentCount += 1;
       for (const item of items) log.push({ user_id: userId, event_id: item.eventId, kind: item.kind });
     }
