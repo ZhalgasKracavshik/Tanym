@@ -74,7 +74,7 @@ function LanguageCorner() {
           onClick={() => setLanguage(item.id)}
           title={item.title}
           aria-pressed={state.language === item.id}
-          className={`rounded-md px-2 py-1 text-[11px] font-medium outline-none transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
+          className={`rounded-md px-2.5 py-1.5 text-xs font-medium outline-none transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
             state.language === item.id ? 'bg-brand-500 text-white shadow-sm' : 'text-ink-400 hover:text-ink-700'
           }`}
         >
@@ -624,7 +624,8 @@ export function ProviderButtons({
 
 export function AuthLink({ href, children }: { href: string; children: ReactNode }) {
   return (
-    <Link href={href} className="font-semibold text-brand-600 transition-colors hover:text-brand-700">
+    // Отрицательные поля по вертикали: зона нажатия ~32px, а строка текста не раздвигается.
+    <Link href={href} className="-my-2 inline-block py-2 font-semibold text-brand-600 transition-colors hover:text-brand-700">
       {children}
     </Link>
   );

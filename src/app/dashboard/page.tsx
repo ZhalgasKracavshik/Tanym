@@ -8,12 +8,13 @@
  * между кабинетом, планом и панелью учителя.
  */
 
-import Link from 'next/link';
 import { getSubject, getTopic } from '@/data';
 import { daysUntil, rankTopics, summarize, weakestSkills } from '@/lib/personalization';
 import { almatyDateIso, almatyYesterdayIso } from '@/lib/date';
-import { daysLeftUntil } from '@/lib/events';
-import { usePublishedEvents } from '@/lib/supabase/events';
+import { usePublishedEvents, useSavedEvents } from '@/lib/supabase/events';
+import { NearestDeadline } from '@/components/NearestDeadline';
+import { MyPath } from '@/components/MyPath';
+import { LEARNING_ENABLED } from '@/lib/pilot';
 import { reasonText } from '@/lib/reasons';
 import { useStore } from '@/components/StoreProvider';
 import { useEffectiveProfile } from '@/lib/useEffectiveProfile';
@@ -57,10 +58,6 @@ const TEXT: Dict<{
   continue: string;
   weakTitle: string;
   nextTitle: string;
-  eventTitle: string;
-  eventIn: (n: number) => string;
-  eventToday: string;
-  allEvents: string;
   todayKicker: string;
   todayStart: string;
   todayRing: string;
@@ -96,10 +93,6 @@ const TEXT: Dict<{
     continue: 'Продолжить',
     weakTitle: 'Слабые места',
     nextTitle: 'Продолжить обучение',
-    eventTitle: 'Ближайшее событие',
-    eventIn: (n) => (n === 1 ? 'через 1 день' : n < 5 ? `через ${n} дня` : `через ${n} дней`),
-    eventToday: 'сегодня',
-    allEvents: 'Вся афиша',
     todayKicker: 'Сегодняшняя задача',
     todayStart: 'Начать',
     todayRing: 'освоено',
@@ -135,10 +128,6 @@ const TEXT: Dict<{
     continue: 'Жалғастыру',
     weakTitle: 'Әлсіз тұстар',
     nextTitle: 'Оқуды жалғастыру',
-    eventTitle: 'Жақын іс-шара',
-    eventIn: (n) => `${n} күннен кейін`,
-    eventToday: 'бүгін',
-    allEvents: 'Барлық афиша',
     todayKicker: 'Бүгінгі тапсырма',
     todayStart: 'Бастау',
     todayRing: 'меңгерілді',
@@ -174,10 +163,6 @@ const TEXT: Dict<{
     continue: 'Continue',
     weakTitle: 'Weak spots',
     nextTitle: 'Keep learning',
-    eventTitle: 'Next event',
-    eventIn: (n) => (n === 1 ? 'in 1 day' : `in ${n} days`),
-    eventToday: 'today',
-    allEvents: 'All events',
     todayKicker: "Today's task",
     todayStart: 'Start',
     todayRing: 'mastered',
@@ -219,9 +204,19 @@ function Metric({
   );
 }
 
+/**
+ * На пилоте домашний экран — «Мой путь» (сохранённые события и дедлайны).
+ * Учебный кабинет ниже остаётся в коде и возвращается вместе с учебным
+ * модулем (LEARNING_ENABLED в lib/pilot.ts).
+ */
 export default function DashboardPage() {
+  return LEARNING_ENABLED ? <LearningDashboard /> : <MyPath />;
+}
+
+function LearningDashboard() {
   const { state, hydrated } = useStore();
   const publishedEvents = usePublishedEvents();
+  const { ids: savedEventIds, toggle: toggleSavedEvent } = useSavedEvents();
   /*
     Не state.profile напрямую: локальная копия пуста в новом браузере, и
     вошедший ученик получал бы «профиль не создан» поверх заполненного
@@ -273,10 +268,6 @@ export default function DashboardPage() {
   const lastActive = state.streak.lastActiveDate;
   const streakValue =
     lastActive === almatyDateIso() || lastActive === almatyYesterdayIso() ? state.streak.current : 0;
-  // Ближайшее из тех событий, на которые ученик записался и которые ещё не прошли.
-  const upcomingEvent = (publishedEvents ?? [])
-    .filter((event) => state.eventRegistrations.includes(event.id) && daysLeftUntil(event.startsAt) >= 0)
-    .sort((a, b) => a.startsAt.localeCompare(b.startsAt))[0];
   const daysLeft = daysUntil(profile.targetDate);
   const primarySubject = getSubject(profile.subjectIds[0]);
   const nextTopics = primarySubject ? rankTopics(primarySubject, state, state.customTopics).slice(0, 3) : [];
@@ -342,6 +333,21 @@ export default function DashboardPage() {
           </div>
         </div>
       </Reveal>
+
+      {/*
+        Ближайший дедлайн — сразу под приветствием, выше учёбы: пропущенную
+        регистрацию не наверстать, а тему можно открыть и завтра. Тот же
+        блок, что наверху афиши; по сохранённым событиям, если они есть.
+      */}
+      {publishedEvents && (
+        <NearestDeadline
+          events={publishedEvents}
+          savedIds={savedEventIds}
+          onToggleSave={toggleSavedEvent}
+          language={state.language}
+          className="mt-6"
+        />
+      )}
 
       {/*
         Задача дня стоит сразу под приветствием и в единственном числе.
@@ -519,25 +525,6 @@ export default function DashboardPage() {
                 </ul>
               </Card>
 
-              {upcomingEvent && (
-                <Card>
-                  <h2 className="flex items-center gap-2 text-lg font-medium text-ink-900">
-                    <Icon name="calendar" size={20} className="text-brand-500" />
-                    {t.eventTitle}
-                  </h2>
-                  <p className="mt-2 font-semibold text-ink-800">{upcomingEvent.title}</p>
-                  <p className="mt-1 text-sm text-brand-600">
-                    {daysLeftUntil(upcomingEvent.startsAt) === 0
-                      ? t.eventToday
-                      : t.eventIn(daysLeftUntil(upcomingEvent.startsAt))}
-                  </p>
-                  {/* Link, а не <a>: обычная ссылка перезагружает всё
-                      приложение целиком вместо перехода внутри него. */}
-                  <Link href="/events" className="mt-3 inline-block text-sm font-semibold text-brand-600 hover:underline">
-                    {t.allEvents}
-                  </Link>
-                </Card>
-              )}
 
             </div>
           </div>

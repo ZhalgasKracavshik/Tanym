@@ -20,6 +20,7 @@ import { useStore } from './StoreProvider';
 import type { Dict } from '@/lib/i18n';
 import { Icon } from './Icon';
 import { useSlidingPill } from './useSlidingPill';
+import { isDisabledPath } from '@/lib/pilot';
 import type { IconName } from './Icon';
 
 const TEXT: Dict<{
@@ -27,6 +28,7 @@ const TEXT: Dict<{
   dashboard: string;
   achievements: string;
   mentor: string;
+  events: string;
   leaderboard: string;
   profile: string;
   teacher: string;
@@ -35,9 +37,10 @@ const TEXT: Dict<{
 }> = {
   ru: {
     archive: 'Архив',
-    dashboard: 'Кабинет',
+    dashboard: 'Мой путь',
     achievements: 'Портфолио',
     mentor: 'Наставник',
+    events: 'Афиша',
     leaderboard: 'Рейтинг',
     profile: 'Профиль',
     teacher: 'Класс',
@@ -46,9 +49,10 @@ const TEXT: Dict<{
   },
   kk: {
     archive: 'Мұрағат',
-    dashboard: 'Кабинет',
+    dashboard: 'Менің жолым',
     achievements: 'Портфолио',
     mentor: 'Тәлімгер',
+    events: 'Афиша',
     leaderboard: 'Рейтинг',
     profile: 'Профиль',
     teacher: 'Сынып',
@@ -57,9 +61,10 @@ const TEXT: Dict<{
   },
   en: {
     archive: 'Archive',
-    dashboard: 'Home',
+    dashboard: 'My path',
     achievements: 'Portfolio',
     mentor: 'Mentor',
+    events: 'Events',
     leaderboard: 'Ranking',
     profile: 'Profile',
     teacher: 'Class',
@@ -80,34 +85,20 @@ export function MobileTabBar({ onMore }: { onMore: () => void }) {
     наставника, зато есть класс. Гость сюда не попадает вообще —
     middleware разворачивает его на вход раньше.
   */
-  const tabs: { href: string; label: string; icon: IconName }[] =
-    profile?.role === 'teacher'
-      ? [
-          { href: '/teacher', label: t.teacher, icon: 'cap' },
-          { href: '/achievements', label: t.achievements, icon: 'trophy' },
-          { href: '/leaderboard', label: t.leaderboard, icon: 'medal' },
-          { href: '/profile', label: t.profile, icon: 'user' },
-        ]
-      : profile?.role === 'admin'
-        ? [
-            { href: '/admin', label: t.admin, icon: 'building' },
-            { href: '/achievements', label: t.achievements, icon: 'trophy' },
-            { href: '/leaderboard', label: t.leaderboard, icon: 'medal' },
-            { href: '/profile', label: t.profile, icon: 'user' },
-          ]
-        : [
-            /*
-              Порядок повторяет учебный путь: кабинет с прогрессом, план
-              занятий, наставник, достижения, рейтинг. Раньше первой стояла
-              лента школы — то есть на самом видном месте мобильной панели
-              был раздел, к учёбе отношения не имеющий.
-            */
-            { href: '/dashboard', label: t.dashboard, icon: 'columns' },
-            { href: '/archive', label: t.archive, icon: 'folder' },
-            { href: '/chat', label: t.mentor, icon: 'chat' },
-            { href: '/achievements', label: t.achievements, icon: 'trophy' },
-            { href: '/leaderboard', label: t.leaderboard, icon: 'medal' },
-          ];
+  const tabs: { href: string; label: string; icon: IconName }[] = [
+    /*
+      Один набор для всех ролей на пилоте: «Мой путь» (сохранённые события
+      и дедлайны), афиша, архив и профиль. Админу — ещё панель.
+      Разделы, выключенные на пилот (наставник, рейтинг, достижения),
+      фильтр ниже всё равно снял бы — поэтому их здесь просто нет.
+    */
+    { href: '/dashboard', label: t.dashboard, icon: 'columns' },
+    { href: '/events', label: t.events, icon: 'calendar' },
+    { href: '/archive', label: t.archive, icon: 'folder' },
+    ...(profile?.role === 'admin' ? [{ href: '/admin', label: t.admin, icon: 'building' as IconName }] : []),
+    { href: '/profile', label: t.profile, icon: 'user' },
+  ];
+  const visibleTabs = tabs.filter((tab) => !isDisabledPath(tab.href));
 
   return (
     <nav
@@ -137,7 +128,7 @@ export function MobileTabBar({ onMore }: { onMore: () => void }) {
           className="t-tabs-pill rounded-[var(--radius-pill)] shadow-[var(--shadow-rest)]"
           style={{ background: 'var(--surface-brand)' }}
         />
-        {tabs.map((tab) => {
+        {visibleTabs.map((tab) => {
           const active = pathname === tab.href || pathname.startsWith(`${tab.href}/`);
           return (
             <li key={tab.href} className="flex-1">
@@ -160,7 +151,7 @@ export function MobileTabBar({ onMore }: { onMore: () => void }) {
                   <Icon name={tab.icon} size={19} />
                 </span>
                 <span
-                  className={`text-[10px] font-semibold leading-none ${
+                  className={`text-[11px] font-semibold leading-none ${
                     active ? 'text-brand-700' : 'text-ink-400'
                   }`}
                 >
@@ -181,7 +172,7 @@ export function MobileTabBar({ onMore }: { onMore: () => void }) {
             <span className="flex h-9 w-full max-w-[3.5rem] items-center justify-center rounded-[var(--radius-pill)] text-ink-400">
               <Icon name="menu" size={19} />
             </span>
-            <span className="text-[10px] font-semibold leading-none text-ink-400">{t.more}</span>
+            <span className="text-[11px] font-semibold leading-none text-ink-400">{t.more}</span>
           </button>
         </li>
       </ul>

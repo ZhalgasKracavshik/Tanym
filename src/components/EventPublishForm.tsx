@@ -13,6 +13,8 @@ import { normalizeSocialUrl } from '@/lib/social';
 import { Button } from './ui';
 import { Icon } from './Icon';
 import { ImageGalleryField } from './ImageGalleryField';
+import { coverExtension } from '@/lib/storageKey';
+import { almatyDateIso } from '@/lib/date';
 
 const TEXT = {
   ru: {
@@ -30,17 +32,39 @@ const TEXT = {
     registrationUrl: 'Ссылка для записи (необязательно)',
     registrationUrlPlaceholder: 'Google-форма, чат или страница курса',
     registrationUrlHint:
-      'Если оставить пустым, на странице события останется только личная отметка «иду», без перехода куда-либо.',
+      'Если оставить пустым, на странице события будет только кнопка «Сохранить в мои события», без перехода к организатору.',
     registrationUrlError: 'Проверьте ссылку для записи — она должна быть настоящим адресом.',
+    sourceUrl: 'Источник — где опубликовано событие',
+    sourceUrlHint: 'Ссылка на сайт или страницу организатора: по ней сверяют сроки, и ученик может открыть первоисточник.',
+    sourceUrlError: 'Проверьте ссылку на источник — она должна быть настоящим адресом.',
     publish: 'Опубликовать',
-    publishing: 'Публикуем…',
+    propose: 'Отправить на проверку',
+    publishing: 'Отправляем…',
     done: 'Событие опубликовано и видно в афише.',
     error: 'Не получилось опубликовать. Проверьте поля.',
+    titleTooShort: 'Название — от 3 до 200 символов.',
+    datesOrder: 'Регистрация должна закрываться не позже даты проведения.',
+    reviewHint: 'Событие появится в афише после проверки администратором.',
   },
 } as const;
 
-export function EventPublishForm({ language, adminId, onPublished }: { language: Language; adminId: string; onPublished: () => void }) {
+export function EventPublishForm({
+  language,
+  adminId,
+  role,
+  onPublished,
+}: {
+  language: Language;
+  adminId: string;
+  /**
+   * Админ публикует сразу; все остальные (ученик, учитель) отправляют на
+   * проверку (status 'pending'). Политика INSERT в базе пускает их только так.
+   */
+  role: 'admin' | 'member';
+  onPublished: (eventId: string) => void;
+}) {
   const t = TEXT.ru;
+  const needsReview = role !== 'admin';
   const [type, setType] = useState<EventType>('olympiad');
   const [title, setTitle] = useState('');
   const [organizer, setOrganizer] = useState('');
@@ -53,8 +77,11 @@ export function EventPublishForm({ language, adminId, onPublished }: { language:
   const [prize, setPrize] = useState('');
   const [free, setFree] = useState(true);
   const [registrationUrl, setRegistrationUrl] = useState('');
+  const [sourceUrl, setSourceUrl] = useState('');
   const [covers, setCovers] = useState<File[]>([]);
-  const [status, setStatus] = useState<'idle' | 'sending' | 'done' | 'error' | 'bad-url'>('idle');
+  const [status, setStatus] = useState<
+    'idle' | 'sending' | 'done' | 'error' | 'bad-url' | 'bad-source' | 'title-length' | 'dates-order'
+  >('idle');
 
 
   /**
@@ -70,9 +97,10 @@ export function EventPublishForm({ language, adminId, onPublished }: { language:
 
     const paths: string[] = [];
     for (const [position, file] of covers.entries()) {
-      const extension = file.name.split('.').pop()?.toLowerCase() ?? 'jpg';
+      const extension = coverExtension(file.name);
       // Позиция в имени — чтобы порядок читался прямо по бакету при разборе.
-      const path = `${Date.now()}-${position}-${Math.round(Math.random() * 1e6)}.${extension}`;
+      // Папка автора: политика бакета пускает запись только в <uid>/.
+      const path = `${adminId}/${Date.now()}-${position}-${Math.round(Math.random() * 1e6)}.${extension}`;
       const { error } = await supabase.storage.from('card-covers').upload(path, file);
       if (error) return undefined;
       paths.push(path);
@@ -83,6 +111,15 @@ export function EventPublishForm({ language, adminId, onPublished }: { language:
   async function submit() {
     if (!title.trim() || !startsAt || !deadline) {
       setStatus('error');
+      return;
+    }
+    // Те же правила, что и CHECK в базе: объяснить заранее, а не получить отказ.
+    if (title.trim().length < 3 || title.trim().length > 200) {
+      setStatus('title-length');
+      return;
+    }
+    if (deadline > startsAt) {
+      setStatus('dates-order');
       return;
     }
 
@@ -99,6 +136,12 @@ export function EventPublishForm({ language, adminId, onPublished }: { language:
       return;
     }
 
+    const safeSourceUrl = sourceUrl.trim() === '' ? null : normalizeSocialUrl(sourceUrl);
+    if (sourceUrl.trim() !== '' && safeSourceUrl === null) {
+      setStatus('bad-source');
+      return;
+    }
+
     setStatus('sending');
     const supabase = createClient();
     const gradeList = grades
@@ -112,11 +155,12 @@ export function EventPublishForm({ language, adminId, onPublished }: { language:
       return;
     }
 
-    const { error } = await supabase.from('published_events').insert({
+    const { data: inserted, error } = await supabase.from('published_events').insert({
       cover_paths: coverPaths,
       admin_id: adminId,
+      status: needsReview ? 'pending' : 'approved',
       type,
-      title,
+      title: title.trim(),
       organizer,
       description,
       starts_at: startsAt,
@@ -127,9 +171,12 @@ export function EventPublishForm({ language, adminId, onPublished }: { language:
       prize: prize || null,
       free,
       registration_url: safeRegistrationUrl,
-    });
+      source_url: safeSourceUrl,
+      // Админ публикует то, что сверил сам, — дата проверки ставится сразу.
+      ...(needsReview ? {} : { verified_at: almatyDateIso() }),
+    }).select('id').single();
 
-    if (error) {
+    if (error || !inserted) {
       setStatus('error');
       return;
     }
@@ -140,7 +187,8 @@ export function EventPublishForm({ language, adminId, onPublished }: { language:
     setDescription('');
     setPrize('');
     setRegistrationUrl('');
-    onPublished();
+    setSourceUrl('');
+    onPublished(inserted.id as string);
   }
 
   return (
@@ -207,14 +255,33 @@ export function EventPublishForm({ language, adminId, onPublished }: { language:
         <p className="mt-1 text-xs text-ink-400">{t.registrationUrlHint}</p>
       </div>
 
+      <div>
+        <label className="text-sm font-semibold text-ink-700" htmlFor="event-source-url">
+          {t.sourceUrl}
+        </label>
+        <input
+          id="event-source-url"
+          value={sourceUrl}
+          onChange={(e) => setSourceUrl(e.target.value)}
+          placeholder="https://"
+          className={`${inputCls} mt-2`}
+        />
+        <p className="mt-1 text-xs text-ink-400">{t.sourceUrlHint}</p>
+      </div>
+
       {status === 'done' && <p className="text-sm font-semibold text-success-700">{t.done}</p>}
       {status === 'error' && <p className="text-sm font-semibold text-danger-600">{t.error}</p>}
       {status === 'bad-url' && <p className="text-sm font-semibold text-danger-600">{t.registrationUrlError}</p>}
+      {status === 'bad-source' && <p className="text-sm font-semibold text-danger-600">{t.sourceUrlError}</p>}
+      {status === 'title-length' && <p className="text-sm font-semibold text-danger-600">{t.titleTooShort}</p>}
+      {status === 'dates-order' && <p className="text-sm font-semibold text-danger-600">{t.datesOrder}</p>}
 
       <ImageGalleryField files={covers} onChange={setCovers} />
 
+      {needsReview && <p className="text-sm text-ink-500">{t.reviewHint}</p>}
+
       <Button onClick={submit} disabled={status === 'sending'}>
-        {status === 'sending' ? t.publishing : t.publish}
+        {status === 'sending' ? t.publishing : needsReview ? t.propose : t.publish}
       </Button>
     </div>
   );

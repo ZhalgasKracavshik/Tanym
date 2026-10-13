@@ -15,6 +15,9 @@
 
 import { createServerClient } from '@supabase/ssr';
 import { type NextRequest, NextResponse } from 'next/server';
+import { isDisabledPath } from '@/lib/pilot';
+import { buildCsp, generateNonce } from '@/lib/security/csp';
+import { checkWriteRateLimit } from '@/lib/security/rate-limit';
 
 /**
  * Страницы, доступные без входа.
@@ -28,13 +31,9 @@ const PUBLIC_PATHS = new Set([
   '/',
   '/login',
   '/register',
-  // Отдельный вход для внешних центров: организация приходит по ссылке
-  // со страницы «Для учебных центров» и сессии у неё, разумеется, нет.
-  '/register/center',
   '/forgot-password',
   '/reset-password',
   '/for-schools',
-  '/for-centers',
   // Что хранится об ученике — читают до регистрации, значит без сессии.
   '/privacy',
 ]);
@@ -46,14 +45,64 @@ const PUBLIC_PATHS = new Set([
  * сессии ещё нет. /api/profile — его дёргает сам провайдер авторизации
  * со страниц входа, и он корректно отвечает {profile: null} гостю.
  */
-const PUBLIC_PREFIXES = ['/auth/callback', '/api/profile'];
+// /api/cron — вызывает Vercel Cron без сессии; роут сам проверяет CRON_SECRET.
+const PUBLIC_PREFIXES = ['/auth/callback', '/api/profile', '/api/csp-report', '/api/cron'];
+
+/**
+ * Афиша открыта гостям: ссылку на олимпиаду пересылают в чат класса, и
+ * требовать вход, чтобы увидеть срок, значит потерять человека на первом
+ * шаге. Открыт список и страницы событий, но не форма публикации.
+ * В базе гостю видны только одобренные события (pilot_public_events).
+ */
+function isPublicEventsPath(pathname: string): boolean {
+  if (pathname === '/events') return true;
+  return /^\/events\/[0-9a-f-]{36}$/i.test(pathname);
+}
 
 function isPublic(pathname: string): boolean {
   if (PUBLIC_PATHS.has(pathname)) return true;
+  if (isPublicEventsPath(pathname)) return true;
   return PUBLIC_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 }
 
+/** Методы, которые что-то меняют: на них действует ограничитель частоты. */
+const WRITE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+
 export async function proxy(request: NextRequest) {
+  const { pathname, search } = request.nextUrl;
+
+  /*
+    Разделы, выключенные на пилот (см. lib/pilot.ts), отвечают 404 до
+    любой другой работы — и гостю, и вошедшему. Не редирект на главную:
+    иначе закрытый раздел выглядел бы как поломка навигации.
+  */
+  if (isDisabledPath(pathname)) {
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json({ error: 'not_found' }, { status: 404 });
+    }
+    return NextResponse.rewrite(new URL('/_pilot-disabled', request.url), { status: 404 });
+  }
+
+  if (pathname.startsWith('/api/') && WRITE_METHODS.has(request.method)) {
+    const verdict = await checkWriteRateLimit(request);
+    if (!verdict.allowed) {
+      return NextResponse.json(
+        { error: 'rate_limited' },
+        { status: 429, headers: { 'Retry-After': String(verdict.retryAfterSeconds) } }
+      );
+    }
+  }
+
+  /*
+    CSP с nonce: политика уходит и в заголовок запроса (по нему Next.js
+    ставит nonce своим скриптам при рендере), и в ответ (её исполняет
+    браузер). Подробности — в lib/security/csp.ts.
+  */
+  const nonce = generateNonce();
+  const csp = buildCsp(nonce);
+  request.headers.set('x-nonce', nonce);
+  request.headers.set('content-security-policy', csp);
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -76,8 +125,6 @@ export async function proxy(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
-  const { pathname, search } = request.nextUrl;
 
   if (!user && !isPublic(pathname)) {
     /*
@@ -103,6 +150,7 @@ export async function proxy(request: NextRequest) {
     return redirect;
   }
 
+  response.headers.set('Content-Security-Policy', csp);
   return response;
 }
 

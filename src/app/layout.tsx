@@ -4,6 +4,7 @@ import './globals.css';
 import { StoreProvider } from '@/components/StoreProvider';
 import { AppShell } from '@/components/AppShell';
 import { ProgressSync } from '@/components/ProgressSync';
+import { LEARNING_ENABLED } from '@/lib/pilot';
 import { SchoolAuthProvider } from '@/lib/supabase/useSchoolAuth';
 import { getServerProfile } from '@/lib/supabase/serverProfile';
 
@@ -34,9 +35,9 @@ const golos = Golos_Text({
 });
 
 export const metadata: Metadata = {
-  title: 'Tanym: персональный AI-наставник для школьников Казахстана',
+  title: 'Taným — олимпиады, конкурсы и дедлайны для школьников Казахстана',
   description:
-    'Диагностика уровня, персональный план обучения и разбор заданий с искусственным интеллектом для учеников 7–12 классов из любого региона Казахстана.',
+    'Все олимпиады, конкурсы и курсы для школьников Казахстана в одной афише — с датой, до которой нужно подать заявку. Сохраняй события и не пропускай сроки.',
 };
 
 export const viewport: Viewport = {
@@ -64,7 +65,7 @@ export default async function RootLayout({ children }: LayoutProps<'/'>) {
             initialEmailConfirmed={emailConfirmed}
             initialSchoolClass={schoolClass}
           >
-            <ProgressSync />
+            {LEARNING_ENABLED && <ProgressSync />}
             <AppShell>{children}</AppShell>
           </SchoolAuthProvider>
         </StoreProvider>

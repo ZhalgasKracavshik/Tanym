@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Совет: пилот Taným</title>
+<style>
+  :root { --bg:#faf9f7; --card:#fff; --ink:#1d1b19; --muted:#6b655e; --line:#e7e2dc; --brand:#d85f2e;
+    --ok:#1f7a4d; --okbg:#e8f5ee; --warn:#9a5b00; --warnbg:#fff4e0; --no:#a3312b; --nobg:#fdeceb; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --bg:#151413; --card:#1e1c1a; --ink:#f1ede8; --muted:#a59e96; --line:#34302c; --brand:#ef7b4c;
+    --ok:#6fd3a0; --okbg:#173326; --warn:#f2bd6b; --warnbg:#3a2c12; --no:#f08f88; --nobg:#3d1d1b; } }
+  * { box-sizing:border-box }
+  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  main { max-width:880px; margin:0 auto; padding:40px 16px 64px; }
+  h1 { font-size:28px; margin:4px 0 8px; line-height:1.25 }
+  h2 { font-size:20px; margin:36px 0 12px }
+  h3 { font-size:16px; margin:20px 0 6px }
+  .kicker { color:var(--brand); font-size:12px; letter-spacing:.12em; text-transform:uppercase; font-weight:700 }
+  .q { color:var(--muted); margin:0 }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:20px 22px; margin:14px 0 }
+  .verdict { border-left:4px solid var(--brand) }
+  ul { padding-left:20px; margin:8px 0 } li { margin:4px 0 }
+  .grid { width:100%; border-collapse:collapse; font-size:14px }
+  .grid th, .grid td { border-bottom:1px solid var(--line); padding:8px 6px; text-align:left; vertical-align:top }
+  .grid th { color:var(--muted); font-weight:600 }
+  .scroll { overflow-x:auto }
+  .tag { display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; font-weight:700; white-space:nowrap }
+  .y { background:var(--okbg); color:var(--ok) } .n { background:var(--nobg); color:var(--no) } .m { background:var(--warnbg); color:var(--warn) }
+  details { background:var(--card); border:1px solid var(--line); border-radius:12px; margin:10px 0; padding:12px 16px }
+  summary { cursor:pointer; font-weight:600 }
+  details p { color:var(--ink); white-space:pre-line; margin:10px 0 0 }
+  .first { background:var(--brand); color:#fff; border-radius:14px; padding:18px 22px }
+  .first h2 { margin-top:0; color:#fff }
+  footer { color:var(--muted); font-size:13px; margin-top:40px }
+</style>
+</head>
+<body>
+<main>
+  <div class="kicker">Совет пяти советников · 6 октября 2026</div>
+  <h1>Каким должен быть пилот Taným</h1>
+  <p class="q">Афиша для гостей и новый лендинг · скрыть AI-обучение и оставить материалы · роль без доменов и без выбора · новая логика достижений и рейтинга · мягкий профиль · решает ли продукт проблему</p>
+
+  <div class="card verdict">
+    <h2 style="margin-top:0">Вердикт</h2>
+    <p><b>Продукт — это календарь возможностей с напоминаниями.</b> ChatGPT не знает актуальных дедлайнов олимпиад в Казахстане. В этом ваша ценность, всё остальное вторично. Главная проблема сейчас не в коде, а в пустоте: в афише 3 события, и 2 из них уже прошли. Вторая проблема — нет канала, через который придут ученики.</p>
+    <h3>Состав пилота</h3>
+    <ul>
+      <li>Публичная афиша: у каждого события своя страница и кнопка «Поделиться в WhatsApp».</li>
+      <li>«Мои события» с напоминаниями, архив материалов, минимальный профиль.</li>
+      <li>AI-обучение, рейтинг и загрузку сканов скрыть флагами, не удаляя.</li>
+    </ul>
+    <h3>(а) Роль без выбора и без доменов</h3>
+    <ul>
+      <li>Все регистрируются учениками, вопроса о роли нет.</li>
+      <li>Учитель определяется по действию: «Предложить событие», «Добавить материал», «Создать ссылку для класса». Первое такое действие делает его кандидатом, админ одобряет одним кликом.</li>
+      <li>Кто пришёл по ссылке класса, тот ученик этого учителя.</li>
+    </ul>
+    <h3>(б) Достижения и рейтинг (в пилоте скрыты)</h3>
+    <ul>
+      <li><b>Портфолио вместо баллов за грамоты.</b> Запись привязана к событию из афиши со статусами «сохранил → подал → результат». Подтверждение — ссылка на список победителей или отметка учителя, скан не нужен. По умолчанию запись приватная.</li>
+      <li><b>Сезонный личный прогресс вместо общего рейтинга.</b> Сезон равен четверти. Учитываются заявки, поданные до дедлайна, решённые задания из архива и недельная серия.</li>
+      <li>Лидерборд школы или класса только по согласию и при 15 и более учениках. «Бронзу» убрать.</li>
+    </ul>
+    <h3>(в) Профиль — «Мой путь»</h3>
+    <ul>
+      <li>Сверху аватар и имя, затем крупный ближайший дедлайн, «Мои события» по статусам и строка «3 недели подряд».</li>
+      <li>Интересы — чипсы, которые сразу фильтруют афишу.</li>
+      <li>Тёмную шапку со счётчиками и 4 вкладки убрать, настройки спрятать за шестерёнку.</li>
+    </ul>
+    <h3>Наполнение и петля возврата</h3>
+    <ul>
+      <li>За актуальность отвечаете вы, это 2–3 часа в неделю.</li>
+      <li>Источники: «Дарын», НИШ, Bilimland, вузовские олимпиады.</li>
+      <li>У события поля «источник» и «проверено [дата]», прошедшие события архивируются автоматически, есть форма «Сообщить о событии».</li>
+      <li>По понедельникам — дайджест «Открылось / Закрывается» и «Задача недели» в Telegram-канале и на email. Напоминания за 7 и 1 день.</li>
+      <li>Метрика — вернулись ли за 14 дней. Стоп-критерий: меньше 20 незнакомых учеников вернулись дважды за 6 недель.</li>
+    </ul>
+  </div>
+
+  <h2>Кто с чем согласен</h2>
+  <div class="card scroll">
+    <table class="grid">
+      <tr><th></th><th>Contrarian</th><th>First Principles</th><th>Expansionist</th><th>Outsider</th><th>Executor</th></tr>
+      <tr><td>Открыть афишу гостям</td><td><span class="tag m">после наполнения</span></td><td><span class="tag y">да</span></td><td><span class="tag y">да + SEO</span></td><td><span class="tag y">да</span></td><td><span class="tag y">да</span></td></tr>
+      <tr><td>Скрыть AI-обучение</td><td><span class="tag m">спорно</span></td><td><span class="tag y">да</span></td><td><span class="tag y">да</span></td><td><span class="tag y">да</span></td><td><span class="tag y">да</span></td></tr>
+      <tr><td>Роль: угадывать автоматически</td><td><span class="tag n">нет</span></td><td><span class="tag n">нет</span></td><td><span class="tag n">через действие</span></td><td><span class="tag n">через действие</span></td><td><span class="tag n">по заявке</span></td></tr>
+      <tr><td>Проектировать рейтинг сейчас</td><td><span class="tag n">нет</span></td><td><span class="tag n">нет</span></td><td><span class="tag y">портфолио</span></td><td><span class="tag n">нет</span></td><td><span class="tag n">нет</span></td></tr>
+      <tr><td>Переделывать профиль</td><td><span class="tag n">3 поля</span></td><td><span class="tag n">2 поля</span></td><td><span class="tag y">«Мой путь»</span></td><td><span class="tag n">не нужен</span></td><td><span class="tag n">не трогать</span></td></tr>
+      <tr><td>Напоминания (Telegram/email)</td><td><span class="tag y">да</span></td><td><span class="tag y">да</span></td><td><span class="tag y">да</span></td><td><span class="tag y">да</span></td><td><span class="tag y">да</span></td></tr>
+    </table>
+  </div>
+
+  <h2>Слепые зоны, которые поймало ревью</h2>
+  <div class="card"><ul>
+    <li>Кто будет держать афишу актуальной. Просроченная афиша опаснее пустой.</li>
+    <li>Дедлайны редкие, поэтому нужен еженедельный повод вернуться: дайджест и задача недели.</li>
+    <li>Telegram-бот с привязкой аккаунта — это отдельная работа. Канал проще.</li>
+    <li>Казахский и русский; WhatsApp и Instagram, а не только Telegram.</li>
+    <li>Уже существуют Telegram-каналы с олимпиадами, это конкуренты.</li>
+    <li>Персональные данные несовершеннолетних (закон РК №94-V): согласие родителей, хранение данных за рубежом, сканы грамот.</li>
+  </ul></div>
+
+  <div class="first">
+    <h2>Первое, что сделать</h2>
+    <p style="margin:0">Сегодня снять прошедшие события и внести 30 актуальных на ближайшие 3 месяца, с источником и датой проверки. Без наполненной афиши лендинг и профиль ничего не дадут.</p>
+  </div>
+
+  <h2>Ответы советников</h2>
+  <details><summary>Contrarian — «главная ошибка: ни один пункт не про дистрибуцию»</summary><p>Пустая афиша (3 события, 2 прошли): открыть гостям значит показать мёртвую витрину. Без напоминаний (Telegram, email за 7 и 1 день) афиша проблему «узнают поздно» не решает. Девять материалов архива ChatGPT заменяет легко, ценность в дедлайнах. Угадывать роль не нужно: все ученики, учитель по заявке. Рейтинг со сканами — это ПДн, подделки и накрутка. Профиль на 11 человек — трата времени. Первым делом: 30–50 событий, публичные страницы, Telegram, 10 интервью. Метрика — подписки на напоминания.</p></details>
+  <details><summary>First Principles — «это пока демо, а не продукт»</summary><p>Реальный вопрос: зайдёт ли хоть один школьник сам. Ценность в актуальном календаре с напоминаниями. Пункты 1–3 верны. Пункт 4 — ложная задача: все ученики, учитель позже по приглашению. Пункт 5 — косметика, хватит класса и города. Первым делом: 30–50 событий на 3 месяца, подписка на напоминания, нести продукт в чаты. Цель — 50 подписавшихся.</p></details>
+  <details><summary>Expansionist — «единый календарь возможностей Казахстана»</summary><p>Большая пустая ниша. У каждого события должна быть индексируемая страница, кнопка «Поделиться в WhatsApp» и «Напомнить в Telegram». Роль определяется действием, учитель приводит класс. Достижения — подтверждённое портфолио для поступления и грантов. Рейтинг — после 500 пользователей. Профиль — одна страница «Мой путь». Затем платное размещение и соседние страны.</p></details>
+  <details><summary>Outsider — «я школьник из Актобе»</summary><p>Афиша закрыта логином, поэтому я ухожу. Если открыть, а там «прошло», я тоже не вернусь. Анкета на 4 вкладки похожа на школьную форму. Мне нужно «когда дедлайн» и «напомнить». Зачем спрашивать мою роль, я не понимаю. Проверьте ценность просто: покажите афишу 10 одноклассникам.</p></details>
+  <details><summary>Executor — «план на понедельник»</summary><p>Скройте флагом AI, достижения и рейтинг. Внесите 15–20 актуальных событий. Сделайте «Напомнить в Telegram» или email за 7 и 1 день. Разошлите ссылку в 5–10 школьных чатов. Через 2 недели проверьте, сколько человек сохранили событие и вернулись. Роль — кнопка «Я учитель» в настройках и ручное одобрение.</p></details>
+
+  <footer>Совет: 5 независимых советников, анонимное перекрёстное ревью, синтез председателя. Полная стенограмма лежит рядом: council-transcript-2026-10-06.md</footer>
+</main>
+</body>
+</html>

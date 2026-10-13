@@ -34,8 +34,10 @@ import { Spinner } from '@/components/motion';
 import { SuccessCheckMark } from '@/components/SuccessCheckMark';
 import { OtpInput, type OtpStatus } from '@/components/ui/otp-input';
 import { fireCelebration } from '@/components/ui/confetti';
+import { LEARNING_ENABLED } from '@/lib/pilot';
+import { INTERESTS } from '@/lib/profileFields';
 
-type Step = 'classcode' | 'grade' | 'subjects' | 'goal' | 'classname' | 'teachsubjects';
+type Step = 'classcode' | 'grade' | 'subjects' | 'goal' | 'interests' | 'classname' | 'teachsubjects';
 
 /*
   Пропустить можно только те шаги, ответ на которые ученик может не знать
@@ -44,7 +46,7 @@ type Step = 'classcode' | 'grade' | 'subjects' | 'goal' | 'classname' | 'teachsu
   себя знает всегда, и без них персонализация не считается вовсе, поэтому
   там «Позже» не показываем.
 */
-const SKIPPABLE: Step[] = ['classcode', 'goal', 'classname'];
+const SKIPPABLE: Step[] = ['classcode', 'goal', 'classname', 'interests'];
 
 const STEP_TITLE: Record<Step, { title: string; hint: string }> = {
   classname: {
@@ -61,7 +63,11 @@ const STEP_TITLE: Record<Step, { title: string; hint: string }> = {
   },
   grade: {
     title: 'В каком вы классе?',
-    hint: 'От класса зависит программа и сложность заданий.',
+    hint: 'Покажем олимпиады и конкурсы, куда можно подать заявку в вашем классе.',
+  },
+  interests: {
+    title: 'Что вам интересно?',
+    hint: 'Выберите пару тем — по ним подберём события. Поменять можно в профиле.',
   },
   subjects: {
     title: 'Какие предметы вам нужны?',
@@ -83,6 +89,7 @@ export default function OnboardingPage() {
   const [className, setClassName] = useState('');
   const [grade, setGrade] = useState<Grade | null>(null);
   const [subjectIds, setSubjectIds] = useState<SubjectId[]>([]);
+  const [interests, setInterests] = useState<string[]>([]);
   const [goal, setGoal] = useState<LearningGoal | null>(null);
   const [goalCustom, setGoalCustom] = useState('');
   const [saving, setSaving] = useState(false);
@@ -111,6 +118,12 @@ export default function OnboardingPage() {
   const isTeacher = profile?.role === 'teacher';
   const steps = useMemo<Step[]>(() => {
     if (isTeacher) return ['classname', 'teachsubjects'];
+    /*
+      Пилот: учебный модуль выключен, и предметы с целью ни на что не
+      влияют. Остаются два вопроса, по которым подбирается афиша: класс
+      и интересы. Код класса тоже не спрашиваем — его вводят в профиле.
+    */
+    if (!LEARNING_ENABLED) return ['grade', 'interests'];
     return needsClassCode
       ? ['classcode', 'grade', 'subjects', 'goal']
       : ['grade', 'subjects', 'goal'];
@@ -142,7 +155,7 @@ export default function OnboardingPage() {
     */
     if (done) return;
     if (profile?.role === 'teacher' && profile.subject_ids?.length) {
-      router.replace('/teacher');
+      router.replace(LEARNING_ENABLED ? '/teacher' : '/events');
     }
     if (profile?.role === 'admin') router.replace('/admin');
   }, [loading, isSignedIn, done, profile?.role, profile?.subject_ids?.length, router]);
@@ -163,6 +176,7 @@ export default function OnboardingPage() {
     if (profile.subject_ids?.length) setSubjectIds(profile.subject_ids as SubjectId[]);
     if (profile.goal) setGoal(profile.goal as LearningGoal);
     if (profile.goal_custom) setGoalCustom(profile.goal_custom);
+    if (profile.interests?.length) setInterests(profile.interests);
   }
 
   /*
@@ -182,11 +196,12 @@ export default function OnboardingPage() {
     if (step === 'classname') return className.trim().length > 0;
     if (step === 'grade') return grade !== null;
     if (step === 'subjects' || step === 'teachsubjects') return subjectIds.length > 0;
+    if (step === 'interests') return interests.length > 0;
     // Выбрать «Свою цель» и не написать её — то же самое, что не выбрать
     // ничего: в промпт наставника ушла бы пустая строка.
     if (goal === 'custom') return goalCustom.trim().length > 0;
     return goal !== null;
-  }, [step, classCode, className, grade, subjectIds, goal, goalCustom]);
+  }, [step, classCode, className, grade, subjectIds, goal, goalCustom, interests]);
 
   /**
    * Присоединение к классу по коду.
@@ -293,6 +308,7 @@ export default function OnboardingPage() {
     if (subjectIds.length > 0) patch.subjectIds = subjectIds;
     if (goal !== null) patch.goal = goal;
     if (goal === 'custom') patch.goalCustom = goalCustom.trim();
+    if (interests.length > 0) patch.interests = interests;
 
     // Локальная копия — на ней держится движок персонализации.
     updateProfile({
@@ -344,7 +360,7 @@ export default function OnboardingPage() {
     setDone(true);
     fireCelebration();
     setTimeout(() => {
-      router.replace(isTeacher ? '/teacher' : '/dashboard');
+      router.replace(isTeacher && LEARNING_ENABLED ? '/teacher' : '/dashboard');
       router.refresh();
     }, 1100);
   }
@@ -582,6 +598,33 @@ export default function OnboardingPage() {
                       <Icon name="check" size={18} />
                     </span>
                   )}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {step === 'interests' && (
+          <div className="flex flex-wrap gap-2">
+            {INTERESTS.map((item) => {
+              const active = interests.includes(item.id);
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() =>
+                    setInterests((prev) =>
+                      prev.includes(item.id) ? prev.filter((id) => id !== item.id) : [...prev, item.id],
+                    )
+                  }
+                  aria-pressed={active}
+                  className={`rounded-[var(--radius-pill)] border-2 px-4 py-2 text-sm font-semibold transition-all ${
+                    active
+                      ? 'border-brand-500 bg-brand-50 text-brand-700'
+                      : 'border-ink-200 bg-white text-ink-600 hover:border-brand-300'
+                  }`}
+                >
+                  {item.title}
                 </button>
               );
             })}

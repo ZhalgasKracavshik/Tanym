@@ -26,6 +26,9 @@ import {
   type AchievementPlace,
 } from '@/lib/portfolio';
 import { ADMIN_TEXT, AdminShell, Row, Section, useRows } from '../parts';
+import { useProofUrl } from '@/lib/supabase/proofUrl';
+import { formatEventDate } from '@/lib/events';
+import { almatyDateIso } from '@/lib/date';
 
 const TEXT = {
   pendingAchievements: 'Достижения на проверке',
@@ -35,6 +38,10 @@ const TEXT = {
   proof: 'Диплом',
   noProof: 'без подтверждения',
   willGive: (points: number) => `+${points} баллов`,
+  pendingEvents: 'События от учителей',
+  noPendingEvents: 'Новых событий на проверке нет.',
+  eventHint:
+    'Проверьте даты и ссылку на регистрацию: после одобрения событие увидят все, и оно может стать «ближайшим дедлайном» у учеников.',
   pendingListings: 'Объявления на модерации',
   noPending: 'Заявок на модерации нет.',
   /*
@@ -46,7 +53,7 @@ const TEXT = {
   open: 'Открыть',
 } as const;
 
-function ModerationPanel({ language }: { language: Language }) {
+function ModerationPanel({ language, reviewerId }: { language: Language; reviewerId: string }) {
   const [refreshKey, setRefreshKey] = useState(0);
   const bump = () => setRefreshKey((key) => key + 1);
 
@@ -56,12 +63,32 @@ function ModerationPanel({ language }: { language: Language }) {
     refreshKey,
     ['status', 'pending'],
   );
+  const pendingEvents = useRows(
+    'published_events',
+    'id, title, organizer, registration_deadline',
+    refreshKey,
+    ['status', 'pending'],
+  );
   const pendingListings = useRows(
     'published_listings',
     'id, title, author_name, category',
     refreshKey,
     ['status', 'pending'],
   );
+
+  async function reviewEvent(id: string, decision: 'approved' | 'rejected', reviewerId: string) {
+    await createClient()
+      .from('published_events')
+      .update({
+        status: decision,
+        reviewed_by: reviewerId,
+        reviewed_at: new Date().toISOString(),
+        // Одобряя, админ сверяет сроки с источником — это и есть проверка.
+        ...(decision === 'approved' ? { verified_at: almatyDateIso() } : {}),
+      })
+      .eq('id', id);
+    bump();
+  }
 
   async function approveListing(id: string) {
     await createClient().from('published_listings').update({ status: 'approved' }).eq('id', id);
@@ -105,11 +132,6 @@ function ModerationPanel({ language }: { language: Language }) {
           pendingAchievements.map((row) => {
             const level = row.level as AchievementLevel;
             const place = row.place as AchievementPlace;
-            const proofUrl = row.proof_path
-              ? createClient()
-                  .storage.from('achievement-proofs')
-                  .getPublicUrl(String(row.proof_path)).data.publicUrl
-              : null;
 
             return (
               <Row
@@ -127,18 +149,7 @@ function ModerationPanel({ language }: { language: Language }) {
                   <Icon name="arrow-right" size={12} />
                 </Link>
 
-                {proofUrl ? (
-                  <a
-                    href={proofUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-xs font-semibold text-brand-600 hover:underline"
-                  >
-                    {TEXT.proof}
-                  </a>
-                ) : (
-                  <span className="text-xs text-danger-600">{TEXT.noProof}</span>
-                )}
+                <ProofLink path={row.proof_path ? String(row.proof_path) : null} />
 
                 <Button size="sm" onClick={() => reviewAchievement(row.id, 'approved', level, place)}>
                   <Icon name="check" size={14} />
@@ -154,6 +165,39 @@ function ModerationPanel({ language }: { language: Language }) {
               </Row>
             );
           })
+        )}
+      </Section>
+
+      <Section title={TEXT.pendingEvents}>
+        <p className="mb-4 text-xs text-ink-400">{TEXT.eventHint}</p>
+        {pendingEvents === null ? (
+          <Skeleton className="h-10 w-full" />
+        ) : pendingEvents.length === 0 ? (
+          <p className="text-sm text-ink-500">{TEXT.noPendingEvents}</p>
+        ) : (
+          pendingEvents.map((row) => (
+            <Row
+              key={row.id}
+              title={String(row.title)}
+              meta={`${String(row.organizer ?? '')} · до ${formatEventDate(String(row.registration_deadline), language)}`}
+            >
+              <Link
+                href={`/events/${row.id}`}
+                className="flex items-center gap-1 text-xs font-semibold text-ink-600 hover:underline"
+              >
+                {TEXT.open}
+                <Icon name="arrow-right" size={12} />
+              </Link>
+
+              <Button size="sm" onClick={() => reviewEvent(row.id, 'approved', reviewerId)}>
+                <Icon name="check" size={14} />
+                {ADMIN_TEXT.approve}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => reviewEvent(row.id, 'rejected', reviewerId)}>
+                {ADMIN_TEXT.reject}
+              </Button>
+            </Row>
+          ))
         )}
       </Section>
 
@@ -196,9 +240,24 @@ export default function AdminModerationPage() {
     <AdminShell title="Модерация" description="Заявки, которые ждут решения. Разобрали — очередь пуста.">
       <Suspense fallback={null}>
         <SchoolAuthGate requireRole="admin" language={state.language}>
-          {() => <ModerationPanel language={state.language} />}
+          {(profile) => <ModerationPanel language={state.language} reviewerId={profile.id} />}
         </SchoolAuthGate>
       </Suspense>
     </AdminShell>
+  );
+}
+
+/**
+ * Ссылка на скан для проверяющего. Отдельный компонент, потому что
+ * подписанная ссылка получается хуком, а хуки нельзя звать внутри map.
+ */
+function ProofLink({ path }: { path: string | null }) {
+  const url = useProofUrl(path);
+  if (!path) return <span className="text-xs text-danger-600">{TEXT.noProof}</span>;
+  if (!url) return <span className="text-xs text-ink-400">{TEXT.proof}…</span>;
+  return (
+    <a href={url} target="_blank" rel="noreferrer" className="text-xs font-semibold text-brand-600 hover:underline">
+      {TEXT.proof}
+    </a>
   );
 }

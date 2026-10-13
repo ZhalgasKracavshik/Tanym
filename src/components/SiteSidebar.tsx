@@ -28,6 +28,7 @@ import { useSidebarCollapsed } from '@/lib/localSetting';
 import { MobileTabBar } from './MobileTabBar';
 import { useSlidingPill } from './useSlidingPill';
 import { avatarPhotoUrl } from '@/lib/supabase/avatarPhoto';
+import { isDisabledPath } from '@/lib/pilot';
 
 /**
  * Пункты, скрытые от роли.
@@ -39,8 +40,9 @@ import { avatarPhotoUrl } from '@/lib/supabase/avatarPhoto';
  */
 const HIDDEN_FOR_ROLE: Record<'student' | 'teacher' | 'admin' | 'center', string[]> = {
   student: ['/teacher', '/admin', '/center'],
-  teacher: ['/plan', '/dashboard', '/chat', '/admin', '/center'],
-  admin: ['/plan', '/dashboard', '/chat', '/teacher', '/center'],
+  // «Мой путь» на пилоте — это сохранённые события и дедлайны, он нужен всем.
+  teacher: ['/plan', '/chat', '/admin', '/center'],
+  admin: ['/plan', '/chat', '/teacher', '/center'],
   /*
     Внешнему центру оставлен один раздел — «Возможности», где живут его
     объявления. Остальное закрыто не только в меню, но и в самой базе
@@ -79,7 +81,7 @@ const TEXT: Dict<{
   ru: {
     plan: 'Мой план',
     more: 'Ещё',
-    dashboard: 'Кабинет',
+    dashboard: 'Мой путь',
     achievements: 'Достижения',
     archive: 'Архив',
     events: 'Афиша',
@@ -101,7 +103,7 @@ const TEXT: Dict<{
   kk: {
     plan: 'Жоспарым',
     more: 'Тағы',
-    dashboard: 'Кабинет',
+    dashboard: 'Менің жолым',
     achievements: 'Жетістіктер',
     archive: 'Мұрағат',
     events: 'Афиша',
@@ -123,7 +125,7 @@ const TEXT: Dict<{
   en: {
     plan: 'My plan',
     more: 'More',
-    dashboard: 'Dashboard',
+    dashboard: 'My path',
     achievements: 'Achievements',
     archive: 'Archive',
     events: 'Events',
@@ -271,14 +273,15 @@ export function SiteSidebar() {
     /* Плана отдельным пунктом больше нет: он живёт внутри кабинета,
        потому что отвечает на вторую половину того же вопроса. */
     { href: '/dashboard', label: t.dashboard, icon: 'columns', section: 'study' },
-    { href: '/chat', label: t.mentor, icon: 'chat', section: 'study' },
+    /* Афиша — главный раздел пилота, поэтому сразу после «Моего пути». */
+    { href: '/events', label: t.events, icon: 'calendar', section: 'study' },
     { href: '/archive', label: t.archive, icon: 'folder', section: 'study' },
+    { href: '/chat', label: t.mentor, icon: 'chat', section: 'study' },
     { href: '/achievements', label: t.achievements, icon: 'trophy', section: 'study' },
     { href: '/leaderboard', label: t.leaderboard, icon: 'medal', section: 'study' },
     { href: '/teacher', label: t.teacher, icon: 'cap', section: 'study' },
     { href: '/admin', label: t.admin, icon: 'building', section: 'study' },
     { href: '/announcements', label: t.announcements, icon: 'megaphone', section: 'more' },
-    { href: '/events', label: t.events, icon: 'calendar', section: 'more' },
     { href: '/marketplace', label: t.marketplace, icon: 'backpack', section: 'more' },
     { href: '/center', label: t.myServices, icon: 'building', section: 'study' },
   ];
@@ -296,7 +299,8 @@ export function SiteSidebar() {
     меню несравнимо лучше, чем не показать ничего.
   */
   const hidden = schoolProfile ? (HIDDEN_FOR_ROLE[schoolProfile.role] ?? []) : [];
-  const NAV = ALL_NAV.filter((item) => !hidden.includes(item.href));
+  // Разделы, выключенные на пилот, не показываются никому (см. lib/pilot.ts).
+  const NAV = ALL_NAV.filter((item) => !hidden.includes(item.href) && !isDisabledPath(item.href));
 
   /*
     Отдельным компонентом, а не общей переменной с разметкой: список

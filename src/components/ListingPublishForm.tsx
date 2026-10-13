@@ -14,6 +14,7 @@ import { createClient } from '@/lib/supabase/client';
 import { Button } from './ui';
 import { Icon } from './Icon';
 import { ImageField } from './ImageField';
+import { coverExtension } from '@/lib/storageKey';
 
 const TEXT = {
   ru: {
@@ -68,8 +69,8 @@ export function ListingPublishForm({ language, adminId, onPublished }: { languag
    */
   async function uploadCover(supabase: ReturnType<typeof createClient>): Promise<string | null | undefined> {
     if (!cover) return null;
-    const extension = cover.name.split('.').pop()?.toLowerCase() ?? 'jpg';
-    const path = `${Date.now()}-${Math.round(Math.random() * 1e6)}.${extension}`;
+    const extension = coverExtension(cover.name);
+    const path = `${adminId}/${Date.now()}-${Math.round(Math.random() * 1e6)}.${extension}`;
     const { error } = await supabase.storage.from('card-covers').upload(path, cover);
     return error ? undefined : path;
   }
