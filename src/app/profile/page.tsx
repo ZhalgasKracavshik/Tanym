@@ -1008,7 +1008,7 @@ function ProfileContent() {
                         <button
                           key={interest.id}
                           onClick={() => toggleInterest(interest.id)}
-                          className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-all ${
+                          className={`min-h-9 rounded-full border px-3.5 py-2 text-xs font-semibold transition-all ${
                             active
                               ? 'border-brand-400 bg-brand-50 text-brand-700 font-medium'
                               : 'border-ink-200 bg-white text-ink-600 hover:border-brand-200'

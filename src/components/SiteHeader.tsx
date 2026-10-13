@@ -40,7 +40,7 @@ export function SiteHeader() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-ink-200 bg-white/90 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
         <Link
           href="/"
           className="flex shrink-0 items-center gap-2 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
@@ -48,21 +48,37 @@ export function SiteHeader() {
           <Logo />
         </Link>
 
-        <div className="flex shrink-0 items-center gap-3">
+        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
           <Link
             href="/events"
             className="hidden rounded-lg px-2 py-1 text-sm font-semibold text-ink-600 outline-none hover:text-brand-600 focus-visible:ring-2 focus-visible:ring-brand-500 sm:block"
           >
             {t.events}
           </Link>
-          <div className="flex rounded-lg border border-ink-200 p-0.5" role="group" aria-label={t.language}>
+          {/*
+            На телефоне — одна кнопка, которая переключает язык по кругу.
+            Три кнопки RU/KZ/EN рядом с логотипом и «Регистрацией» не
+            помещались в 360px, и браузер расширял всю страницу вбок.
+          */}
+          <button
+            type="button"
+            onClick={() => {
+              const index = LANGUAGES.findIndex((item) => item.id === state.language);
+              setLanguage(LANGUAGES[(index + 1) % LANGUAGES.length].id);
+            }}
+            aria-label={t.language}
+            className="flex h-9 min-w-9 items-center justify-center rounded-lg border border-ink-200 px-2 text-xs font-semibold text-ink-700 outline-none focus-visible:ring-2 focus-visible:ring-brand-500 sm:hidden"
+          >
+            {LANGUAGES.find((item) => item.id === state.language)?.label}
+          </button>
+          <div className="hidden rounded-lg border border-ink-200 p-0.5 sm:flex" role="group" aria-label={t.language}>
             {LANGUAGES.map((item) => (
               <button
                 key={item.id}
                 onClick={() => setLanguage(item.id)}
                 title={item.title}
                 aria-pressed={state.language === item.id}
-                className={`rounded-md px-2.5 py-1 text-xs font-semibold outline-none transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
+                className={`rounded-md px-2.5 py-1.5 text-xs font-semibold outline-none transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
                   state.language === item.id ? 'bg-brand-500 text-white shadow-sm' : 'text-ink-400 hover:text-ink-700'
                 }`}
               >

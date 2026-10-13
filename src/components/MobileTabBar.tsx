@@ -151,7 +151,7 @@ export function MobileTabBar({ onMore }: { onMore: () => void }) {
                   <Icon name={tab.icon} size={19} />
                 </span>
                 <span
-                  className={`text-[10px] font-semibold leading-none ${
+                  className={`text-[11px] font-semibold leading-none ${
                     active ? 'text-brand-700' : 'text-ink-400'
                   }`}
                 >
@@ -172,7 +172,7 @@ export function MobileTabBar({ onMore }: { onMore: () => void }) {
             <span className="flex h-9 w-full max-w-[3.5rem] items-center justify-center rounded-[var(--radius-pill)] text-ink-400">
               <Icon name="menu" size={19} />
             </span>
-            <span className="text-[10px] font-semibold leading-none text-ink-400">{t.more}</span>
+            <span className="text-[11px] font-semibold leading-none text-ink-400">{t.more}</span>
           </button>
         </li>
       </ul>

@@ -269,6 +269,8 @@ export default function EventsPage() {
           href="/events/new"
           label={profile?.role === 'admin' ? t.add : t.propose}
           requireRole={['admin', 'teacher', 'student']}
+          // Ученику это второстепенное действие: главное на странице — сами события.
+          variant={profile?.role === 'admin' ? 'primary' : 'secondary'}
         />
       </div>
 
@@ -290,8 +292,12 @@ export default function EventsPage() {
       {/* Вводный абзац: на голом фоне, отдельно от заголовка */}
       <p className="mt-4 max-w-2xl text-sm text-ink-500">{t.subtitle}</p>
 
-      {/* Фильтры */}
-      <div className="mt-10 flex flex-wrap gap-2">
+      {/*
+        Фильтры. На телефоне — одна строка с прокруткой вбок: шесть
+        переносящихся чипов занимали четыре строки, и первое событие
+        уезжало за первый экран. С sm — обычный перенос.
+      */}
+      <div className="-mx-4 mt-10 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 [&::-webkit-scrollbar]:hidden">
         <button onClick={() => setFilter('all')} className={chip(filter === 'all')}>
           {t.all}
         </button>
@@ -371,7 +377,7 @@ export default function EventsPage() {
 }
 
 function chip(active: boolean): string {
-  return `inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 [@media(pointer:coarse)]:min-h-11 ${
+  return `inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-xl border px-4 py-2 text-sm font-semibold transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 [@media(pointer:coarse)]:min-h-11 ${
     active
       ? 'border-brand-500 bg-brand-50 text-brand-700'
       : 'border-ink-200 bg-white text-ink-600 hover:border-brand-300 hover:shadow-[var(--shadow-lift)]'
