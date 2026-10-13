@@ -102,11 +102,21 @@ export function usePublishedEvents(refreshKey = 0) {
  * ids === null — ещё грузим (или гость): кнопку сохранения не показываем,
  * чем показать её не в том состоянии.
  */
+/**
+ * Статус сохранённого события: сохранил → подал заявку → участвовал.
+ * Первый шаг новой логики достижений (docs/achievements-and-progress.md).
+ */
+export type SaveStatus = 'saved' | 'applied' | 'participated';
+
 export function useSavedEvents() {
   const { profile } = useSchoolAuth();
   const { state, clearEventRegistrations } = useStore();
   const userId = profile?.id ?? null;
-  const [loaded, setLoaded] = useState<{ userId: string; ids: Set<string> } | null>(null);
+  const [loaded, setLoaded] = useState<{
+    userId: string;
+    ids: Set<string>;
+    statuses: Map<string, SaveStatus>;
+  } | null>(null);
   const migrated = useRef(false);
 
   // Локальные отметки читаются один раз — для переноса, а не как состояние.
@@ -129,9 +139,19 @@ export function useSavedEvents() {
         clearEventRegistrations();
       }
 
-      const { data } = await supabase.from('event_saves').select('event_id');
+      /*
+        select('*'), а не перечисление колонок: статус появился миграцией
+        pilot_event_sources_applications_reminders, и до её применения
+        запрос с явным status упал бы целиком — вместе со списком сохранённых.
+      */
+      const { data } = await supabase.from('event_saves').select('*');
       if (!cancelled) {
-        setLoaded({ userId: userId!, ids: new Set((data ?? []).map((row) => row.event_id as string)) });
+        const rows = (data ?? []) as { event_id: string; status?: SaveStatus }[];
+        setLoaded({
+          userId: userId!,
+          ids: new Set(rows.map((row) => row.event_id)),
+          statuses: new Map(rows.map((row) => [row.event_id, row.status ?? 'saved'])),
+        });
       }
     }
 
@@ -142,6 +162,7 @@ export function useSavedEvents() {
   }, [userId, clearEventRegistrations]);
 
   const ids = loaded && loaded.userId === userId ? loaded.ids : null;
+  const statuses = loaded && loaded.userId === userId ? loaded.statuses : null;
 
   /**
    * Переключает сохранение. Состояние меняется сразу, запрос идёт следом;
@@ -172,5 +193,32 @@ export function useSavedEvents() {
     [userId, ids],
   );
 
-  return { ids, toggle };
+  /**
+   * Меняет статус сохранённого события («Я подал заявку»). Как и toggle —
+   * сразу на экране, с откатом, если база отказала.
+   */
+  const setStatus = useCallback(
+    async (eventId: string, status: SaveStatus) => {
+      if (!userId || !statuses || !ids?.has(eventId)) return;
+      const previous = statuses.get(eventId) ?? 'saved';
+      const apply = (value: SaveStatus) =>
+        setLoaded((current) => {
+          if (!current) return current;
+          const next = new Map(current.statuses);
+          next.set(eventId, value);
+          return { ...current, statuses: next };
+        });
+
+      apply(status);
+      const { error } = await createClient()
+        .from('event_saves')
+        .update({ status, status_changed_at: new Date().toISOString() })
+        .eq('event_id', eventId)
+        .eq('user_id', userId);
+      if (error) apply(previous);
+    },
+    [userId, ids, statuses],
+  );
+
+  return { ids, statuses, toggle, setStatus };
 }

@@ -31,6 +31,7 @@ order by version;
 | `20261006100400_pilot_event_saves_policies.sql` | Доводка предыдущей миграции: в SQL Editor не применился её хвост, у `event_saves` не было политик и прав. |
 | `20261006100500_pilot_public_events.sql` | Гость читает одобренные события (афиша без входа). |
 | `20261006100600_pilot_teacher_requests_and_event_proposals.sql` | Заявка «Я учитель» (`request_teacher_role`), её видно в `admin_list_users`. Предложить событие на проверку может любой вошедший. |
+| `20261013100000_pilot_event_sources_applications_reminders.sql` | У события поля «источник» (`source_url`) и «сверено» (`verified_at`, ставит только админ). У `event_saves` статус: сохранил → подал заявку → участвовал. Журнал напоминаний `deadline_reminders`. |
 
 Как применить (любой способ):
 

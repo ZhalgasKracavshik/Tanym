@@ -19,7 +19,7 @@ import type { SchoolEvent } from '@/lib/events';
 import type { Dict, Language } from '@/lib/i18n';
 import { INTERESTS } from '@/lib/profileFields';
 import { avatarPhotoUrl } from '@/lib/supabase/avatarPhoto';
-import { usePublishedEvents, useSavedEvents } from '@/lib/supabase/events';
+import { usePublishedEvents, useSavedEvents, type SaveStatus } from '@/lib/supabase/events';
 import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
 import { Avatar } from './Avatar';
 import { Icon } from './Icon';
@@ -41,6 +41,8 @@ const TEXT: Dict<{
   startsOn: (date: string) => string;
   daysLeft: (n: number) => string;
   lastDay: string;
+  applied: string;
+  participated: string;
   forYou: (grade: number | null) => string;
   forYouEmpty: string;
   allEvents: string;
@@ -65,6 +67,8 @@ const TEXT: Dict<{
     startsOn: (date) => `проходит ${date}`,
     daysLeft: (n) => (n === 0 ? 'сегодня последний день' : `осталось ${n} дн.`),
     lastDay: 'сегодня последний день',
+    applied: 'заявка подана',
+    participated: 'участвовали',
     forYou: (grade) => (grade ? `Подходит для ${grade} класса` : 'Ещё в афише'),
     forYouEmpty: 'Пока всё подходящее уже у вас в списке.',
     allEvents: 'Вся афиша',
@@ -89,6 +93,8 @@ const TEXT: Dict<{
     startsOn: (date) => `${date} өтеді`,
     daysLeft: (n) => (n === 0 ? 'бүгін соңғы күн' : `${n} күн қалды`),
     lastDay: 'бүгін соңғы күн',
+    applied: 'өтінім берілді',
+    participated: 'қатыстыңыз',
     forYou: (grade) => (grade ? `${grade}-сыныпқа сай` : 'Афишада тағы бар'),
     forYouEmpty: 'Сізге сайдың бәрі тізімде.',
     allEvents: 'Бүкіл афиша',
@@ -113,6 +119,8 @@ const TEXT: Dict<{
     startsOn: (date) => `takes place ${date}`,
     daysLeft: (n) => (n === 0 ? 'last day today' : `${n} days left`),
     lastDay: 'last day today',
+    applied: 'applied',
+    participated: 'took part',
     forYou: (grade) => (grade ? `Fits grade ${grade}` : 'More events'),
     forYouEmpty: 'Everything that fits is already on your list.',
     allEvents: 'All events',
@@ -131,7 +139,7 @@ export function MyPath() {
   const t = TEXT[language];
   const { profile } = useSchoolAuth();
   const events = usePublishedEvents();
-  const { ids: savedIds, toggle } = useSavedEvents();
+  const { ids: savedIds, statuses, toggle } = useSavedEvents();
 
   const firstName = (profile?.name ?? '').split(' ')[0] || '';
   const grade = profile?.role === 'student' ? profile.grade : null;
@@ -204,9 +212,9 @@ export function MyPath() {
               </div>
             ) : (
               <div className="mt-3 space-y-5">
-                <EventGroup title={t.open} events={groups.open} language={language} t={t} />
-                <EventGroup title={t.closed} events={groups.closed} language={language} t={t} muted />
-                <EventGroup title={t.past} events={groups.past} language={language} t={t} muted />
+                <EventGroup title={t.open} events={groups.open} language={language} t={t} statuses={statuses} />
+                <EventGroup title={t.closed} events={groups.closed} language={language} t={t} statuses={statuses} muted />
+                <EventGroup title={t.past} events={groups.past} language={language} t={t} statuses={statuses} muted />
               </div>
             )}
           </section>
@@ -272,12 +280,14 @@ function EventGroup({
   events,
   language,
   t,
+  statuses,
   muted = false,
 }: {
   title: string;
   events: SchoolEvent[];
   language: Language;
   t: PathText;
+  statuses: Map<string, SaveStatus> | null;
   muted?: boolean;
 }) {
   if (events.length === 0) return null;
@@ -286,14 +296,25 @@ function EventGroup({
       <p className="text-xs font-medium uppercase tracking-wide text-ink-400">{title}</p>
       <ul className="mt-2 divide-y divide-ink-100 rounded-[var(--radius-card)] border border-ink-200 bg-white">
         {events.map((event) => (
-          <EventRow key={event.id} event={event} language={language} t={t} />
+          <EventRow key={event.id} event={event} language={language} t={t} status={statuses?.get(event.id)} />
         ))}
       </ul>
     </div>
   );
 }
 
-function EventRow({ event, language, t }: { event: SchoolEvent; language: Language; t: PathText }) {
+function EventRow({
+  event,
+  language,
+  t,
+  status: saveStatus,
+}: {
+  event: SchoolEvent;
+  language: Language;
+  t: PathText;
+  /** Статус из «Моих событий»; у подборки его нет. */
+  status?: SaveStatus;
+}) {
   const status = eventStatus(event);
   const meta = EVENT_TYPES.find((type) => type.id === event.type);
   const registrationRuns = status === 'open' || status === 'closing-soon';
@@ -316,7 +337,11 @@ function EventRow({ event, language, t }: { event: SchoolEvent; language: Langua
               : t.startsOn(formatEventDate(event.startsAt, language))}
           </span>
         </span>
-        {registrationRuns && (
+        {saveStatus === 'applied' || saveStatus === 'participated' ? (
+          <span className="shrink-0 rounded-[var(--radius-pill)] bg-success-50 px-2 py-0.5 text-xs font-semibold text-success-700">
+            {saveStatus === 'applied' ? t.applied : t.participated}
+          </span>
+        ) : registrationRuns && (
           <span
             className={`shrink-0 text-xs font-semibold ${status === 'closing-soon' ? 'text-danger-600' : 'text-ink-500'}`}
           >

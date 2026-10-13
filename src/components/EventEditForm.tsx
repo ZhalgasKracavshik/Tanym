@@ -51,6 +51,9 @@ const TEXT = {
     registrationUrlHint:
       'Если оставить пустым, на странице события останется только личная отметка «иду», без перехода куда-либо.',
     registrationUrlError: 'Проверьте ссылку для записи — она должна быть настоящим адресом.',
+    sourceUrl: 'Источник — где опубликовано событие',
+    sourceUrlHint: 'Ссылка на сайт или страницу организатора: по ней сверяют сроки, и ученик может открыть первоисточник.',
+    sourceUrlError: 'Проверьте ссылку на источник — она должна быть настоящим адресом.',
     covers: 'Уже загруженные изображения',
     coversHint: 'Первое изображение — обложка в афише.',
     coversFull: `Загружено ${MAX_IMAGES} из ${MAX_IMAGES} — чтобы добавить новое, уберите старое.`,
@@ -83,6 +86,7 @@ export interface EventEditInitial {
   free: boolean;
   /** Пустая строка — ссылки для записи нет. */
   registrationUrl: string;
+  sourceUrl: string;
   /** Пути в бакете card-covers, а не публичные ссылки. */
   coverPaths: string[];
 }
@@ -118,11 +122,12 @@ export function EventEditForm({
   const [prize, setPrize] = useState(initial.prize);
   const [free, setFree] = useState(initial.free);
   const [registrationUrl, setRegistrationUrl] = useState(initial.registrationUrl);
+  const [sourceUrl, setSourceUrl] = useState(initial.sourceUrl);
 
   /** Что из уже загруженного остаётся, в том порядке, в каком останется. */
   const [keptPaths, setKeptPaths] = useState<string[]>(initial.coverPaths);
   const [newFiles, setNewFiles] = useState<File[]>([]);
-  const [status, setStatus] = useState<'idle' | 'sending' | 'error' | 'denied' | 'bad-url'>('idle');
+  const [status, setStatus] = useState<'idle' | 'sending' | 'error' | 'denied' | 'bad-url' | 'bad-source'>('idle');
 
   const room = MAX_IMAGES - keptPaths.length;
 
@@ -173,6 +178,12 @@ export function EventEditForm({
       return;
     }
 
+    const safeSourceUrl = sourceUrl.trim() === '' ? null : normalizeSocialUrl(sourceUrl);
+    if (sourceUrl.trim() !== '' && safeSourceUrl === null) {
+      setStatus('bad-source');
+      return;
+    }
+
     setStatus('sending');
 
     const supabase = createClient();
@@ -208,6 +219,7 @@ export function EventEditForm({
         prize: prize || null,
         free,
         registration_url: safeRegistrationUrl,
+        source_url: safeSourceUrl,
         cover_paths: [...keptPaths, ...uploaded],
         /*
           Старая одиночная колонка гасится намеренно. Если её оставить, то
@@ -321,6 +333,20 @@ export function EventEditForm({
         <p className="mt-1 text-xs text-ink-400">{t.registrationUrlHint}</p>
       </div>
 
+      <div>
+        <label className="text-sm font-semibold text-ink-700" htmlFor="event-edit-source-url">
+          {t.sourceUrl}
+        </label>
+        <input
+          id="event-edit-source-url"
+          value={sourceUrl}
+          onChange={(e) => setSourceUrl(e.target.value)}
+          placeholder="https://"
+          className={`${inputCls} mt-2`}
+        />
+        <p className="mt-1 text-xs text-ink-400">{t.sourceUrlHint}</p>
+      </div>
+
       {keptPaths.length > 0 && (
         <div>
           <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -387,6 +413,7 @@ export function EventEditForm({
       {status === 'error' && <p className="text-sm font-semibold text-danger-600">{t.error}</p>}
       {status === 'denied' && <p className="text-sm font-semibold text-danger-600">{t.denied}</p>}
       {status === 'bad-url' && <p className="text-sm font-semibold text-danger-600">{t.registrationUrlError}</p>}
+      {status === 'bad-source' && <p className="text-sm font-semibold text-danger-600">{t.sourceUrlError}</p>}
 
       <div className="flex flex-wrap gap-3">
         <Button onClick={submit} disabled={status === 'sending'}>

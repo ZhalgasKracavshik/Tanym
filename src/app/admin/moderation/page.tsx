@@ -28,6 +28,7 @@ import {
 import { ADMIN_TEXT, AdminShell, Row, Section, useRows } from '../parts';
 import { useProofUrl } from '@/lib/supabase/proofUrl';
 import { formatEventDate } from '@/lib/events';
+import { almatyDateIso } from '@/lib/date';
 
 const TEXT = {
   pendingAchievements: 'Достижения на проверке',
@@ -78,7 +79,13 @@ function ModerationPanel({ language, reviewerId }: { language: Language; reviewe
   async function reviewEvent(id: string, decision: 'approved' | 'rejected', reviewerId: string) {
     await createClient()
       .from('published_events')
-      .update({ status: decision, reviewed_by: reviewerId, reviewed_at: new Date().toISOString() })
+      .update({
+        status: decision,
+        reviewed_by: reviewerId,
+        reviewed_at: new Date().toISOString(),
+        // Одобряя, админ сверяет сроки с источником — это и есть проверка.
+        ...(decision === 'approved' ? { verified_at: almatyDateIso() } : {}),
+      })
       .eq('id', id);
     bump();
   }

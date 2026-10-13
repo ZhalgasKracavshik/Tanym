@@ -21,16 +21,17 @@
 import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { EVENT_TYPES, daysLeftUntil, eventStatus, formatEventDate } from '@/lib/events';
+import { EVENT_TYPES, daysLeftUntil, deadlineIcs, eventStatus, formatEventDate } from '@/lib/events';
 import type { EventStatus, EventType, SchoolEvent } from '@/lib/events';
 import type { Dict } from '@/lib/i18n';
 import type { Language } from '@/lib/types';
 import { createClient } from '@/lib/supabase/client';
-import { normalizeSocialUrl } from '@/lib/social';
+import { normalizeSocialUrl, shortenUrl } from '@/lib/social';
+import { almatyDateIso } from '@/lib/date';
 import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
 import { useStore } from '@/components/StoreProvider';
 import { EventEditForm } from '@/components/EventEditForm';
-import { useSavedEvents } from '@/lib/supabase/events';
+import { useSavedEvents, type SaveStatus } from '@/lib/supabase/events';
 import type { EventEditInitial } from '@/components/EventEditForm';
 import { Icon } from '@/components/Icon';
 import type { IconName } from '@/components/Icon';
@@ -90,6 +91,14 @@ const TEXT: Dict<{
   unmark: string;
   guestSave: string;
   share: string;
+  calendar: string;
+  applied: string;
+  markApplied: string;
+  participated: string;
+  markParticipated: string;
+  verified: (date: string) => string;
+  source: string;
+  markVerified: string;
   shareText: (title: string, date: string) => string;
   confirmUnmark: (title: string) => string;
   edit: string;
@@ -133,6 +142,14 @@ const TEXT: Dict<{
     unmark: 'Убрать',
     guestSave: 'Войти и сохранить',
     share: 'Отправить в WhatsApp',
+    calendar: 'В календарь',
+    applied: 'Заявка подана',
+    markApplied: 'Я подал заявку',
+    participated: 'Вы участвовали',
+    markParticipated: 'Я участвовал',
+    verified: (date) => `Сроки сверены ${date}`,
+    source: 'Источник',
+    markVerified: 'Сверено сегодня',
     shareText: (title, date) => `${title} — регистрация до ${date}`,
     confirmUnmark: (title) => `Убрать «${title}» из ваших событий?`,
     edit: 'Редактировать',
@@ -175,6 +192,14 @@ const TEXT: Dict<{
     unmark: 'Алып тастау',
     guestSave: 'Кіріп, сақтау',
     share: 'WhatsApp-қа жіберу',
+    calendar: 'Күнтізбеге',
+    applied: 'Өтінім берілді',
+    markApplied: 'Өтінім бердім',
+    participated: 'Сіз қатыстыңыз',
+    markParticipated: 'Қатыстым',
+    verified: (date) => `Мерзімдер ${date} тексерілді`,
+    source: 'Дереккөз',
+    markVerified: 'Бүгін тексерілді',
     shareText: (title, date) => `${title} — тіркелу ${date} дейін`,
     confirmUnmark: (title) => `«${title}» сіздің іс-шараларыңыздан алынсын ба?`,
     edit: 'Өңдеу',
@@ -217,6 +242,14 @@ const TEXT: Dict<{
     unmark: 'Remove',
     guestSave: 'Log in to save',
     share: 'Share on WhatsApp',
+    calendar: 'Add to calendar',
+    applied: 'Application sent',
+    markApplied: 'I applied',
+    participated: 'You took part',
+    markParticipated: 'I took part',
+    verified: (date) => `Dates checked ${date}`,
+    source: 'Source',
+    markVerified: 'Checked today',
     shareText: (title, date) => `${title} — register by ${date}`,
     confirmUnmark: (title) => `Remove "${title}" from your events?`,
     edit: 'Edit',
@@ -280,6 +313,9 @@ interface EventRow {
   cover_path: string | null;
   cover_paths: string[] | null;
   status: 'pending' | 'approved' | 'rejected';
+  /** Появились миграцией pilot_event_sources_applications_reminders. */
+  source_url?: string | null;
+  verified_at?: string | null;
 }
 
 /** Пути обложек по порядку. Легаси-колонка — запасной источник, как в афише. */
@@ -314,7 +350,7 @@ export default function EventPage({ params }: PageProps<'/events/[id]'>) {
   const { id } = use(params);
   const { state } = useStore();
   // Сохранение — в базе (event_saves), см. useSavedEvents.
-  const { ids: savedIds, toggle: toggleSaved } = useSavedEvents();
+  const { ids: savedIds, statuses, toggle: toggleSaved, setStatus } = useSavedEvents();
   const { profile, isSignedIn, loading: authLoading } = useSchoolAuth();
   const t = TEXT[state.language];
 
@@ -380,6 +416,10 @@ export default function EventPage({ params }: PageProps<'/events/[id]'>) {
           t={t}
           language={state.language}
           registered={savedIds?.has(row.id) ?? false}
+          saveStatus={statuses?.get(row.id) ?? 'saved'}
+          onSetStatus={(status) => setStatus(row.id, status)}
+          isAdmin={profile?.role === 'admin'}
+          onVerified={() => setRefreshKey((key) => key + 1)}
           canSave={savedIds !== null && row.status === 'approved'}
           guest={!authLoading && !isSignedIn}
           onToggleRegistration={() => toggleSaved(row.id)}
@@ -419,6 +459,10 @@ function EventBody({
   t,
   language,
   registered,
+  saveStatus,
+  onSetStatus,
+  isAdmin,
+  onVerified,
   canSave,
   guest,
   onToggleRegistration,
@@ -432,6 +476,10 @@ function EventBody({
   t: PageText;
   language: Language;
   registered: boolean;
+  saveStatus: SaveStatus;
+  onSetStatus: (status: SaveStatus) => void;
+  isAdmin: boolean;
+  onVerified: () => void;
   /** Сохранять можно только одобренное — так же решает политика event_saves. */
   canSave: boolean;
   /** Гость: сохранить нельзя, вместо кнопки — вход. */
@@ -455,6 +503,7 @@ function EventBody({
     источником правды считается момент показа, а не момент записи.
   */
   const safeRegistrationUrl = event.registrationUrl ? normalizeSocialUrl(event.registrationUrl) : null;
+  const safeSourceUrl = row.source_url ? normalizeSocialUrl(row.source_url) : null;
   const meta = EVENT_TYPES.find((type) => type.id === event.type);
   const images = event.coverUrls ?? [];
   /*
@@ -485,6 +534,7 @@ function EventBody({
       prize: event.prize ?? '',
       free: event.free,
       registrationUrl: row.registration_url ?? '',
+      sourceUrl: row.source_url ?? '',
       coverPaths: coverPathsOf(row),
     };
 
@@ -640,8 +690,23 @@ function EventBody({
             <div className="flex flex-wrap items-center gap-2">
               <span className="flex items-center gap-2 text-sm font-semibold text-success-700">
                 <Icon name="check" size={16} />
-                {t.going}
+                {saveStatus === 'participated' ? t.participated : saveStatus === 'applied' ? t.applied : t.going}
               </span>
+              {/*
+                Статус — шаг к портфолио: сохранил → подал → участвовал.
+                «Подал» имеет смысл, пока идёт регистрация, «участвовал» —
+                когда заявка подана (docs/achievements-and-progress.md).
+              */}
+              {saveStatus === 'saved' && registrationRuns && (
+                <Button variant="secondary" size="sm" onClick={() => onSetStatus('applied')}>
+                  {t.markApplied}
+                </Button>
+              )}
+              {saveStatus === 'applied' && (
+                <Button variant="secondary" size="sm" onClick={() => onSetStatus('participated')}>
+                  {t.markParticipated}
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="sm"
@@ -683,6 +748,27 @@ function EventBody({
             <Icon name="link" size={14} />
             {t.share}
           </ButtonLink>
+
+          {/* Дедлайн в календарь телефона — напоминание без нашей почты. */}
+          {registrationRuns && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                const blob = new Blob([deadlineIcs(event, `${SITE_URL}/events/${event.id}`)], {
+                  type: 'text/calendar;charset=utf-8',
+                });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'tanym-deadline.ics';
+                link.click();
+                setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+              }}
+            >
+              <Icon name="calendar" size={14} />
+              {t.calendar}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -715,6 +801,33 @@ function EventBody({
         */}
         {event.prize && <Fact icon="trophy" label={t.prize} value={event.prize} />}
       </dl>
+
+      {/*
+        Откуда сведения и когда их сверяли. Просроченная афиша опаснее
+        пустой: ученик должен видеть, что сроки кто-то проверял, и иметь
+        возможность открыть первоисточник сам.
+      */}
+      {(row.verified_at || safeSourceUrl || isAdmin) && (
+        <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-ink-200 pt-4 text-xs text-ink-500">
+          {row.verified_at && (
+            <span className="flex items-center gap-1.5">
+              <Icon name="check" size={13} className="text-success-600" />
+              {t.verified(formatEventDate(row.verified_at.slice(0, 10), language))}
+            </span>
+          )}
+          {safeSourceUrl && (
+            <a
+              href={safeSourceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-brand-600 hover:underline"
+            >
+              {t.source}: {shortenUrl(safeSourceUrl)}
+            </a>
+          )}
+          {isAdmin && <MarkVerifiedButton eventId={row.id} label={t.markVerified} onDone={onVerified} />}
+        </div>
+      )}
     </article>
   );
 }
@@ -851,6 +964,28 @@ function GalleryButton({
       }`}
     >
       <Icon name={side === 'left' ? 'chevron-left' : 'chevron-right'} size={18} />
+    </button>
+  );
+}
+
+/**
+ * «Сверено сегодня» — админ подтверждает, что сроки совпадают с
+ * первоисточником. Ставить дату может только админ (триггер в базе).
+ */
+function MarkVerifiedButton({ eventId, label, onDone }: { eventId: string; label: string; onDone: () => void }) {
+  const [busy, setBusy] = useState(false);
+  return (
+    <button
+      disabled={busy}
+      onClick={async () => {
+        setBusy(true);
+        await createClient().from('published_events').update({ verified_at: almatyDateIso() }).eq('id', eventId);
+        setBusy(false);
+        onDone();
+      }}
+      className="rounded-[var(--radius-pill)] border border-ink-200 px-2.5 py-1 font-semibold text-ink-600 hover:border-brand-300 hover:text-brand-600 disabled:opacity-50"
+    >
+      {label}
     </button>
   );
 }

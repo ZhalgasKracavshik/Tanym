@@ -98,3 +98,41 @@ export function pickNearestDeadline(
   if (saved) return { event: saved, fromSaved: true };
   return open[0] ? { event: open[0], fromSaved: false } : null;
 }
+
+/**
+ * Файл календаря (.ics) с дедлайном регистрации — для кнопки «В календарь».
+ *
+ * Напоминание в телефоне ученика срабатывает без нашей почты и без
+ * интернета: событие на весь день в дату дедлайна плюс сигнал за сутки.
+ * Строки экранируются по RFC 5545 (запятая, точка с запятой, перенос).
+ */
+export function deadlineIcs(event: Pick<SchoolEvent, 'id' | 'title' | 'registrationDeadline'>, url: string): string {
+  const escape = (value: string) =>
+    value.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
+  const day = event.registrationDeadline.replace(/-/g, '');
+  const next = new Date(`${event.registrationDeadline}T12:00:00Z`);
+  next.setUTCDate(next.getUTCDate() + 1);
+  const dayAfter = next.toISOString().slice(0, 10).replace(/-/g, '');
+  const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+
+  return [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Tanym//Events//RU',
+    'BEGIN:VEVENT',
+    `UID:deadline-${event.id}@tanym`,
+    `DTSTAMP:${stamp}`,
+    `DTSTART;VALUE=DATE:${day}`,
+    `DTEND;VALUE=DATE:${dayAfter}`,
+    `SUMMARY:${escape(`Дедлайн регистрации: ${event.title}`)}`,
+    `DESCRIPTION:${escape(url)}`,
+    `URL:${url}`,
+    'BEGIN:VALARM',
+    'TRIGGER:-P1D',
+    'ACTION:DISPLAY',
+    `DESCRIPTION:${escape(`Завтра последний день регистрации: ${event.title}`)}`,
+    'END:VALARM',
+    'END:VEVENT',
+    'END:VCALENDAR',
+  ].join('\r\n');
+}

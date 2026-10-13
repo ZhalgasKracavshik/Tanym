@@ -11,7 +11,8 @@ const load = (path) => import(pathToFileURL(join(root, path)).href);
 
 const { isDisabledPath, isAiLive } = await load('src/lib/pilot.ts');
 const { buildCsp, generateNonce } = await load('src/lib/security/csp.ts');
-const { pickNearestDeadline } = await load('src/lib/events.ts');
+const { pickNearestDeadline, deadlineIcs } = await load('src/lib/events.ts');
+const { reminderKindFor, addDaysIso, buildReminderEmail } = await load('src/lib/notifications/deadlineReminder.ts');
 
 const problems = [];
 const expect = (condition, message) => {
@@ -107,6 +108,27 @@ expect(
   'есть сохранённое открытое — берётся оно, закрытое сохранённое пропускается',
 );
 expect(pickNearestDeadline([event('closed', '2026-10-01')], null, today) === null, 'всё закрыто — блока нет');
+
+/* Напоминания о дедлайне: ровно за 7 и за 1 день, без сдвига суток. */
+expect(addDaysIso('2026-10-30', 7) === '2026-11-06', 'addDaysIso переходит через месяц');
+expect(addDaysIso('2026-12-31', 1) === '2027-01-01', 'addDaysIso переходит через год');
+expect(reminderKindFor('2026-10-13', '2026-10-06') === 'd7', 'за 7 дней — напоминание d7');
+expect(reminderKindFor('2026-10-07', '2026-10-06') === 'd1', 'за 1 день — напоминание d1');
+expect(reminderKindFor('2026-10-06', '2026-10-06') === null, 'в сам день дедлайна письма нет');
+expect(reminderKindFor('2026-10-10', '2026-10-06') === null, 'за 4 дня письма нет');
+const mail = buildReminderEmail('<b>Айгерим</b>', [
+  { eventId: 'e1', title: 'Олимпиада <script>alert(1)</script>', deadlineIso: '2026-10-07', kind: 'd1' },
+], 'https://tanym.kz');
+expect(!mail.html.includes('<script>') && !mail.html.includes('<b>Айгерим'), 'письмо экранирует имя и название');
+expect(mail.subject.startsWith('Завтра'), 'тема письма за 1 день — «Завтра…»');
+expect(mail.text.includes('https://tanym.kz/events/e1'), 'в письме ссылка на событие');
+expect(!isDisabledPath('/api/cron/deadline-reminders'), 'крон напоминаний не закрыт пилотом');
+
+/* Файл календаря: дата дедлайна, сигнал за сутки, экранирование. */
+const ics = deadlineIcs({ id: 'e1', title: 'Олимпиада; этап, 1', registrationDeadline: '2026-12-31' }, 'https://tanym.kz/events/e1');
+expect(ics.includes('DTSTART;VALUE=DATE:20261231') && ics.includes('DTEND;VALUE=DATE:20270101'), 'ics: событие на весь день дедлайна');
+expect(ics.includes('TRIGGER:-P1D'), 'ics: сигнал за сутки');
+expect(ics.includes('Олимпиада\\; этап\\, 1'), 'ics: ; и , экранированы');
 
 if (problems.length > 0) {
   console.error('✗ Проверка пилота не прошла:');

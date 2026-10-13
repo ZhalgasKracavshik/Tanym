@@ -14,6 +14,7 @@ import { Button } from './ui';
 import { Icon } from './Icon';
 import { ImageGalleryField } from './ImageGalleryField';
 import { coverExtension } from '@/lib/storageKey';
+import { almatyDateIso } from '@/lib/date';
 
 const TEXT = {
   ru: {
@@ -33,6 +34,9 @@ const TEXT = {
     registrationUrlHint:
       'Если оставить пустым, на странице события будет только кнопка «Сохранить в мои события», без перехода к организатору.',
     registrationUrlError: 'Проверьте ссылку для записи — она должна быть настоящим адресом.',
+    sourceUrl: 'Источник — где опубликовано событие',
+    sourceUrlHint: 'Ссылка на сайт или страницу организатора: по ней сверяют сроки, и ученик может открыть первоисточник.',
+    sourceUrlError: 'Проверьте ссылку на источник — она должна быть настоящим адресом.',
     publish: 'Опубликовать',
     propose: 'Отправить на проверку',
     publishing: 'Отправляем…',
@@ -73,9 +77,10 @@ export function EventPublishForm({
   const [prize, setPrize] = useState('');
   const [free, setFree] = useState(true);
   const [registrationUrl, setRegistrationUrl] = useState('');
+  const [sourceUrl, setSourceUrl] = useState('');
   const [covers, setCovers] = useState<File[]>([]);
   const [status, setStatus] = useState<
-    'idle' | 'sending' | 'done' | 'error' | 'bad-url' | 'title-length' | 'dates-order'
+    'idle' | 'sending' | 'done' | 'error' | 'bad-url' | 'bad-source' | 'title-length' | 'dates-order'
   >('idle');
 
 
@@ -131,6 +136,12 @@ export function EventPublishForm({
       return;
     }
 
+    const safeSourceUrl = sourceUrl.trim() === '' ? null : normalizeSocialUrl(sourceUrl);
+    if (sourceUrl.trim() !== '' && safeSourceUrl === null) {
+      setStatus('bad-source');
+      return;
+    }
+
     setStatus('sending');
     const supabase = createClient();
     const gradeList = grades
@@ -160,6 +171,9 @@ export function EventPublishForm({
       prize: prize || null,
       free,
       registration_url: safeRegistrationUrl,
+      source_url: safeSourceUrl,
+      // Админ публикует то, что сверил сам, — дата проверки ставится сразу.
+      ...(needsReview ? {} : { verified_at: almatyDateIso() }),
     }).select('id').single();
 
     if (error || !inserted) {
@@ -173,6 +187,7 @@ export function EventPublishForm({
     setDescription('');
     setPrize('');
     setRegistrationUrl('');
+    setSourceUrl('');
     onPublished(inserted.id as string);
   }
 
@@ -240,9 +255,24 @@ export function EventPublishForm({
         <p className="mt-1 text-xs text-ink-400">{t.registrationUrlHint}</p>
       </div>
 
+      <div>
+        <label className="text-sm font-semibold text-ink-700" htmlFor="event-source-url">
+          {t.sourceUrl}
+        </label>
+        <input
+          id="event-source-url"
+          value={sourceUrl}
+          onChange={(e) => setSourceUrl(e.target.value)}
+          placeholder="https://"
+          className={`${inputCls} mt-2`}
+        />
+        <p className="mt-1 text-xs text-ink-400">{t.sourceUrlHint}</p>
+      </div>
+
       {status === 'done' && <p className="text-sm font-semibold text-success-700">{t.done}</p>}
       {status === 'error' && <p className="text-sm font-semibold text-danger-600">{t.error}</p>}
       {status === 'bad-url' && <p className="text-sm font-semibold text-danger-600">{t.registrationUrlError}</p>}
+      {status === 'bad-source' && <p className="text-sm font-semibold text-danger-600">{t.sourceUrlError}</p>}
       {status === 'title-length' && <p className="text-sm font-semibold text-danger-600">{t.titleTooShort}</p>}
       {status === 'dates-order' && <p className="text-sm font-semibold text-danger-600">{t.datesOrder}</p>}
 

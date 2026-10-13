@@ -45,7 +45,8 @@ const PUBLIC_PATHS = new Set([
  * сессии ещё нет. /api/profile — его дёргает сам провайдер авторизации
  * со страниц входа, и он корректно отвечает {profile: null} гостю.
  */
-const PUBLIC_PREFIXES = ['/auth/callback', '/api/profile', '/api/csp-report'];
+// /api/cron — вызывает Vercel Cron без сессии; роут сам проверяет CRON_SECRET.
+const PUBLIC_PREFIXES = ['/auth/callback', '/api/profile', '/api/csp-report', '/api/cron'];
 
 /**
  * Афиша открыта гостям: ссылку на олимпиаду пересылают в чат класса, и
