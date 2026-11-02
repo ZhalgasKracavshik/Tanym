@@ -80,3 +80,81 @@ export function formatEventDate(dateIso: string, language: Language): string {
     timeZone: 'Asia/Almaty',
   }).format(new Date(`${dateIso}T12:00:00+05:00`));
 }
+
+/** Ближайший открытый дедлайн: сначала среди сохранённых, затем среди всех. */
+export function pickNearestDeadline(
+  events: SchoolEvent[],
+  savedIds: Set<string> | null,
+  today: string = almatyDateIso(),
+): { event: SchoolEvent; fromSaved: boolean } | null {
+  const open = events
+    .filter((event) => {
+      const status = eventStatus(event, today);
+      return status === 'open' || status === 'closing-soon';
+    })
+    .sort((a, b) => a.registrationDeadline.localeCompare(b.registrationDeadline));
+
+  const saved = savedIds ? open.find((event) => savedIds.has(event.id)) : undefined;
+  if (saved) return { event: saved, fromSaved: true };
+  return open[0] ? { event: open[0], fromSaved: false } : null;
+}
+
+/**
+ * Файл календаря (.ics) с дедлайном регистрации — для кнопки «В календарь».
+ *
+ * Напоминание в телефоне ученика срабатывает без нашей почты и без
+ * интернета: событие на весь день в дату дедлайна плюс сигнал за сутки.
+ * Строки экранируются по RFC 5545 (запятая, точка с запятой, перенос).
+ */
+export function deadlineIcs(event: Pick<SchoolEvent, 'id' | 'title' | 'registrationDeadline'>, url: string): string {
+  const escape = (value: string) =>
+    value.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
+  const day = event.registrationDeadline.replace(/-/g, '');
+  const next = new Date(`${event.registrationDeadline}T12:00:00Z`);
+  next.setUTCDate(next.getUTCDate() + 1);
+  const dayAfter = next.toISOString().slice(0, 10).replace(/-/g, '');
+  const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+
+  return [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Tanym//Events//RU',
+    'BEGIN:VEVENT',
+    `UID:deadline-${event.id}@tanym`,
+    `DTSTAMP:${stamp}`,
+    `DTSTART;VALUE=DATE:${day}`,
+    `DTEND;VALUE=DATE:${dayAfter}`,
+    `SUMMARY:${escape(`Дедлайн регистрации: ${event.title}`)}`,
+    `DESCRIPTION:${escape(url)}`,
+    `URL:${url}`,
+    'BEGIN:VALARM',
+    'TRIGGER:-P1D',
+    'ACTION:DISPLAY',
+    `DESCRIPTION:${escape(`Завтра последний день регистрации: ${event.title}`)}`,
+    'END:VALARM',
+    'END:VEVENT',
+    'END:VCALENDAR',
+  ].join('\r\n');
+}
+
+/**
+ * Классы из поля формы: «9,10,11», «9-11», «9–11», «5 6 7». Только 1–11.
+ *
+ * Раньше «9-11» превращалось в пустой список, а пустой список значит «для
+ * всех» — событие для старшеклассников уходило пятиклассникам в афишу и
+ * дайджест.
+ */
+export function parseGrades(input: string): number[] {
+  const result = new Set<number>();
+  for (const part of input.split(/[,;\s]+/).filter(Boolean)) {
+    const range = part.match(/^(\d{1,2})\s*[-–—]\s*(\d{1,2})$/);
+    if (range) {
+      const [from, to] = [Number(range[1]), Number(range[2])].sort((a, b) => a - b);
+      for (let grade = from; grade <= to; grade += 1) if (grade >= 1 && grade <= 11) result.add(grade);
+      continue;
+    }
+    const grade = Number(part);
+    if (Number.isInteger(grade) && grade >= 1 && grade <= 11) result.add(grade);
+  }
+  return [...result].sort((a, b) => a - b);
+}

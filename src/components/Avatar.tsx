@@ -1,28 +1,19 @@
 'use client';
 
 /**
- * Аватар пользователя в стиле WhatsApp / современных мессенджеров.
+ * Аватар: фотография, а без неё — инициалы на плоском цвете.
  *
- * Если загружена фотография — отображает её.
- * По умолчанию — аккуратное стоковое изображение (узнаваемый силуэт пользователя
- * на нейтральном или выбранном фоне, как в WhatsApp).
+ * Раньше без фото рисовался серый силуэт на сером фоне, одинаковый у всех,
+ * и выбранный в профиле цвет не применялся вовсе. Безликий кружок — это
+ * то, что пользователь назвал «скучной иконкой профиля»: ни у одного живого
+ * продукта в нише (olimpiada.ru, Codeforces, Telegram, Instagram) его нет —
+ * там фото, инициалы или фирменный рисунок.
+ *
+ * Цвет — сохранённый в профиле, а если не выбран, стабильный по имени: у
+ * разных людей разные цвета ещё до того, как кто-то дошёл до настроек.
  */
 
-export function DefaultUserIcon({ className = 'text-white' }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 40 40"
-      fill="currentColor"
-      className={`w-full h-full ${className}`}
-      aria-hidden="true"
-    >
-      {/* Голова */}
-      <circle cx="20" cy="14" r="6.5" />
-      {/* Плечи / бюст */}
-      <path d="M7 36C7.5 26.5 13.5 23.5 20 23.5C26.5 23.5 32.5 26.5 33 36Z" />
-    </svg>
-  );
-}
+import { avatarBackground, avatarInitials } from '@/lib/avatar';
 
 export function Avatar({
   name = '',
@@ -33,7 +24,7 @@ export function Avatar({
 }: {
   name?: string;
   colorId?: string | null;
-  /** Готовая ссылка на фотографию. Без неё — стоковое изображение силуэта. */
+  /** Готовая ссылка на фотографию. Без неё — инициалы. */
   photoUrl?: string | null;
   size?: number;
   className?: string;
@@ -47,7 +38,7 @@ export function Avatar({
         width={size}
         height={size}
         loading="lazy"
-        className={`shrink-0 rounded-full bg-ink-100 object-cover border border-black/5 ${className}`}
+        className={`shrink-0 rounded-full bg-ink-100 object-cover ${className}`}
         style={{ width: size, height: size }}
       />
     );
@@ -56,16 +47,16 @@ export function Avatar({
   return (
     <span
       aria-hidden
-      className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-black/5 bg-[#cfd7df] text-white shadow-inner ${className}`}
+      className={`relative flex shrink-0 select-none items-center justify-center rounded-full font-semibold leading-none tracking-[-0.02em] text-white ${className}`}
       style={{
         width: size,
         height: size,
-        background: colorId ? undefined : '#d0d7de',
+        background: avatarBackground(colorId ?? null, name || '?'),
+        // Две буквы занимают ~40% диаметра: крупнее — упираются в край на 24px.
+        fontSize: Math.max(10, Math.round(size * 0.4)),
       }}
     >
-      <span className="w-[82%] h-[82%] flex items-end justify-center translate-y-[8%] text-[#f0f3f6]">
-        <DefaultUserIcon />
-      </span>
+      {avatarInitials(name)}
     </span>
   );
 }

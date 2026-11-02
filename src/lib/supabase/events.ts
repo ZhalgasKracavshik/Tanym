@@ -8,9 +8,13 @@
  * id, которого в базе уже нет.
  */
 
-import { useEffect, useState } from 'react';
+import { createContext, createElement, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { createClient } from './client';
+import { useSchoolAuth } from './useSchoolAuth';
+import { useStore } from '@/components/StoreProvider';
 import type { EventType, SchoolEvent } from '@/lib/events';
+import { almatyDateIso } from '@/lib/date';
+import { addDaysIso } from '@/lib/notifications/deadlineReminder';
 
 interface PublishedEventRow {
   id: string;
@@ -28,6 +32,7 @@ interface PublishedEventRow {
   free: boolean;
   cover_path: string | null;
   cover_paths: string[] | null;
+  registration_url: string | null;
 }
 
 function rowToEvent(row: PublishedEventRow): SchoolEvent {
@@ -45,6 +50,7 @@ function rowToEvent(row: PublishedEventRow): SchoolEvent {
     subjectId: row.subject_id ?? undefined,
     prize: row.prize ?? undefined,
     free: row.free,
+    registrationUrl: row.registration_url,
     /*
       cover_path остаётся как запасной источник: колонка была одиночной,
       и у событий, опубликованных до перехода на галерею, ссылка лежит
@@ -62,9 +68,20 @@ export function usePublishedEvents(refreshKey = 0) {
     const supabase = createClient();
     let cancelled = false;
 
+    /*
+      Явный фильтр по статусу, хотя RLS и так прячет чужие заявки: автору
+      и админу политика отдаёт ещё и неодобренное, а в общей афише его
+      быть не должно. Заявки на проверке видны в /admin/moderation.
+    */
     supabase
       .from('published_events')
       .select('*')
+      .eq('status', 'approved')
+      /*
+        Прошедшие старше полугода не грузим: PostgREST отдаёт максимум 1000
+        строк, и при сортировке по сроку первыми отрезались бы как раз новые.
+      */
+      .gte('starts_at', addDaysIso(almatyDateIso(), -180))
       .order('registration_deadline', { ascending: true })
       .then(({ data }) => {
         if (!cancelled) setEvents((data ?? []).map(rowToEvent));
@@ -76,4 +93,181 @@ export function usePublishedEvents(refreshKey = 0) {
   }, [refreshKey]);
 
   return events;
+}
+
+/**
+ * «Мои события» — сохранённые учеником события, таблица event_saves.
+ *
+ * Раньше отметка жила в localStorage (state.eventRegistrations) и терялась
+ * при входе с другого устройства, а ближайший дедлайн в кабинете считался
+ * только в том браузере, где её поставили. Теперь источник правды — база.
+ *
+ * Старые локальные отметки переносятся один раз: при первой загрузке они
+ * вставляются в event_saves и стираются из хранилища. Событие, которого
+ * больше нет, политика просто не вставит — и это правильно.
+ *
+ * ids === null — ещё грузим (или гость): кнопку сохранения не показываем,
+ * чем показать её не в том состоянии.
+ */
+/**
+ * Статус сохранённого события: сохранил → подал заявку → участвовал.
+ * Первый шаг новой логики достижений (docs/achievements-and-progress.md).
+ */
+export type SaveStatus = 'saved' | 'applied' | 'participated';
+
+function useSavedEventsState() {
+  const { profile } = useSchoolAuth();
+  const { state, clearEventRegistrations } = useStore();
+  const userId = profile?.id ?? null;
+  const [loaded, setLoaded] = useState<{
+    userId: string;
+    ids: Set<string>;
+    statuses: Map<string, SaveStatus>;
+  } | null>(null);
+  const migrated = useRef(false);
+
+  // Локальные отметки читаются один раз — для переноса, а не как состояние.
+  const legacyIds = useRef(state.eventRegistrations);
+
+  useEffect(() => {
+    if (!userId) return;
+    const supabase = createClient();
+    let cancelled = false;
+
+    async function load() {
+      if (!migrated.current && legacyIds.current.length > 0) {
+        migrated.current = true;
+        await supabase
+          .from('event_saves')
+          .upsert(
+            legacyIds.current.map((eventId) => ({ user_id: userId, event_id: eventId })),
+            { onConflict: 'user_id,event_id', ignoreDuplicates: true },
+          );
+        clearEventRegistrations();
+      }
+
+      /*
+        select('*'), а не перечисление колонок: статус появился миграцией
+        pilot_event_sources_applications_reminders, и до её применения
+        запрос с явным status упал бы целиком — вместе со списком сохранённых.
+      */
+      const { data } = await supabase.from('event_saves').select('*');
+      if (!cancelled) {
+        const rows = (data ?? []) as { event_id: string; status?: SaveStatus }[];
+        setLoaded({
+          userId: userId!,
+          ids: new Set(rows.map((row) => row.event_id)),
+          statuses: new Map(rows.map((row) => [row.event_id, row.status ?? 'saved'])),
+        });
+      }
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, clearEventRegistrations]);
+
+  const ids = loaded && loaded.userId === userId ? loaded.ids : null;
+  const statuses = loaded && loaded.userId === userId ? loaded.statuses : null;
+
+  /**
+   * Переключает сохранение. Состояние меняется сразу, запрос идёт следом;
+   * при отказе базы отметка откатывается — иначе кнопка врала бы.
+   */
+  const toggle = useCallback(
+    async (eventId: string) => {
+      if (!userId || !ids) return;
+      const wasSaved = ids.has(eventId);
+      const flip = (current: Set<string>, save: boolean) => {
+        const next = new Set(current);
+        if (save) next.add(eventId);
+        else next.delete(eventId);
+        return next;
+      };
+
+      /*
+        Статус меняется вместе с отметкой: убранное и снова сохранённое
+        событие в базе — новая строка со статусом «сохранено», и на экране
+        должно быть так же. Иначе «Заявка подана» оставалась висеть, а крон
+        слал напоминания «вы ещё не подали заявку».
+      */
+      const reStatus = (current: Map<string, SaveStatus>, save: boolean, previous?: SaveStatus) => {
+        const next = new Map(current);
+        if (save) next.set(eventId, previous ?? 'saved');
+        else next.delete(eventId);
+        return next;
+      };
+      const previousStatus = statuses?.get(eventId);
+
+      setLoaded((current) =>
+        current ? { ...current, ids: flip(current.ids, !wasSaved), statuses: reStatus(current.statuses, !wasSaved) } : current,
+      );
+
+      const supabase = createClient();
+      const { error } = wasSaved
+        ? await supabase.from('event_saves').delete().eq('event_id', eventId).eq('user_id', userId)
+        : await supabase.from('event_saves').insert({ user_id: userId, event_id: eventId });
+
+      if (error) {
+        setLoaded((current) =>
+          current
+            ? { ...current, ids: flip(current.ids, wasSaved), statuses: reStatus(current.statuses, wasSaved, previousStatus) }
+            : current,
+        );
+      }
+    },
+    [userId, ids, statuses],
+  );
+
+  /**
+   * Меняет статус сохранённого события («Я подал заявку»). Как и toggle —
+   * сразу на экране, с откатом, если база отказала.
+   */
+  const setStatus = useCallback(
+    async (eventId: string, status: SaveStatus) => {
+      if (!userId || !statuses || !ids?.has(eventId)) return;
+      const previous = statuses.get(eventId) ?? 'saved';
+      const apply = (value: SaveStatus) =>
+        setLoaded((current) => {
+          if (!current) return current;
+          const next = new Map(current.statuses);
+          next.set(eventId, value);
+          return { ...current, statuses: next };
+        });
+
+      apply(status);
+      const { error } = await createClient()
+        .from('event_saves')
+        .update({ status, status_changed_at: new Date().toISOString() })
+        .eq('event_id', eventId)
+        .eq('user_id', userId);
+      if (error) apply(previous);
+    },
+    [userId, ids, statuses],
+  );
+
+  return { ids, statuses, toggle, setStatus };
+}
+
+type SavedEvents = ReturnType<typeof useSavedEventsState>;
+
+const SavedEventsContext = createContext<SavedEvents | null>(null);
+
+/**
+ * Одно состояние «Моих событий» на всё приложение (src/app/layout.tsx).
+ *
+ * Раньше каждый компонент вызывал хук сам и держал свою копию: меню
+ * профиля в шапке грузило список один раз и до перезагрузки показывало
+ * «ничего не сохранено», хотя на странице события звезда уже горела.
+ */
+export function SavedEventsProvider({ children }: { children: ReactNode }) {
+  const value = useSavedEventsState();
+  return createElement(SavedEventsContext.Provider, { value }, children);
+}
+
+export function useSavedEvents(): SavedEvents {
+  const value = useContext(SavedEventsContext);
+  if (!value) throw new Error('useSavedEvents: нет SavedEventsProvider выше по дереву');
+  return value;
 }

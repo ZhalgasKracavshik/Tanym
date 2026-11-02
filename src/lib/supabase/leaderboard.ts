@@ -52,8 +52,13 @@ export function useSchoolLeaderboard(excludeStudentId: string | null) {
 
           Баллы даются только за первое верное решение задания, поэтому
           перерешивание с уже известными ответами больше ничего не даёт.
+
+          Через функцию, а не напрямую из вьюхи: вьюха теперь работает с
+          правами читающего и отдаёт только свою строку (и класс — учителю).
+          leaderboard_progress() отдаёт всем вошедшим одни агрегаты для
+          рейтинга — без счётчиков попыток.
         */
-        supabase.from('verified_progress').select('student_id, points, topics_touched, streak_current'),
+        supabase.rpc('leaderboard_progress'),
         supabase
           .from('portfolio_achievements')
           .select('student_id, points')

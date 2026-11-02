@@ -33,11 +33,12 @@ const ROLE_LABEL: Record<string, string> = {
 };
 
 /*
-  Роль центра в переключателе есть, но менять её вручную незачем — она
-  назначается своей формой регистрации. Показывается она затем, чтобы
-  администратор понимал, кто перед ним, а не видел сырое «center».
+  «Учебный центр» здесь не назначается: admin_set_role его не принимает
+  (центры на пилоте выключены), и кнопка только показывала ошибку базы.
+  Подпись ROLE_LABEL.center осталась — чтобы у старых центров была роль
+  словами, а не сырое «center».
 */
-const ROLES = ['student', 'teacher', 'admin', 'center'] as const;
+const ROLES = ['student', 'teacher', 'admin'] as const;
 
 function UsersPanel() {
   const { profile: me } = useSchoolAuth();
@@ -75,6 +76,10 @@ function UsersPanel() {
   }, [refreshKey]);
 
   async function setRole(id: string, role: string) {
+    // Админ видит почты всех детей и публикует всем — такое не выдают одним случайным нажатием.
+    if (role === 'admin' && !window.confirm('Сделать этого человека администратором? Он получит доступ ко всем данным и модерации.')) {
+      return;
+    }
     setBusyId(id);
     setError(null);
     const { error: rpcError } = await createClient().rpc('admin_set_role', {
@@ -83,7 +88,13 @@ function UsersPanel() {
     });
     setBusyId(null);
     if (rpcError) {
-      setError(rpcError.message);
+      setError(
+        /mfa_required/.test(rpcError.message)
+          ? 'Нужен код второго фактора — обновите страницу и введите его.'
+          : /последнего администратора/.test(rpcError.message)
+            ? 'Нельзя снять роль с последнего администратора.'
+            : 'Роль не изменилась. Попробуйте ещё раз.',
+      );
       return;
     }
     setRefreshKey((key) => key + 1);
@@ -106,8 +117,41 @@ function UsersPanel() {
     return haystack.includes(needle);
   });
 
+  /*
+    Заявки учителей — первыми и отдельно от общего списка: на пилоте роль
+    не спрашивают при регистрации, учителем становятся заявкой из профиля
+    (request_teacher_role). Подтверждение — та же admin_set_role, она же
+    снимает заявку.
+  */
+  const requests = (users ?? []).filter((row) => row.teacher_requested_at && String(row.role) === 'student');
+
   return (
     <div>
+      {requests.length > 0 && (
+        <Section title={`Заявки учителей · ${requests.length}`}>
+          <p className="mb-3 text-xs text-ink-400">
+            Проверьте почту и имя: учитель может предлагать события и публиковать материалы в архив.
+          </p>
+          <ul className="divide-y divide-ink-100">
+            {requests.map((row) => (
+              <li key={row.id} className="flex flex-wrap items-center gap-3 py-3">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-semibold text-ink-900">{String(row.name ?? 'Без имени')}</p>
+                  <p className="truncate text-xs text-ink-500">{String(row.email ?? '')}</p>
+                </div>
+                <button
+                  disabled={busyId === row.id}
+                  onClick={() => setRole(row.id, 'teacher')}
+                  className="rounded-[var(--radius-pill)] bg-ink-900 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-ink-800 disabled:opacity-50"
+                >
+                  Сделать учителем
+                </button>
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
+
       {error && (
         <div className="mb-6">
           <Alert tone="danger">{error}</Alert>

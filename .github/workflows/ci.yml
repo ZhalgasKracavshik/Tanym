@@ -1,0 +1,78 @@
+name: ci
+
+# Проверки, которые раньше запускались только руками: тесты, типы, линтер,
+# сборка. Плюс аудит зависимостей и граница сервисного ключа Supabase
+# (перенесено из Ulagat: .github/workflows/security.yml).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Раз в неделю — чтобы новые уязвимости в неизменных зависимостях всплывали сами.
+    - cron: "0 6 * * 1"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Тесты, типы, линтер, сборка
+    runs-on: ubuntu-latest
+    env:
+      # Сборке нужны публичные переменные; настоящие значения не требуются.
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder
+      NEXT_PUBLIC_SITE_URL: https://tanym-alpha.vercel.app
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run build
+
+  dependencies:
+    name: Аудит зависимостей
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: npm audit (high и выше)
+        run: npm audit --audit-level=high --omit=dev
+
+  secret-boundary:
+    name: Сервисный ключ не попадает в браузер
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Проверка границы SUPABASE_SERVICE_ROLE_KEY
+        run: |
+          set -e
+          # 1) ни один клиентский файл не читает сервисный ключ и не импортирует adminClient
+          hits=$(grep -rlZ "^'use client'" src 2>/dev/null \
+            | xargs -0 grep -lE "SERVICE_ROLE|@/lib/supabase/admin" 2>/dev/null || true)
+          if [ -n "$hits" ]; then
+            echo "::error::Сервисный ключ или adminClient в клиентском файле:"
+            echo "$hits"
+            exit 1
+          fi
+          # 2) ключ никогда не бывает NEXT_PUBLIC_
+          if grep -rn "NEXT_PUBLIC_SUPABASE_SERVICE_ROLE" src .env.example 2>/dev/null; then
+            echo "::error::Сервисный ключ не должен быть NEXT_PUBLIC_-переменной"
+            exit 1
+          fi
+          echo "Граница сервисного ключа в порядке"

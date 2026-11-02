@@ -247,7 +247,8 @@ export function AiTextScaleControl({
           aria-label={SCALE_LABEL[option]}
           title={SCALE_LABEL[option]}
           className={
-            'rounded-[var(--radius-pill)] px-2 py-0.5 font-medium transition-colors ' +
+            // min-h/min-w 8 (32px) — по букве «А» нужно попадать пальцем.
+            'flex min-h-8 min-w-8 items-center justify-center rounded-[var(--radius-pill)] px-2 font-medium transition-colors ' +
             (option === 's' ? 'text-[11px] ' : option === 'm' ? 'text-[13px] ' : 'text-[15px] ') +
             (scale === option ? 'bg-brand-500 text-white' : 'text-ink-400 hover:bg-ink-50 hover:text-ink-700')
           }

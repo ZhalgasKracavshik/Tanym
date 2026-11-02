@@ -256,7 +256,7 @@ export default function MarketplacePage() {
           <EmptyState title={t.empty} description="" />
         </div>
       ) : (
-        <div className="mt-10 grid auto-rows-fr gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-10 grid gap-4 sm:auto-rows-fr sm:grid-cols-2 lg:grid-cols-3">
           {/*
             auto-rows-fr держит все карточки одной высоты.
 

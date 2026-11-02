@@ -26,6 +26,9 @@ import {
   type AchievementPlace,
 } from '@/lib/portfolio';
 import { ADMIN_TEXT, AdminShell, Row, Section, useRows } from '../parts';
+import { useProofUrl } from '@/lib/supabase/proofUrl';
+import { formatEventDate } from '@/lib/events';
+import { almatyDateIso } from '@/lib/date';
 
 const TEXT = {
   pendingAchievements: 'Достижения на проверке',
@@ -35,6 +38,10 @@ const TEXT = {
   proof: 'Диплом',
   noProof: 'без подтверждения',
   willGive: (points: number) => `+${points} баллов`,
+  pendingEvents: 'Предложенные события',
+  noPendingEvents: 'Новых событий на проверке нет.',
+  eventHint:
+    'Проверьте даты и ссылку на регистрацию: после одобрения событие увидят все, и оно может стать «ближайшим дедлайном» у учеников.',
   pendingListings: 'Объявления на модерации',
   noPending: 'Заявок на модерации нет.',
   /*
@@ -44,15 +51,140 @@ const TEXT = {
     как её увидят все, а не по одной строке в этой очереди.
   */
   open: 'Открыть',
+  reasonLabel: 'Причина отказа — её увидит автор',
+  reasonPlaceholder: 'Например: нет ссылки на организатора, такое событие уже есть, сроки не совпадают с источником',
+  confirmReject: 'Отклонить',
+  cancel: 'Отмена',
+  reviewFailed: 'Не сохранилось. Проверьте связь и попробуйте ещё раз.',
+  reviewChanged: 'Автор изменил событие после того, как оно попало в очередь. Откройте его и проверьте заново.',
+  reload: 'Обновить очередь',
 } as const;
 
-function ModerationPanel({ language }: { language: Language }) {
+/**
+ * Строка события в очереди: одобрить сразу, отклонить — с причиной.
+ * Кнопки блокируются на время запроса: двойной клик раньше отправлял два
+ * обновления, а ошибка сохранения проходила молча.
+ */
+function EventReviewRow({
+  id,
+  title,
+  meta,
+  seenVersion,
+  reviewerId,
+  onDone,
+}: {
+  id: string;
+  title: string;
+  meta: string;
+  /** updated_at, с которым событие пришло в очередь: одобряем ровно эту версию. */
+  seenVersion: string;
+  reviewerId: string;
+  onDone: () => void;
+}) {
+  const [rejecting, setRejecting] = useState(false);
+  const [reason, setReason] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState<false | 'error' | 'changed'>(false);
+
+  async function review(decision: 'approved' | 'rejected') {
+    setBusy(true);
+    setFailed(false);
+    const { data, error } = await createClient()
+      .from('published_events')
+      .update({
+        status: decision,
+        reviewed_by: reviewerId,
+        reviewed_at: new Date().toISOString(),
+        rejection_reason: decision === 'rejected' ? reason.trim().slice(0, 500) || null : null,
+        // Одобряя, админ сверяет сроки с источником — это и есть проверка.
+        ...(decision === 'approved' ? { verified_at: almatyDateIso() } : {}),
+      })
+      .eq('id', id)
+      /*
+        Только та версия, которую админ видел: автор может править событие,
+        пока оно на проверке, и без этого условия одобрялась бы уже
+        подменённая ссылка на регистрацию (см. pilot_event_review_integrity).
+      */
+      .eq('updated_at', seenVersion)
+      .select('id');
+    setBusy(false);
+    if (error) {
+      setFailed('error');
+      return;
+    }
+    if (!data || data.length === 0) {
+      setFailed('changed');
+      return;
+    }
+    onDone();
+  }
+
+  return (
+    <div>
+      <Row title={title} meta={meta}>
+        <Link href={`/events/${id}`} className="flex items-center gap-1 text-xs font-semibold text-ink-600 hover:underline">
+          {TEXT.open}
+          <Icon name="arrow-right" size={12} />
+        </Link>
+        <Button size="sm" disabled={busy} onClick={() => review('approved')}>
+          <Icon name="check" size={14} />
+          {ADMIN_TEXT.approve}
+        </Button>
+        <Button size="sm" variant="ghost" disabled={busy} onClick={() => setRejecting((value) => !value)}>
+          {ADMIN_TEXT.reject}
+        </Button>
+      </Row>
+      {rejecting && (
+        <div className="mb-3 space-y-2 rounded-xl border border-ink-100 bg-ink-50/60 p-3">
+          <label htmlFor={`reason-${id}`} className="text-xs font-semibold text-ink-600">
+            {TEXT.reasonLabel}
+          </label>
+          <textarea
+            id={`reason-${id}`}
+            value={reason}
+            onChange={(event) => setReason(event.target.value)}
+            maxLength={500}
+            rows={2}
+            placeholder={TEXT.reasonPlaceholder}
+            className="w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm focus:border-brand-400 focus:outline-none"
+          />
+          <div className="flex gap-2">
+            <Button size="sm" variant="secondary" disabled={busy} onClick={() => review('rejected')}>
+              {TEXT.confirmReject}
+            </Button>
+            <Button size="sm" variant="ghost" disabled={busy} onClick={() => setRejecting(false)}>
+              {TEXT.cancel}
+            </Button>
+          </div>
+        </div>
+      )}
+      {failed && (
+        <p className="mb-3 text-xs font-semibold text-danger-600">
+          {failed === 'changed' ? TEXT.reviewChanged : TEXT.reviewFailed}
+          {failed === 'changed' && (
+            <button type="button" onClick={onDone} className="ml-2 underline">
+              {TEXT.reload}
+            </button>
+          )}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function ModerationPanel({ language, reviewerId }: { language: Language; reviewerId: string }) {
   const [refreshKey, setRefreshKey] = useState(0);
   const bump = () => setRefreshKey((key) => key + 1);
 
   const pendingAchievements = useRows(
     'portfolio_achievements',
     'id, title, level, place, proof_path, student_id',
+    refreshKey,
+    ['status', 'pending'],
+  );
+  const pendingEvents = useRows(
+    'published_events',
+    'id, title, organizer, registration_deadline, updated_at',
     refreshKey,
     ['status', 'pending'],
   );
@@ -105,11 +237,6 @@ function ModerationPanel({ language }: { language: Language }) {
           pendingAchievements.map((row) => {
             const level = row.level as AchievementLevel;
             const place = row.place as AchievementPlace;
-            const proofUrl = row.proof_path
-              ? createClient()
-                  .storage.from('achievement-proofs')
-                  .getPublicUrl(String(row.proof_path)).data.publicUrl
-              : null;
 
             return (
               <Row
@@ -127,18 +254,7 @@ function ModerationPanel({ language }: { language: Language }) {
                   <Icon name="arrow-right" size={12} />
                 </Link>
 
-                {proofUrl ? (
-                  <a
-                    href={proofUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-xs font-semibold text-brand-600 hover:underline"
-                  >
-                    {TEXT.proof}
-                  </a>
-                ) : (
-                  <span className="text-xs text-danger-600">{TEXT.noProof}</span>
-                )}
+                <ProofLink path={row.proof_path ? String(row.proof_path) : null} />
 
                 <Button size="sm" onClick={() => reviewAchievement(row.id, 'approved', level, place)}>
                   <Icon name="check" size={14} />
@@ -154,6 +270,27 @@ function ModerationPanel({ language }: { language: Language }) {
               </Row>
             );
           })
+        )}
+      </Section>
+
+      <Section title={TEXT.pendingEvents}>
+        <p className="mb-4 text-xs text-ink-400">{TEXT.eventHint}</p>
+        {pendingEvents === null ? (
+          <Skeleton className="h-10 w-full" />
+        ) : pendingEvents.length === 0 ? (
+          <p className="text-sm text-ink-500">{TEXT.noPendingEvents}</p>
+        ) : (
+          pendingEvents.map((row) => (
+            <EventReviewRow
+              key={row.id}
+              id={String(row.id)}
+              title={String(row.title)}
+              meta={`${String(row.organizer ?? '')} · до ${formatEventDate(String(row.registration_deadline), language)}`}
+              seenVersion={String(row.updated_at ?? '')}
+              reviewerId={reviewerId}
+              onDone={bump}
+            />
+          ))
         )}
       </Section>
 
@@ -196,9 +333,24 @@ export default function AdminModerationPage() {
     <AdminShell title="Модерация" description="Заявки, которые ждут решения. Разобрали — очередь пуста.">
       <Suspense fallback={null}>
         <SchoolAuthGate requireRole="admin" language={state.language}>
-          {() => <ModerationPanel language={state.language} />}
+          {(profile) => <ModerationPanel language={state.language} reviewerId={profile.id} />}
         </SchoolAuthGate>
       </Suspense>
     </AdminShell>
+  );
+}
+
+/**
+ * Ссылка на скан для проверяющего. Отдельный компонент, потому что
+ * подписанная ссылка получается хуком, а хуки нельзя звать внутри map.
+ */
+function ProofLink({ path }: { path: string | null }) {
+  const url = useProofUrl(path);
+  if (!path) return <span className="text-xs text-danger-600">{TEXT.noProof}</span>;
+  if (!url) return <span className="text-xs text-ink-400">{TEXT.proof}…</span>;
+  return (
+    <a href={url} target="_blank" rel="noreferrer" className="text-xs font-semibold text-brand-600 hover:underline">
+      {TEXT.proof}
+    </a>
   );
 }

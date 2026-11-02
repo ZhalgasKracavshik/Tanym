@@ -11,6 +11,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AuthLink, AuthShell, FormMessage, PasswordField, SubmitButton } from '@/components/auth-ui';
+import { checkNewPassword, PASSWORD_TEXT } from '@/lib/security/password';
 import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
 import { useLang, type Dict } from '@/lib/i18n';
 
@@ -48,8 +49,8 @@ const TEXT: Dict<{
     notFromEmail: 'Эта страница открывается только по ссылке из письма. Запросите письмо для сброса пароля.',
     newPassword: 'Новый пароль',
     repeatPassword: 'Ещё раз',
-    passwordHint: 'Не меньше 6 символов.',
-    tooShort: 'Пароль должен быть не короче 6 символов.',
+    passwordHint: PASSWORD_TEXT.ru.hint,
+    tooShort: PASSWORD_TEXT.ru.short,
     mismatch: 'Пароли не совпадают.',
     linkExpired: 'Ссылка устарела. Запросите новое письмо.',
     genericError: 'Не удалось сменить пароль.',
@@ -69,8 +70,8 @@ const TEXT: Dict<{
     notFromEmail: 'Бұл бет тек хаттағы сілтеме арқылы ашылады. Құпия сөзді қалпына келтіру үшін хат сұраңыз.',
     newPassword: 'Жаңа құпия сөз',
     repeatPassword: 'Тағы бір рет',
-    passwordHint: '6 таңбадан кем емес.',
-    tooShort: 'Құпия сөз 6 таңбадан кем болмауы керек.',
+    passwordHint: PASSWORD_TEXT.kk.hint,
+    tooShort: PASSWORD_TEXT.kk.short,
     mismatch: 'Құпия сөздер сәйкес келмейді.',
     linkExpired: 'Сілтеменің мерзімі өтті. Жаңа хат сұраңыз.',
     genericError: 'Құпия сөзді ауыстыру мүмкін болмады.',
@@ -90,8 +91,8 @@ const TEXT: Dict<{
     notFromEmail: 'This page only opens from the link in the email. Request a password reset email.',
     newPassword: 'New password',
     repeatPassword: 'Repeat it',
-    passwordHint: 'At least 6 characters.',
-    tooShort: 'Password must be at least 6 characters.',
+    passwordHint: PASSWORD_TEXT.en.hint,
+    tooShort: PASSWORD_TEXT.en.short,
     mismatch: "Passwords don't match.",
     linkExpired: 'The link has expired. Request a new email.',
     genericError: 'Could not change the password.',
@@ -148,10 +149,6 @@ function ResetPasswordForm() {
     setShakeKey((k) => k + 1);
 
     let hasError = false;
-    if (password.length < 6) {
-      setPasswordError(t.tooShort);
-      hasError = true;
-    }
     if (password !== repeat) {
       setRepeatError(t.mismatch);
       hasError = true;
@@ -159,6 +156,13 @@ function ResetPasswordForm() {
     if (hasError) return;
 
     setStatus('loading');
+    // Короткий, простой или утёкший пароль — до запроса в Supabase.
+    const passwordIssue = await checkNewPassword(password, lang);
+    if (passwordIssue) {
+      setStatus('idle');
+      setPasswordError(passwordIssue);
+      return;
+    }
     const result = await updatePassword(password);
 
     if (!result.ok) {

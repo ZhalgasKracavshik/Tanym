@@ -51,3 +51,17 @@ export function storageObjectName(fileName: string): string {
 
   return extension === '' ? tail : `${tail}.${extension}`;
 }
+
+/**
+ * Расширение картинки-обложки для ключа в хранилище.
+ *
+ * Раньше бралось как есть: `name.split('.').pop()`. У файла без точки это
+ * всё имя целиком, а у «фото (1).JPEG?» — символы, которые хранилище не
+ * примет. Оставляем только латиницу и цифры; пусто — значит jpg.
+ */
+export function coverExtension(fileName: string): string {
+  const dot = fileName.lastIndexOf('.');
+  const raw = dot > 0 ? fileName.slice(dot + 1) : '';
+  const clean = raw.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 5);
+  return clean || 'jpg';
+}

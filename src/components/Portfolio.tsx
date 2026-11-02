@@ -31,6 +31,7 @@ import { normalizeSocialUrl } from '@/lib/social';
 import { Icon } from './Icon';
 import { PressButton, Spinner, StaggerGroup, StaggerItem } from './motion';
 import { storageObjectName } from '@/lib/storageKey';
+import { useProofUrl } from '@/lib/supabase/proofUrl';
 
 interface Row {
   id: string;
@@ -326,9 +327,8 @@ export function AchievementCard({
    */
   showProof?: boolean;
 }) {
-  const proofUrl = achievement.proofPath
-    ? createClient().storage.from('achievement-proofs').getPublicUrl(achievement.proofPath).data.publicUrl
-    : null;
+  // Приватный бакет: ссылку получат только автор и админ, остальным — null.
+  const proofUrl = useProofUrl(achievement.proofPath);
 
   const subtitle = [
     PLACE_TITLES[achievement.place][language],

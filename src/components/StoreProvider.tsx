@@ -51,6 +51,8 @@ interface StoreValue {
   recordAttempt: (attempt: Omit<TaskAttempt, 'at'>, topicTaskCount: number) => void;
   markAchievementsSeen: (ids: string[]) => void;
   toggleEventRegistration: (eventId: string) => void;
+  /** Стереть локальные отметки «иду» — после переноса их в event_saves. */
+  clearEventRegistrations: () => void;
   addListing: (listing: Listing) => void;
   markAnnouncementsRead: (ids: string[]) => void;
   setLeaderboardAnonymous: (anonymous: boolean) => void;
@@ -253,6 +255,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         ? previous.eventRegistrations.filter((id) => id !== eventId)
         : [...previous.eventRegistrations, eventId],
     }));
+  }, []);
+
+  const clearEventRegistrations = useCallback(() => {
+    setState((previous) =>
+      previous.eventRegistrations.length === 0 ? previous : { ...previous, eventRegistrations: [] },
+    );
   }, []);
 
   const addListing = useCallback((listing: Listing) => {
@@ -465,6 +473,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       recordAttempt,
       markAchievementsSeen,
       toggleEventRegistration,
+      clearEventRegistrations,
       addListing,
       removeListing,
       markAnnouncementsRead,
@@ -493,6 +502,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       recordAttempt,
       markAchievementsSeen,
       toggleEventRegistration,
+      clearEventRegistrations,
       addListing,
       removeListing,
       markAnnouncementsRead,

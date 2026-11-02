@@ -115,7 +115,7 @@ export default function PrivacyPage() {
       </section>
 
       <div className="mt-12">
-        <Link href="/" className="text-sm font-medium text-ink-900 underline underline-offset-4">
+        <Link href="/" className="tap text-sm font-medium text-ink-900 underline underline-offset-4">
           На главную
         </Link>
       </div>

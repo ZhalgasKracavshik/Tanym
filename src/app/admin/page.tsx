@@ -19,16 +19,19 @@ import { SchoolAuthGate } from '@/components/SchoolAuthGate';
 import { Icon } from '@/components/Icon';
 import { Card, Skeleton } from '@/components/ui';
 import { ADMIN_SECTIONS, AdminShell, useCount } from './parts';
+import { pluralRu } from '@/lib/plural';
 
 function Overview() {
   const [refreshKey] = useState(0);
 
   const pendingAchievements = useCount('portfolio_achievements', refreshKey, ['status', 'pending']);
   const pendingListings = useCount('published_listings', refreshKey, ['status', 'pending']);
+  // Предложенные события — главная очередь пилота: без них «Всё проверено» врало.
+  const pendingEvents = useCount('published_events', refreshKey, ['status', 'pending']);
   const students = useCount('profiles', refreshKey, ['role', 'student']);
   const events = useCount('published_events', refreshKey);
 
-  const waiting = (pendingAchievements ?? 0) + (pendingListings ?? 0);
+  const waiting = (pendingAchievements ?? 0) + (pendingListings ?? 0) + (pendingEvents ?? 0);
 
   return (
     <div>
@@ -45,13 +48,13 @@ function Overview() {
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-ink-400">
               Требует внимания
             </p>
-            {pendingAchievements === null || pendingListings === null ? (
+            {pendingAchievements === null || pendingListings === null || pendingEvents === null ? (
               <Skeleton className="mt-2 h-9 w-40" />
             ) : waiting > 0 ? (
               <p className="mt-1 text-3xl font-medium text-ink-900">
                 {waiting}
                 <span className="ml-2 text-base font-medium text-ink-500">
-                  {waiting === 1 ? 'заявка' : waiting < 5 ? 'заявки' : 'заявок'} на проверке
+                  {pluralRu(waiting, 'заявка', 'заявки', 'заявок')} на проверке
                 </span>
               </p>
             ) : (

@@ -3,49 +3,40 @@
 /**
  * Карточка события в афише.
  *
- * Наверху — то, что прислал организатор: афиша, фото с прошлого года, схема
- * площадки. Их листают, потому что решение «идти или нет» по одной картинке
- * не принимают. Придуманных иллюстраций здесь нет намеренно: нарисованная
- * заставка вместо настоящего снимка — это украшение пустоты, и на десяти
- * карточках подряд она сразу читается как заглушка. Если организатор ничего
- * не прислал, шапка остаётся типографской: крупный вид события на плотной
- * заливке — честно и не притворяется фотографией.
+ * Одна раскладка на всех экранах, только повёрнутая:
+ * - телефон — строка: превью 96×96 слева, факты справа. В экран помещается
+ *   3–4 события вместо полутора, а превью всё равно видно;
+ * - от sm — колонка: превью 16:9 сверху, те же факты снизу.
  *
- * Карточка больше не принимает решений. Раньше на ней стояла «Записаться»:
- * человек соглашался участвовать, прочитав три строки описания и не увидев
- * ни места, ни классов, ни того, что событие даёт. Теперь единственное
- * действие — «Подробнее», а запись живёт на странице события, где есть всё,
- * на чём это решение можно основывать. Заодно исчез и оборот с подробностями:
- * он дублировал ту же страницу, только в щели высотой в четыре строки.
+ * Превью — первое фото, которое прислал организатор. Листать его здесь не
+ * нужно: галерея живёт на странице события. Без фото — плитка цвета вида
+ * события с его значком: тот же размер и место, поэтому сетка не прыгает,
+ * и олимпиаду от курса видно с первого взгляда, как на olimpiada.ru.
+ *
+ * Главный факт — срок регистрации (цвет — срочность). Вся карточка — одна
+ * ссылка на событие (растянутая ссылка заголовка), а «Сохранить» — отдельная
+ * кнопка поверх неё: сохранить можно, не открывая событие.
  */
 
-import { useState } from 'react';
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import Link from 'next/link';
+import { motion, useReducedMotion } from 'framer-motion';
 import type { EventStatus, SchoolEvent } from '@/lib/events';
-import { Badge, ButtonLink } from './ui';
+import { Badge } from './ui';
 import { Icon } from './Icon';
 import type { IconName } from './Icon';
 
-/*
-  Направление приходит в variants через `custom`: кадр должен уезжать в ту
-  сторону, откуда пришёл следующий, иначе листание назад выглядит как
-  листание вперёд.
-*/
-const SLIDE = {
-  enter: (direction: number) => ({ x: direction > 0 ? '100%' : '-100%', opacity: 0 }),
-  center: { x: 0, opacity: 1 },
-  exit: (direction: number) => ({ x: direction < 0 ? '100%' : '-100%', opacity: 0 }),
-};
-
 export interface EventCardText {
+  /** «Регистрация до» — подпись к главному факту карточки. */
+  deadline: string;
   daysLeft: (n: number) => string;
   lastDay: string;
   online: string;
   free: string;
   paid: string;
-  details: string;
-  prevImage: string;
-  nextImage: string;
+  save: string;
+  saved: string;
+  saveLogin: string;
+  gradeShort: string;
 }
 
 export function EventCard({
@@ -58,6 +49,8 @@ export function EventCard({
   typeTitle,
   daysLeft,
   deadlineLabel,
+  saved,
+  onToggleSave,
   t,
 }: {
   event: SchoolEvent;
@@ -69,216 +62,154 @@ export function EventCard({
   typeTitle?: string;
   daysLeft: number;
   deadlineLabel: string;
+  /** null — гость или ещё грузим: вместо кнопки ссылка на вход. */
+  saved: boolean | null;
+  onToggleSave?: () => void;
   t: EventCardText;
 }) {
   const reduce = useReducedMotion();
-  const [index, setIndex] = useState(0);
-  const [direction, setDirection] = useState(0);
-
-  const images = event.coverUrls ?? [];
-  const hasImages = images.length > 0;
-
-  /*
-    Считается здесь, а не приходит пропсом: значение полностью выводится из
-    статуса, который уже пришёл. Лишний проп — это ещё одно место, где
-    вызывающий может передать одно, а показать другое.
-  */
+  const cover = event.coverUrls?.[0];
   const registrationRuns = status === 'open' || status === 'closing-soon';
+  const grades = gradesLabel(event.grades, t.gradeShort);
 
-  function move(step: number) {
-    setDirection(step);
-    setIndex((current) => (current + step + images.length) % images.length);
-  }
+  const deadlineTone = !registrationRuns
+    ? 'text-ink-400'
+    : daysLeft <= 3
+      ? 'text-danger-600'
+      : daysLeft <= 14
+        ? 'text-accent-700'
+        : 'text-ink-800';
 
   return (
     <motion.article
-      initial={reduce ? false : { opacity: 0, y: 18 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.25 }}
-      transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-      /*
-        Подъём на пружине, а не на линейном переходе: карточка должна
-        отзываться как предмет, который приподняли, а не как слайд.
-      */
-      whileHover={reduce ? undefined : { y: -4, transition: { type: 'spring', stiffness: 300, damping: 22 } }}
-      className={`group flex flex-col overflow-hidden rounded-[var(--radius-card)] border border-ink-200 bg-white shadow-[var(--shadow-rest)] transition-shadow duration-300 hover:shadow-[var(--shadow-float)] ${
+      initial={reduce ? false : { opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+      className={`group relative flex min-w-0 gap-3.5 rounded-[var(--radius-card)] border border-ink-200 bg-white p-3 transition-[border-color,box-shadow] duration-200 hover:border-ink-300 hover:shadow-[var(--shadow-float)] sm:flex-col sm:gap-0 sm:overflow-hidden sm:p-0 ${
         status === 'past' ? 'opacity-60' : ''
       }`}
     >
-      {/* --- Шапка --- */}
-      <div className={`relative h-48 shrink-0 overflow-hidden ${hasImages ? 'bg-ink-900' : bannerClass}`}>
-        {hasImages ? (
-          <AnimatePresence initial={false} custom={direction}>
-            <motion.img
-              key={index}
-              src={images[index]}
-              alt=""
-              loading="lazy"
-              custom={direction}
-              variants={SLIDE}
-              initial={reduce ? false : 'enter'}
-              animate="center"
-              exit={reduce ? { opacity: 0 } : 'exit'}
-              transition={{
-                x: { type: 'spring', stiffness: 300, damping: 30 },
-                opacity: { duration: 0.2 },
-              }}
-              className="absolute inset-0 h-full w-full object-cover"
-            />
-          </AnimatePresence>
+      {/* --- Превью: фото организатора или плитка вида события --- */}
+      <div
+        className={`relative h-24 w-24 shrink-0 overflow-hidden rounded-xl sm:aspect-[16/9] sm:h-auto sm:w-full sm:rounded-none ${
+          cover ? 'bg-ink-100' : bannerClass
+        }`}
+      >
+        {cover ? (
+          // eslint-disable-next-line @next/next/no-img-element -- обложки из Supabase Storage, размеры задаёт контейнер
+          <img
+            src={cover}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+          />
         ) : (
-          /*
-            Без фотографий — не иконка на цветной плашке, а название вида
-            события крупно. Иконка в пустом прямоугольнике сообщает «здесь
-            должна была быть картинка»; слово ничего не обещает и читается
-            как оформление.
-          */
-          <div className="flex h-full items-end p-5">
-            <span className="text-2xl font-medium leading-tight text-white/90">{typeTitle}</span>
+          <div aria-hidden className="flex h-full w-full items-center justify-center text-white/90">
+            {typeIcon && <Icon name={typeIcon} size={30} className="sm:hidden" />}
+            {typeIcon && <Icon name={typeIcon} size={44} className="hidden sm:block" />}
           </div>
         )}
-
-        {/* Затемнение снизу — иначе белые бейджи теряются на светлом снимке */}
-        {hasImages && (
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-0 bg-gradient-to-t from-ink-900/45 via-transparent to-ink-900/25"
-          />
-        )}
-
-        {/*
-          Все плашки — вид события, формат и статус — лежат в одном
-          переносящемся ряду, а не двумя группами по углам.
-
-          Почему не две группы с justify-between. Так было, и статус всё
-          равно наезжал на вид события. Сжать левую группу через min-w-0
-          недостаточно: плашка внутри неё упирается в собственную
-          min-content ширину (самое длинное слово плюс поля) и дальше не
-          сжимается, а просто вылезает за границу группы — под бейдж, у
-          которого shrink-0. Замер на карточке 224px: «Курсы и вебинары»
-          против «Скоро закрытие» давали перекрытие в 19px, против «Запись
-          закрыта» — 16px, в английском «Sign-up open» — 2px. Не помещается
-          не текст, а сумма: карточка в сетке нигде не шире ~330px, и
-          130 + 8 + 118 в неё не влезает ни при каком сокращении подписей.
-
-          Один flex-wrap решает это тем, что лишнему просто некуда наехать:
-          не поместившийся бейдж переносится на вторую строку. ml-auto
-          держит его прижатым вправо и на своей строке, поэтому в обычном
-          случае (короткий вид события) ряд выглядит ровно как раньше —
-          вид слева, статус справа, одна строка. whitespace-nowrap на
-          плашках нужен затем, чтобы вместо переноса бейджа они не начали
-          ломаться пополам внутри себя.
-        */}
-        <div className="absolute inset-x-3 top-3 flex flex-wrap items-start gap-2">
-          <span className="flex items-center gap-1.5 whitespace-nowrap rounded-[var(--radius-pill)] bg-white/85 px-2.5 py-1 text-xs font-semibold text-ink-800 backdrop-blur-sm">
-            {typeIcon && <Icon name={typeIcon} size={13} />}
-            {typeTitle}
-          </span>
-
-          {event.online && (
-            <span className="whitespace-nowrap rounded-[var(--radius-pill)] bg-white/85 px-2.5 py-1 text-xs font-semibold text-ink-800 backdrop-blur-sm">
-              {t.online}
-            </span>
-          )}
-
-          <Badge tone={statusTone} className="ml-auto shrink-0 whitespace-nowrap">
+        {!registrationRuns && (
+          <Badge tone={statusTone} className="absolute left-1.5 top-1.5 whitespace-nowrap sm:left-3 sm:top-3">
             {statusLabel}
           </Badge>
-        </div>
-
-        {/* Стрелки появляются при наведении и только когда листать есть что */}
-        {images.length > 1 && (
-          <>
-            <CarouselButton side="left" label={t.prevImage} onClick={() => move(-1)} />
-            <CarouselButton side="right" label={t.nextImage} onClick={() => move(1)} />
-
-            <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1.5">
-              {images.map((image, dot) => (
-                <button
-                  key={image}
-                  onClick={() => {
-                    setDirection(dot > index ? 1 : -1);
-                    setIndex(dot);
-                  }}
-                  aria-label={`${dot + 1}`}
-                  aria-current={dot === index}
-                  className={`h-1.5 rounded-full transition-all duration-300 ${
-                    dot === index ? 'w-4 bg-white' : 'w-1.5 bg-white/55 hover:bg-white/80'
-                  }`}
-                />
-              ))}
-            </div>
-          </>
         )}
       </div>
 
-      {/* --- Содержание --- */}
-      <div className="flex flex-1 flex-col p-5">
-        <h2 className="text-lg font-medium leading-snug break-words text-ink-900">{event.title}</h2>
-
-        <p className="mt-1.5 text-sm text-ink-400">
-          {deadlineLabel} · {event.organizer}
+      {/* --- Факты --- */}
+      <div className="flex min-w-0 flex-1 flex-col sm:p-4">
+        <p className="flex min-w-0 items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.06em] text-ink-500">
+          {typeIcon && <Icon name={typeIcon} size={12} className="shrink-0" />}
+          <span className="truncate">
+            {typeTitle}
+            {event.online ? ` · ${t.online}` : event.location ? ` · ${event.location}` : ''}
+          </span>
         </p>
 
-        {/*
-          mb-4 у описания, а не mt у подвала: подвал прижат книзу через
-          mt-auto, и у самой высокой карточки в ряду это «авто» равно нулю —
-          линия подвала прилипла бы к последней строке текста.
-        */}
-        <p className="mt-3 mb-4 line-clamp-3 break-words text-sm leading-relaxed text-ink-600">{event.description}</p>
+        <h2 className="mt-1 line-clamp-2 break-words text-[15px] font-semibold leading-snug tracking-[-0.01em] text-ink-900 sm:text-base">
+          {/* Растянутая ссылка: нажатие по любой части карточки открывает событие. */}
+          <Link
+            href={`/events/${event.id}`}
+            className="outline-none after:absolute after:inset-0 after:rounded-[var(--radius-card)] focus-visible:after:ring-2 focus-visible:after:ring-brand-500"
+          >
+            {event.title}
+          </Link>
+        </h2>
+        {event.organizer && <p className="mt-0.5 truncate text-xs text-ink-500 sm:text-sm">{event.organizer}</p>}
 
-        {/* --- Низ: цена, срок и переход на страницу события --- */}
-        <div className="mt-auto flex flex-wrap items-center justify-between gap-3 border-t border-ink-200 pt-4">
-          <div>
-            <p className="font-medium text-ink-900">{event.free ? t.free : t.paid}</p>
-            {registrationRuns && (
-              <p
-                className={`text-xs font-semibold ${
-                  status === 'closing-soon' ? 'text-danger-600' : 'text-ink-400'
-                }`}
-              >
-                {daysLeft === 0 ? t.lastDay : t.daysLeft(daysLeft)}
-              </p>
-            )}
+        <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
+          <p className={`text-[13px] font-semibold tabular-nums sm:text-sm ${deadlineTone}`}>
+            {t.deadline} {deadlineLabel}
+          </p>
+          {registrationRuns && (
+            <span
+              className={`whitespace-nowrap rounded-full px-1.5 py-0.5 text-[11px] font-semibold ${
+                daysLeft <= 3 ? 'bg-danger-50 text-danger-700' : 'bg-ink-100 text-ink-600'
+              }`}
+            >
+              {daysLeft === 0 ? t.lastDay : t.daysLeft(daysLeft)}
+            </span>
+          )}
+        </div>
+
+        {event.description && (
+          <p className="mt-2 hidden break-words text-sm leading-relaxed text-ink-600 sm:line-clamp-2">
+            {event.description}
+          </p>
+        )}
+
+        {/* --- Низ: факты и «Сохранить» --- */}
+        <div className="mt-auto flex items-center justify-between gap-2 pt-2.5 sm:pt-4">
+          <div className="flex min-w-0 flex-wrap items-center gap-1 text-[11px] font-semibold text-ink-600">
+            {grades && <span className="rounded-md border border-ink-200 px-1.5 py-0.5">{grades}</span>}
+            <span
+              className={`rounded-md border px-1.5 py-0.5 ${
+                event.free ? 'border-success-200 bg-success-50 text-success-700' : 'border-ink-200'
+              }`}
+            >
+              {event.free ? t.free : t.paid}
+            </span>
           </div>
 
-          <ButtonLink href={`/events/${event.id}`} size="sm" className="group/cta">
-            {t.details}
-            <Icon
-              name="arrow-right"
-              size={15}
-              className="transition-transform duration-300 group-hover/cta:translate-x-1"
-            />
-          </ButtonLink>
+          {/* relative z-10 — поверх растянутой ссылки заголовка. */}
+          {saved === null ? (
+            <Link
+              href={`/login?next=${encodeURIComponent('/events')}`}
+              aria-label={t.saveLogin}
+              title={t.saveLogin}
+              className="relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-ink-200 text-ink-500 transition-colors hover:border-ink-300 hover:text-ink-800"
+            >
+              <Icon name="star" size={16} />
+            </Link>
+          ) : (
+            <button
+              type="button"
+              onClick={onToggleSave}
+              aria-pressed={saved}
+              aria-label={saved ? t.saved : t.save}
+              title={saved ? t.saved : t.save}
+              className={`relative z-10 flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-full border px-2.5 text-xs font-semibold transition-colors ${
+                saved
+                  ? 'border-brand-200 bg-brand-50 text-brand-700'
+                  : 'border-ink-200 text-ink-600 hover:border-ink-300 hover:text-ink-900'
+              }`}
+            >
+              <Icon name="star" size={15} className={saved ? 'fill-current' : ''} />
+              <span className="hidden sm:inline">{saved ? t.saved : t.save}</span>
+            </button>
+          )}
         </div>
       </div>
     </motion.article>
   );
 }
 
-function CarouselButton({
-  side,
-  label,
-  onClick,
-}: {
-  side: 'left' | 'right';
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      aria-label={label}
-      /*
-        opacity-0 только там, где наведение вообще есть. На телефоне
-        (hover:none) кнопки видны всегда — иначе листать было бы нечем:
-        карусель без стрелок и без свайпа осталась бы на первом кадре.
-      */
-      className={`absolute top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-ink-900/45 text-white backdrop-blur-sm transition-all duration-200 hover:bg-ink-900/70 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-white [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 ${
-        side === 'left' ? 'left-2' : 'right-2'
-      }`}
-    >
-      <Icon name={side === 'left' ? 'chevron-left' : 'chevron-right'} size={16} />
-    </button>
-  );
+/** «5–9 кл», «11 кл» или пусто, если классы не указаны (значит — для всех). */
+function gradesLabel(grades: number[], suffix: string): string {
+  const list = [...new Set(grades)].sort((a, b) => a - b);
+  if (list.length === 0) return '';
+  if (list.length === 1) return `${list[0]} ${suffix}`;
+  const contiguous = list.every((grade, i) => i === 0 || grade === list[i - 1] + 1);
+  return contiguous ? `${list[0]}–${list[list.length - 1]} ${suffix}` : `${list.join(', ')} ${suffix}`;
 }

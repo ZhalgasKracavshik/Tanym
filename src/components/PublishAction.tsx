@@ -26,10 +26,12 @@ export function PublishAction({
   href,
   label,
   requireRole,
+  variant = 'primary',
 }: {
   href: string;
   label: string;
   requireRole: SchoolRole | SchoolRole[];
+  variant?: 'primary' | 'secondary';
 }) {
   const { profile, loading } = useSchoolAuth();
   const allowed = Array.isArray(requireRole) ? requireRole : [requireRole];
@@ -40,7 +42,11 @@ export function PublishAction({
   return (
     <Link
       href={href}
-      className="inline-flex shrink-0 items-center gap-2 rounded-[var(--radius-pill)] px-4 py-2.5 text-sm font-semibold bg-ink-900 text-white transition-colors hover:bg-ink-800 shadow-[var(--shadow-lift)] transition-all duration-150 hover:shadow-[var(--shadow-lift)] focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
+      className={`inline-flex shrink-0 items-center gap-2 rounded-[var(--radius-pill)] px-4 py-2.5 text-sm font-semibold transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 ${
+        variant === 'primary'
+          ? 'bg-ink-900 text-white shadow-[var(--shadow-lift)] hover:bg-ink-800'
+          : 'border border-ink-300 bg-white text-ink-800 hover:border-ink-500'
+      }`}
     >
       <Icon name="plus" size={17} />
       {label}

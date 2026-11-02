@@ -58,6 +58,8 @@ export interface SchoolProfile {
   study_days: number[];
   study_time: string | null;
   reminder_lead_minutes: number | null;
+  /** Ученик попросил роль учителя; снимается, когда админ назначит роль. */
+  teacher_requested_at?: string | null;
 
   social_links: unknown;
   subject_ids: string[] | null;
@@ -102,6 +104,8 @@ interface SchoolAuthValue {
     email: string,
     password: string,
     name: string,
+    /** Куда вернуть после онбординга (например, к событию, которое хотели сохранить). */
+    nextPath?: string,
   ) => Promise<{ ok: boolean; error?: string; needsConfirmation?: boolean }>;
   sendPasswordReset: (email: string) => Promise<{ ok: boolean; error?: string }>;
   updatePassword: (password: string) => Promise<{ ok: boolean; error?: string }>;
@@ -245,14 +249,22 @@ export function SchoolAuthProvider({
       return { ok: true };
     }
 
-    async function signUpWithPassword(emailValue: string, password: string, name: string) {
+    async function signUpWithPassword(emailValue: string, password: string, name: string, nextPath?: string) {
       const supabase = createClient();
       const { data, error } = await supabase.auth.signUp({
         email: emailValue,
         password,
         // Имя кладём в метаданные пользователя: /api/profile берёт его оттуда
         // при создании профиля, ровно как для входа через Google.
-        options: { data: { full_name: name } },
+        // Ссылка из письма подтверждения ведёт через /auth/callback сразу в
+        // онбординг. Адрес должен быть в Supabase → Auth → URL Configuration →
+        // Redirect URLs, иначе Supabase подставит Site URL.
+        options: {
+          data: { full_name: name },
+          emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(
+            nextPath ? `/onboarding?next=${encodeURIComponent(nextPath)}` : '/onboarding',
+          )}`,
+        },
       });
       if (error) return { ok: false, error: error.message };
 
@@ -303,11 +315,17 @@ export function SchoolAuthProvider({
     }
 
     async function chooseRole(role: 'student' | 'teacher', classCode?: string) {
-      const res = await fetch('/api/profile', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role, classCode }),
-      });
+      // Обрыв сети — тоже ответ: без него экран создания профиля крутился бы бесконечно.
+      let res: Response;
+      try {
+        res = await fetch('/api/profile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ role, classCode }),
+        });
+      } catch {
+        return { ok: false, error: 'network_error', domains: undefined };
+      }
       const data = await res.json().catch(() => null);
       if (res.ok) await refresh();
       return {

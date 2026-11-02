@@ -17,26 +17,19 @@ import { useRouter } from 'next/navigation';
 import {
   AuthLink,
   AuthShell,
-  ClassCodeField,
   Field,
   FormMessage,
-  InfoBanner,
   PasswordField,
   ProviderButtons,
-  SegmentedToggle,
   SubmitButton,
 } from '@/components/auth-ui';
 import type { IconName } from '@/components/Icon';
 import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
 import { checkPersonName } from '@/lib/personName';
+import { checkNewPassword, PASSWORD_TEXT } from '@/lib/security/password';
+import { safeNextPath } from '@/lib/security/redirect';
 import { useLang, type Dict } from '@/lib/i18n';
-import {
-  canBeTeacher,
-  domainRejectionMessage,
-  fetchAllowedDomainRows,
-  isEmailDomainAllowed,
-  teacherDomainMessage,
-} from '@/lib/supabase/allowedDomains';
+import { domainRejectionMessage, fetchAllowedDomainRows } from '@/lib/supabase/allowedDomains';
 
 /*
   Значки фактов о продукте не зависят от языка — меняется только текст,
@@ -104,11 +97,11 @@ const TEXT: Dict<{
     teacherBanner: 'После регистрации вы получите код класса — раздайте его ученикам.',
     email: 'Почта',
     password: 'Пароль',
-    passwordHint: 'Не меньше 6 символов.',
+    passwordHint: PASSWORD_TEXT.ru.hint,
     emailRequired: 'Введите почту.',
     passwordRequired: 'Введите пароль.',
     alreadyRegistered: 'Такая почта уже зарегистрирована — попробуйте войти.',
-    weakPassword: 'Пароль слишком короткий: нужно не меньше 6 символов.',
+    weakPassword: PASSWORD_TEXT.ru.short,
     invalidEmail: 'Проверьте адрес почты.',
     rateLimit: 'Слишком много попыток. Подождите минуту.',
     domainBlocked: 'С этой почтой зарегистрироваться нельзя — домен не разрешён администратором.',
@@ -148,11 +141,11 @@ const TEXT: Dict<{
     teacherBanner: 'Тіркелгеннен кейін сынып кодын аласыз — оны оқушыларға таратыңыз.',
     email: 'Электрондық пошта',
     password: 'Құпия сөз',
-    passwordHint: '6 таңбадан кем емес.',
+    passwordHint: PASSWORD_TEXT.kk.hint,
     emailRequired: 'Поштаңызды енгізіңіз.',
     passwordRequired: 'Құпия сөзді енгізіңіз.',
     alreadyRegistered: 'Бұл пошта тіркелген — кіріп көріңіз.',
-    weakPassword: 'Құпия сөз тым қысқа: 6 таңбадан кем болмауы керек.',
+    weakPassword: PASSWORD_TEXT.kk.short,
     invalidEmail: 'Пошта мекенжайын тексеріңіз.',
     rateLimit: 'Тым көп әрекет. Бір минуттан кейін қайталаңыз.',
     domainBlocked: 'Бұл поштамен тіркелу мүмкін емес — доменге әкімші рұқсат бермеген.',
@@ -192,11 +185,11 @@ const TEXT: Dict<{
     teacherBanner: "After signing up you'll get a class code — hand it out to your students.",
     email: 'Email',
     password: 'Password',
-    passwordHint: 'At least 6 characters.',
+    passwordHint: PASSWORD_TEXT.en.hint,
     emailRequired: 'Enter your email.',
     passwordRequired: 'Enter your password.',
     alreadyRegistered: 'This email is already registered — try logging in.',
-    weakPassword: 'Password is too short: at least 6 characters.',
+    weakPassword: PASSWORD_TEXT.en.short,
     invalidEmail: 'Check your email address.',
     rateLimit: 'Too many attempts. Wait a minute.',
     domainBlocked: "You can't sign up with this email — the domain isn't allowed.",
@@ -225,8 +218,15 @@ export default function RegisterPage() {
   const heroFeatures = HERO_ICONS.map((icon, i) => ({ icon, text: t.heroFeatures[i] }));
 
   const [name, setName] = useState('');
-  const [role, setRole] = useState<'student' | 'teacher'>('student');
-  const [classCode, setClassCode] = useState('');
+  /*
+    Роль на регистрации больше не спрашивается: все входят учениками.
+    Выбор «ученик / учитель» на первом экране путал (зачем меня спрашивают?),
+    а проверка учителя по домену почты отсекала настоящих учителей с gmail.
+    Учителем становятся позже, заявкой из профиля, — её одобряет админ.
+    Код класса тоже переехал: его вводят в профиле, когда он появится.
+  */
+  const role = 'student' as const;
+  const classCode = '';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
@@ -236,7 +236,6 @@ export default function RegisterPage() {
 
   /* Ошибки конкретных полей — см. пояснение в login/page.tsx. */
   const [nameError, setNameError] = useState<string | undefined>();
-  const [classCodeError, setClassCodeError] = useState<string | undefined>();
   const [emailError, setEmailError] = useState<string | undefined>();
   const [passwordError, setPasswordError] = useState<string | undefined>();
   const [shakeKey, setShakeKey] = useState(0);
@@ -253,6 +252,7 @@ export default function RegisterPage() {
 
   function translateSignUpError(message: string): string {
     if (/already registered|already exists/i.test(message)) return t.alreadyRegistered;
+    if (/should contain at least one character/i.test(message)) return PASSWORD_TEXT[lang].classes;
     if (/password.*at least|weak password/i.test(message)) return t.weakPassword;
     if (/invalid email/i.test(message)) return t.invalidEmail;
     if (/rate limit|too many/i.test(message)) return t.rateLimit;
@@ -274,7 +274,6 @@ export default function RegisterPage() {
     setFormError(null);
     setNotice(null);
     setNameError(undefined);
-    setClassCodeError(undefined);
     setEmailError(undefined);
     setPasswordError(undefined);
   }
@@ -307,6 +306,15 @@ export default function RegisterPage() {
       hasError = true;
     }
     if (hasError || !checkedName.ok) return;
+
+    // Слабый или утёкший пароль отбиваем до создания учётной записи.
+    setStatus('loading');
+    const passwordIssue = await checkNewPassword(password, lang, email.trim());
+    if (passwordIssue) {
+      setStatus('idle');
+      setPasswordError(passwordIssue);
+      return;
+    }
     /*
       Код класса больше не обязателен здесь: его спросят в онбординге, где
       от него можно отказаться кнопкой «Позже». Требовать код прямо на
@@ -325,15 +333,12 @@ export default function RegisterPage() {
       войти может, пользоваться ничем не может, а повторная регистрация
       отвечает ему «почта уже зарегистрирована». Выбраться из этого
       состояния самостоятельно нельзя — в базе такой пользователь уже есть.
+
+      На пилоте ученик регистрируется с любой почтой (миграция
+      pilot_open_student_registration), поэтому домен важен только учителю.
     */
     const domainRows = await fetchAllowedDomainRows();
     const allowedDomains = domainRows.map((row) => row.domain);
-    if (!isEmailDomainAllowed(email, allowedDomains)) {
-      setStatus('idle');
-      setEmailError(domainRejectionMessage(allowedDomains));
-      setShakeKey((k) => k + 1);
-      return;
-    }
 
     /*
       Роль учителя открывает панель класса и данные детей, поэтому её
@@ -344,14 +349,10 @@ export default function RegisterPage() {
       Настоящая проверка всё равно стоит в политике базы: эта нужна, чтобы
       объяснить причину, а не чтобы защитить.
     */
-    if (role === 'teacher' && !canBeTeacher(email, domainRows)) {
-      setStatus('idle');
-      setEmailError(teacherDomainMessage(domainRows));
-      setShakeKey((k) => k + 1);
-      return;
-    }
 
-    const signUp = await signUpWithPassword(email.trim(), password, checkedName.value);
+    // Гость пришёл сохранить событие — после онбординга вернём его туда же.
+    const returnTo = safeNextPath(new URLSearchParams(window.location.search).get('next'), '');
+    const signUp = await signUpWithPassword(email.trim(), password, checkedName.value, returnTo || undefined);
 
     if (!signUp.ok) {
       setStatus('idle');
@@ -399,12 +400,9 @@ export default function RegisterPage() {
         setShakeKey((k) => k + 1);
         return;
       }
-      const classMessage = classCodeErrorText(profile.error);
-      if (classMessage) {
-        setClassCodeError(classMessage);
-      } else {
-        setFormError(translateSignUpError(profile.error ?? t.genericProfileError));
-      }
+      setFormError(
+        classCodeErrorText(profile.error) ?? translateSignUpError(profile.error ?? t.genericProfileError),
+      );
       setShakeKey((k) => k + 1);
       return;
     }
@@ -417,7 +415,7 @@ export default function RegisterPage() {
       создан». Раньше редирект шёл прямо в кабинет, и первым, что видел
       новый ученик, была именно эта заглушка. Учителю те же поля не нужны.
     */
-    router.replace(role === 'teacher' ? '/teacher' : '/onboarding');
+    router.replace(returnTo ? `/onboarding?next=${encodeURIComponent(returnTo)}` : '/onboarding');
     router.refresh();
   }
 
@@ -464,38 +462,12 @@ export default function RegisterPage() {
           shakeKey={shakeKey}
         />
 
-        <SegmentedToggle
-          label={t.roleLabel}
-          value={role}
-          onChange={setRole}
-          options={[
-            { value: 'student', label: t.student, icon: 'cap' },
-            { value: 'teacher', label: t.teacher, icon: 'building' },
-          ]}
-        />
-
-        {/* Код класса только у ученика: учитель класс создаёт, а не входит в него */}
-        {role === 'student' && (
-          <ClassCodeField
-            label={t.classCode}
-            value={classCode}
-            onValueChange={(value) => {
-              setClassCode(value);
-              if (classCodeError) setClassCodeError(undefined);
-            }}
-            hint={t.classCodeHint}
-            error={classCodeError}
-            shakeKey={shakeKey}
-          />
-        )}
-
-        {role === 'teacher' && <InfoBanner>{t.teacherBanner}</InfoBanner>}
 
         <Field
           label={t.email}
           type="email"
           autoComplete="email"
-          placeholder="name@binom.edu.kz"
+          placeholder="name@mail.kz"
           value={email}
           onChange={(event) => {
             setEmail(event.target.value);

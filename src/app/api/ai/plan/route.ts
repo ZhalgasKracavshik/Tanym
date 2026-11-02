@@ -94,7 +94,7 @@ export async function POST(request: Request): Promise<NextResponse<PlanResponse 
     return NextResponse.json({
       text: planFallback(input),
       live: false,
-      fallbackReason: 'AI-ключ не настроен на сервере',
+      fallbackReason: 'Живая модель выключена',
     });
   }
 

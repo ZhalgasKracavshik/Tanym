@@ -19,6 +19,7 @@ import { createClient } from '@/lib/supabase/client';
 import { Icon } from '@/components/Icon';
 import { ImageField } from '@/components/ImageField';
 import { Alert, Button, Panel } from '@/components/ui';
+import { coverExtension } from '@/lib/storageKey';
 
 const TEXT = {
   ru: {
@@ -153,8 +154,8 @@ export function PublishForm({ language, profile, defaultContact }: {
    */
   async function uploadCover(supabase: ReturnType<typeof createClient>) {
     if (!cover) return null;
-    const extension = cover.name.split('.').pop()?.toLowerCase() ?? 'jpg';
-    const path = `${Date.now()}-${Math.round(Math.random() * 1e6)}.${extension}`;
+    const extension = coverExtension(cover.name);
+    const path = `${profile.id}/${Date.now()}-${Math.round(Math.random() * 1e6)}.${extension}`;
     const { error: uploadError } = await supabase.storage.from('card-covers').upload(path, cover);
     return uploadError ? undefined : path;
   }
