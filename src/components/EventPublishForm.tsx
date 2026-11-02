@@ -41,6 +41,7 @@ const TEXT = {
     propose: 'Отправить на проверку',
     publishing: 'Отправляем…',
     done: 'Событие опубликовано и видно в афише.',
+    sentForReview: 'Отправлено на проверку — открываем страницу события…',
     error: 'Не получилось опубликовать. Проверьте поля.',
     titleTooShort: 'Название — от 3 до 200 символов.',
     datesOrder: 'Регистрация должна закрываться не позже даты проведения.',
@@ -269,7 +270,9 @@ export function EventPublishForm({
         <p className="mt-1 text-xs text-ink-400">{t.sourceUrlHint}</p>
       </div>
 
-      {status === 'done' && <p className="text-sm font-semibold text-success-700">{t.done}</p>}
+      {status === 'done' && (
+        <p className="text-sm font-semibold text-success-700">{needsReview ? t.sentForReview : t.done}</p>
+      )}
       {status === 'error' && <p className="text-sm font-semibold text-danger-600">{t.error}</p>}
       {status === 'bad-url' && <p className="text-sm font-semibold text-danger-600">{t.registrationUrlError}</p>}
       {status === 'bad-source' && <p className="text-sm font-semibold text-danger-600">{t.sourceUrlError}</p>}
