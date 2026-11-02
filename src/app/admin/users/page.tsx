@@ -33,11 +33,12 @@ const ROLE_LABEL: Record<string, string> = {
 };
 
 /*
-  Роль центра в переключателе есть, но менять её вручную незачем — она
-  назначается своей формой регистрации. Показывается она затем, чтобы
-  администратор понимал, кто перед ним, а не видел сырое «center».
+  «Учебный центр» здесь не назначается: admin_set_role его не принимает
+  (центры на пилоте выключены), и кнопка только показывала ошибку базы.
+  Подпись ROLE_LABEL.center осталась — чтобы у старых центров была роль
+  словами, а не сырое «center».
 */
-const ROLES = ['student', 'teacher', 'admin', 'center'] as const;
+const ROLES = ['student', 'teacher', 'admin'] as const;
 
 function UsersPanel() {
   const { profile: me } = useSchoolAuth();
@@ -75,6 +76,10 @@ function UsersPanel() {
   }, [refreshKey]);
 
   async function setRole(id: string, role: string) {
+    // Админ видит почты всех детей и публикует всем — такое не выдают одним случайным нажатием.
+    if (role === 'admin' && !window.confirm('Сделать этого человека администратором? Он получит доступ ко всем данным и модерации.')) {
+      return;
+    }
     setBusyId(id);
     setError(null);
     const { error: rpcError } = await createClient().rpc('admin_set_role', {
@@ -83,7 +88,13 @@ function UsersPanel() {
     });
     setBusyId(null);
     if (rpcError) {
-      setError(rpcError.message);
+      setError(
+        /mfa_required/.test(rpcError.message)
+          ? 'Нужен код второго фактора — обновите страницу и введите его.'
+          : /последнего администратора/.test(rpcError.message)
+            ? 'Нельзя снять роль с последнего администратора.'
+            : 'Роль не изменилась. Попробуйте ещё раз.',
+      );
       return;
     }
     setRefreshKey((key) => key + 1);

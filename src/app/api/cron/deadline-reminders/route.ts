@@ -18,7 +18,7 @@
 
 import { NextResponse } from 'next/server';
 import { adminClient } from '@/lib/supabase/admin';
-import { almatyDateIso } from '@/lib/date';
+import { almatyDateIso, daysBetween } from '@/lib/date';
 import {
   addDaysIso,
   buildReminderEmail,
@@ -52,13 +52,13 @@ export async function GET(request: Request) {
   }
 
   const today = almatyDateIso();
-  const targetDates = [addDaysIso(today, 7), addDaysIso(today, 1)];
-
+  // Все дедлайны в ближайшую неделю: окно напоминания, а не точный день (см. reminderKindFor).
   const { data: events, error: eventsError } = await admin
     .from('published_events')
     .select('id, title, registration_deadline')
     .eq('status', 'approved')
-    .in('registration_deadline', targetDates);
+    .gte('registration_deadline', today)
+    .lte('registration_deadline', addDaysIso(today, 7));
   if (eventsError) {
     console.error('[deadline-reminders] события:', eventsError);
     return NextResponse.json({ error: 'events_failed' }, { status: 500 });
@@ -68,10 +68,18 @@ export async function GET(request: Request) {
   const eventById = new Map(events.map((event) => [event.id as string, event]));
   const eventIds = [...eventById.keys()];
 
-  const [{ data: saves }, { data: alreadySent }] = await Promise.all([
+  const [{ data: saves, error: savesError }, { data: alreadySent, error: sentError }] = await Promise.all([
     admin.from('event_saves').select('user_id, event_id').in('event_id', eventIds).eq('status', 'saved'),
     admin.from('deadline_reminders').select('user_id, event_id, kind').in('event_id', eventIds),
   ]);
+  /*
+    Без журнала нельзя: пустой список «уже отправлено» значил бы повторную
+    рассылку всем. Лучше пропустить запуск — завтра окно ещё открыто.
+  */
+  if (savesError || sentError) {
+    console.error('[deadline-reminders] сохранения/журнал:', savesError ?? sentError);
+    return NextResponse.json({ error: 'journal_failed' }, { status: 500 });
+  }
 
   const sentKey = (userId: string, eventId: string, kind: string) => `${userId}:${eventId}:${kind}`;
   const sent = new Set((alreadySent ?? []).map((row) => sentKey(row.user_id, row.event_id, row.kind)));
@@ -89,6 +97,7 @@ export async function GET(request: Request) {
       title: String(event.title),
       deadlineIso: String(event.registration_deadline).slice(0, 10),
       kind,
+      daysLeft: daysBetween(today, String(event.registration_deadline).slice(0, 10)),
     });
     pending.set(save.user_id, list);
   }

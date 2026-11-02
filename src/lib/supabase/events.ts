@@ -8,7 +8,7 @@
  * id, которого в базе уже нет.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { createContext, createElement, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { createClient } from './client';
 import { useSchoolAuth } from './useSchoolAuth';
 import { useStore } from '@/components/StoreProvider';
@@ -108,7 +108,7 @@ export function usePublishedEvents(refreshKey = 0) {
  */
 export type SaveStatus = 'saved' | 'applied' | 'participated';
 
-export function useSavedEvents() {
+function useSavedEventsState() {
   const { profile } = useSchoolAuth();
   const { state, clearEventRegistrations } = useStore();
   const userId = profile?.id ?? null;
@@ -179,7 +179,23 @@ export function useSavedEvents() {
         return next;
       };
 
-      setLoaded((current) => (current ? { ...current, ids: flip(current.ids, !wasSaved) } : current));
+      /*
+        Статус меняется вместе с отметкой: убранное и снова сохранённое
+        событие в базе — новая строка со статусом «сохранено», и на экране
+        должно быть так же. Иначе «Заявка подана» оставалась висеть, а крон
+        слал напоминания «вы ещё не подали заявку».
+      */
+      const reStatus = (current: Map<string, SaveStatus>, save: boolean, previous?: SaveStatus) => {
+        const next = new Map(current);
+        if (save) next.set(eventId, previous ?? 'saved');
+        else next.delete(eventId);
+        return next;
+      };
+      const previousStatus = statuses?.get(eventId);
+
+      setLoaded((current) =>
+        current ? { ...current, ids: flip(current.ids, !wasSaved), statuses: reStatus(current.statuses, !wasSaved) } : current,
+      );
 
       const supabase = createClient();
       const { error } = wasSaved
@@ -187,10 +203,14 @@ export function useSavedEvents() {
         : await supabase.from('event_saves').insert({ user_id: userId, event_id: eventId });
 
       if (error) {
-        setLoaded((current) => (current ? { ...current, ids: flip(current.ids, wasSaved) } : current));
+        setLoaded((current) =>
+          current
+            ? { ...current, ids: flip(current.ids, wasSaved), statuses: reStatus(current.statuses, wasSaved, previousStatus) }
+            : current,
+        );
       }
     },
-    [userId, ids],
+    [userId, ids, statuses],
   );
 
   /**
@@ -221,4 +241,26 @@ export function useSavedEvents() {
   );
 
   return { ids, statuses, toggle, setStatus };
+}
+
+type SavedEvents = ReturnType<typeof useSavedEventsState>;
+
+const SavedEventsContext = createContext<SavedEvents | null>(null);
+
+/**
+ * Одно состояние «Моих событий» на всё приложение (src/app/layout.tsx).
+ *
+ * Раньше каждый компонент вызывал хук сам и держал свою копию: меню
+ * профиля в шапке грузило список один раз и до перезагрузки показывало
+ * «ничего не сохранено», хотя на странице события звезда уже горела.
+ */
+export function SavedEventsProvider({ children }: { children: ReactNode }) {
+  const value = useSavedEventsState();
+  return createElement(SavedEventsContext.Provider, { value }, children);
+}
+
+export function useSavedEvents(): SavedEvents {
+  const value = useContext(SavedEventsContext);
+  if (!value) throw new Error('useSavedEvents: нет SavedEventsProvider выше по дереву');
+  return value;
 }

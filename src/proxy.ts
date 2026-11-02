@@ -154,6 +154,34 @@ export async function proxy(request: NextRequest) {
     return redirect;
   }
 
+  /*
+    Админка — только со вторым фактором (TOTP). Сама граница в базе
+    (миграция pilot_admin_mfa: без aal2 админ ничего не одобрит и не
+    поменяет); здесь — чтобы вместо пустой админки с ошибками человек сразу
+    попал на экран кода. Роль смотрим только на /admin и только пока сессия
+    без второго фактора: остальным запросам лишний поход в базу не нужен.
+  */
+  if (user && !isPublic(pathname) && !pathname.startsWith('/api/') && pathname !== '/mfa') {
+    // Уровень читается из токена сессии — без запроса к серверу.
+    const { data: level } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (level && level.currentLevel !== 'aal2') {
+      const adminPath = pathname === '/admin' || pathname.startsWith('/admin/');
+      // Подключил второй фактор, но вошёл только паролем — код нужен на любой странице.
+      let needsCode = level.nextLevel === 'aal2';
+      if (!needsCode && adminPath) {
+        const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
+        needsCode = profile?.role === 'admin';
+      }
+      if (needsCode) {
+        const mfaUrl = new URL('/mfa', request.url);
+        mfaUrl.searchParams.set('next', pathname + search);
+        const redirect = NextResponse.redirect(mfaUrl);
+        response.cookies.getAll().forEach((cookie) => redirect.cookies.set(cookie));
+        return redirect;
+      }
+    }
+  }
+
   response.headers.set('Content-Security-Policy', csp);
   return response;
 }

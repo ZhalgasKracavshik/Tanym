@@ -13,7 +13,7 @@ const { isDisabledPath, isAiLive } = await load('src/lib/pilot.ts');
 const { buildCsp, generateNonce } = await load('src/lib/security/csp.ts');
 const { pickNearestDeadline, deadlineIcs } = await load('src/lib/events.ts');
 const { reminderKindFor, addDaysIso, buildReminderEmail } = await load('src/lib/notifications/deadlineReminder.ts');
-const { pickDigest, buildDigestEmail, buildTelegramDigest } = await load('src/lib/notifications/digest.ts');
+const { pickDigest, buildDigestEmail, buildTelegramDigest, weekStartIso } = await load('src/lib/notifications/digest.ts');
 const { safeNextPath } = await load('src/lib/security/redirect.ts');
 const { passwordProblem, pwnedCountFromRange, MIN_PASSWORD_LENGTH } = await load('src/lib/security/password.ts');
 
@@ -115,13 +115,20 @@ expect(pickNearestDeadline([event('closed', '2026-10-01')], null, today) === nul
 /* Напоминания о дедлайне: ровно за 7 и за 1 день, без сдвига суток. */
 expect(addDaysIso('2026-10-30', 7) === '2026-11-06', 'addDaysIso переходит через месяц');
 expect(addDaysIso('2026-12-31', 1) === '2027-01-01', 'addDaysIso переходит через год');
-expect(reminderKindFor('2026-10-13', '2026-10-06') === 'd7', 'за 7 дней — напоминание d7');
-expect(reminderKindFor('2026-10-07', '2026-10-06') === 'd1', 'за 1 день — напоминание d1');
-expect(reminderKindFor('2026-10-06', '2026-10-06') === null, 'в сам день дедлайна письма нет');
-expect(reminderKindFor('2026-10-10', '2026-10-06') === null, 'за 4 дня письма нет');
+expect(reminderKindFor('2026-10-13', '2026-10-06') === 'd7', 'за 7 дней — окно d7');
+expect(reminderKindFor('2026-10-10', '2026-10-06') === 'd7', 'за 4 дня — всё ещё окно d7 (пропущенный запуск догоняется)');
+expect(reminderKindFor('2026-10-07', '2026-10-06') === 'd1', 'за 1 день — окно d1');
+expect(reminderKindFor('2026-10-06', '2026-10-06') === 'd1', 'в последний день — d1, если ещё не отправлено');
+expect(reminderKindFor('2026-10-14', '2026-10-06') === null, 'за 8 дней письма нет');
+expect(reminderKindFor('2026-10-05', '2026-10-06') === null, 'после дедлайна письма нет');
 const mail = buildReminderEmail('<b>Айгерим</b>', [
-  { eventId: 'e1', title: 'Олимпиада <script>alert(1)</script>', deadlineIso: '2026-10-07', kind: 'd1' },
+  { eventId: 'e1', title: 'Олимпиада <script>alert(1)</script>', deadlineIso: '2026-10-07', kind: 'd1', daysLeft: 1 },
 ], 'https://tanym.kz');
+const mail5 = buildReminderEmail('', [
+  { eventId: 'a', title: 'A', deadlineIso: '2026-10-11', kind: 'd7', daysLeft: 5 },
+  { eventId: 'b', title: 'B', deadlineIso: '2026-10-12', kind: 'd7', daysLeft: 6 },
+], 'https://tanym.kz');
+expect(mail5.text.includes('через 5 дней') && mail5.subject.includes('2 ваших события'), 'письмо: «через 5 дней», «2 ваших события»');
 expect(!mail.html.includes('<script>') && !mail.html.includes('<b>Айгерим'), 'письмо экранирует имя и название');
 expect(mail.subject.startsWith('Завтра'), 'тема письма за 1 день — «Завтра…»');
 expect(mail.text.includes('https://tanym.kz/events/e1'), 'в письме ссылка на событие');
@@ -150,12 +157,14 @@ expect(dMail.text.includes('https://tanym.kz/events/soon') && dMail.subject.incl
 const dTg = buildTelegramDigest({ opened: [{ ...dEvents[1], title: 'A <b>&' }], closing: [] }, dToday, 'https://tanym.kz');
 expect(dTg.includes('A &lt;b&gt;&amp;') && !dTg.includes('A <b>&'), 'Telegram: название экранировано');
 
+expect(weekStartIso('2026-11-02') === '2026-11-02' && weekStartIso('2026-11-04') === '2026-11-02' && weekStartIso('2026-11-08') === '2026-11-02', 'дайджест: ключ недели — её понедельник');
+
 /* Пароль: длина, простые шаблоны, совпадение с почтой; разбор ответа HIBP. */
 expect(passwordProblem('a'.repeat(MIN_PASSWORD_LENGTH - 1)) === 'short', 'пароль: короткий отбивается');
-for (const weak of ['11111111', '12345678', 'qwertyuiop', 'abcdefgh']) {
-  expect(passwordProblem(weak) === 'simple', `пароль: «${weak}» считается простым`);
+for (const weak of ['11111111', '12345678', 'qwertyuiop', 'abcdefgh', 'Пароль2026!', 'kitap-2026!']) {
+  expect(passwordProblem(weak) === 'classes', `пароль: «${weak}» без всех четырёх наборов отбивается`);
 }
-expect(passwordProblem('aigerim2010!', 'aigerim@mail.kz') === 'simple', 'пароль: логин почты внутри пароля отбивается');
+expect(passwordProblem('Aigerim2010!', 'aigerim@mail.kz') === 'simple', 'пароль: логин почты внутри пароля отбивается');
 expect(passwordProblem('Kitap-Oqu-2026') === null, 'пароль: нормальный пароль проходит');
 expect(pwnedCountFromRange('0018A45C4D1DEF81644B54AB7F969B88D65:1\r\n1E4C9B93F3F0682250B6CF8331B7EE68FD8:3861493', '1e4c9b93f3f0682250b6cf8331b7ee68fd8') === 3861493, 'HIBP: найденный хвост хеша');
 expect(pwnedCountFromRange('0018A45C4D1DEF81644B54AB7F969B88D65:1', 'FFFF') === 0, 'HIBP: отсутствующий хвост — 0');

@@ -23,6 +23,13 @@ import { safeNextPath } from '@/lib/security/redirect';
 /** Пускаем только внутренние пути: иначе ссылка из письма уводила бы на чужой сайт. */
 const safeNext = (raw: string | null) => safeNextPath(raw, '/');
 
+/** Код ошибки добавляется к адресу правильно, даже если в next уже есть «?». */
+function redirectWithError(origin: string, next: string, code: string) {
+  const target = new URL(next, origin);
+  target.searchParams.set('authError', code);
+  return NextResponse.redirect(target);
+}
+
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const next = safeNext(searchParams.get('next'));
@@ -36,7 +43,7 @@ export async function GET(request: Request) {
   */
   const errorCode = searchParams.get('error_code') ?? searchParams.get('error');
   if (errorCode) {
-    return NextResponse.redirect(`${origin}${next}?authError=${encodeURIComponent(errorCode)}`);
+    return redirectWithError(origin, next, errorCode);
   }
 
   const code = searchParams.get('code');
@@ -44,7 +51,7 @@ export async function GET(request: Request) {
   const type = searchParams.get('type') as EmailOtpType | null;
 
   if (!code && !tokenHash) {
-    return NextResponse.redirect(`${origin}${next}?authError=missing_code`);
+    return redirectWithError(origin, next, 'missing_code');
   }
 
   const supabase = await createClient();
@@ -54,34 +61,14 @@ export async function GET(request: Request) {
     : await supabase.auth.verifyOtp({ token_hash: tokenHash!, type: type ?? 'email' });
 
   if (error || !data.user) {
-    return NextResponse.redirect(`${origin}${next}?authError=exchange_failed`);
+    return redirectWithError(origin, next, 'exchange_failed');
   }
 
   /*
-    Проверка школьного домена — только для входа, не для восстановления
-    пароля.
-
-    Аккаунт при восстановлении уже существует, и его почта была принята при
-    регистрации. Прогонять её через список ещё раз значит запереть человека
-    снаружи от собственного аккаунта из-за правила, введённого после того,
-    как он зарегистрировался.
+    Проверки школьного домена здесь больше нет: на пилоте регистрация
+    открыта для любой почты (миграция pilot_open_student_registration), а
+    роль учителя выдаёт только админ. Старая проверка разлогинивала всех,
+    у кого почта не из списка, — в том числе входящих через Google.
   */
-  if (type === 'recovery' || next.startsWith('/reset-password')) {
-    return NextResponse.redirect(`${origin}${next}`);
-  }
-
-  const email = data.user.email ?? '';
-  const { data: allowed } = await supabase
-    .from('allowed_school_domains')
-    .select('domain')
-    .then(({ data }) => ({
-      data: (data ?? []).some((row) => email.toLowerCase().endsWith(`@${row.domain}`)),
-    }));
-
-  if (!allowed) {
-    await supabase.auth.signOut();
-    return NextResponse.redirect(`${origin}${next}?authError=wrong_domain`);
-  }
-
   return NextResponse.redirect(`${origin}${next}`);
 }

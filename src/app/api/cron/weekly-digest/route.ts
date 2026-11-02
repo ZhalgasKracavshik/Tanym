@@ -14,7 +14,7 @@
 import { NextResponse } from 'next/server';
 import { adminClient } from '@/lib/supabase/admin';
 import { almatyDateIso } from '@/lib/date';
-import { buildDigestEmail, buildTelegramDigest, pickDigest, type DigestEvent } from '@/lib/notifications/digest';
+import { buildDigestEmail, buildTelegramDigest, pickDigest, weekStartIso, type DigestEvent } from '@/lib/notifications/digest';
 import {
   SITE_URL,
   confirmedEmails,
@@ -63,23 +63,36 @@ export async function GET(request: Request) {
     grades: (row.grades as number[] | null) ?? [],
   }));
 
+  // Ключ недели — её понедельник по Астане: перезапуск во вторник не начнёт «новую неделю».
+  const week = weekStartIso(today);
+
   // Письма: ученики, не выключившие учебные письма, ещё не получившие дайджест этой недели.
-  const { data: students } = await admin
-    .from('profiles')
-    .select('id, name, grade, notify_learning')
-    .eq('role', 'student');
-  const { data: already } = await admin.from('weekly_digests').select('user_id').eq('week_start', today);
-  const skip = new Set((already ?? []).map((row) => row.user_id as string));
+  // Постранично: PostgREST отдаёт не больше 1000 строк за запрос.
+  const students = await readAll<{ id: string; name: string | null; grade: number | null; notify_learning: boolean | null }>(
+    (from, to) => admin.from('profiles').select('id, name, grade, notify_learning').eq('role', 'student').order('id').range(from, to),
+  );
+  const already = await readAll<{ user_id: string }>((from, to) =>
+    admin.from('weekly_digests').select('user_id').eq('week_start', week).order('user_id').range(from, to),
+  );
+  if (!students || !already) {
+    return NextResponse.json({ error: 'read_failed' }, { status: 500 });
+  }
+  const skip = new Set(already.map((row) => row.user_id));
 
-  // Канал — общая подборка без фильтра по классу. Только при первом запуске
-  // недели: если журнал уже не пуст, крон перезапущен и пост уже ушёл.
+  // Канал — общая подборка без класса, один пост на неделю (журнал digest_posts).
   const common = pickDigest(events, today);
-  const telegram =
-    common.opened.length + common.closing.length > 0 && skip.size === 0
-      ? await postToTelegram(buildTelegramDigest(common, today, SITE_URL), LOG)
-      : 'skipped';
+  let telegram: 'sent' | 'skipped' | 'failed' | 'already' = 'skipped';
+  if (common.opened.length + common.closing.length > 0) {
+    const { data: posted } = await admin.from('digest_posts').select('week_start').eq('week_start', week).maybeSingle();
+    if (posted) {
+      telegram = 'already';
+    } else {
+      telegram = await postToTelegram(buildTelegramDigest(common, today, SITE_URL), LOG);
+      if (telegram === 'sent') await admin.from('digest_posts').insert({ week_start: week });
+    }
+  }
 
-  const candidates = (students ?? []).filter((row) => row.notify_learning !== false && !skip.has(row.id));
+  const candidates = students.filter((row) => row.notify_learning !== false && !skip.has(row.id));
   const emails = await confirmedEmails(admin, candidates.map((row) => row.id as string), LOG);
 
   const dryRun = !emailEnabled();
@@ -99,7 +112,7 @@ export async function GET(request: Request) {
     : await sendEmailBatches(outgoing, LOG, async (batch) => {
         const { error: logError } = await admin
           .from('weekly_digests')
-          .upsert(batch.map((item) => ({ user_id: item.userId, week_start: today })), { ignoreDuplicates: true });
+          .upsert(batch.map((item) => ({ user_id: item.userId, week_start: week })), { ignoreDuplicates: true });
         if (logError) console.error(`${LOG} журнал:`, logError);
       });
 
@@ -112,4 +125,21 @@ export async function GET(request: Request) {
     opened: common.opened.length,
     closing: common.closing.length,
   });
+}
+
+/** Все строки по страницам по 1000; null — если хоть одна страница не прочиталась. */
+async function readAll<T>(
+  page: (from: number, to: number) => PromiseLike<{ data: unknown[] | null; error: unknown }>,
+): Promise<T[] | null> {
+  const rows: T[] = [];
+  for (let from = 0; from < 50_000; from += 1000) {
+    const { data, error } = await page(from, from + 999);
+    if (error) {
+      console.error(`${LOG} чтение:`, error);
+      return null;
+    }
+    rows.push(...((data ?? []) as T[]));
+    if (!data || data.length < 1000) break;
+  }
+  return rows;
 }

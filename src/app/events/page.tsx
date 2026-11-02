@@ -71,6 +71,10 @@ const TEXT: Dict<{
   statusOpen: string;
   statusClosing: string;
   details: string;
+  save: string;
+  saved: string;
+  saveLogin: string;
+  gradeShort: string;
   prevImage: string;
   nextImage: string;
 }> = {
@@ -107,6 +111,10 @@ const TEXT: Dict<{
     statusOpen: 'Идёт запись',
     statusClosing: 'Скоро закрытие',
     details: 'Подробнее',
+    save: 'Сохранить',
+    saved: 'Сохранено',
+    saveLogin: 'Войдите, чтобы сохранить',
+    gradeShort: 'кл',
     prevImage: 'Предыдущее фото',
     nextImage: 'Следующее фото',
   },
@@ -135,6 +143,10 @@ const TEXT: Dict<{
     statusOpen: 'Тіркеу ашық',
     statusClosing: 'Жабылады',
     details: 'Толығырақ',
+    save: 'Сақтау',
+    saved: 'Сақталды',
+    saveLogin: 'Сақтау үшін кіріңіз',
+    gradeShort: 'сынып',
     prevImage: 'Алдыңғы сурет',
     nextImage: 'Келесі сурет',
   },
@@ -163,6 +175,10 @@ const TEXT: Dict<{
     statusOpen: 'Sign-up open',
     statusClosing: 'Closing soon',
     details: 'Details',
+    save: 'Save',
+    saved: 'Saved',
+    saveLogin: 'Log in to save',
+    gradeShort: 'gr.',
     prevImage: 'Previous image',
     nextImage: 'Next image',
   },
@@ -360,6 +376,8 @@ export default function EventsPage() {
                 typeTitle={meta?.title[state.language]}
                 daysLeft={daysLeftUntil(event.registrationDeadline)}
                 deadlineLabel={formatEventDate(event.registrationDeadline, state.language)}
+                saved={guest || !savedIds ? null : savedIds.has(event.id)}
+                onToggleSave={() => void toggleSaved(event.id)}
                 t={t}
               />
             );

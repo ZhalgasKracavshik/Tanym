@@ -58,7 +58,10 @@ async function describeInsertError(
   context: { role: string; email: string },
 ): Promise<{ error: string; domains?: string[] }> {
   // 42501 — insufficient_privilege, то есть отказ именно политики RLS.
-  if (error.code !== '42501') return { error: error.message };
+  if (error.code !== '42501') {
+    console.error('Профиль не создан', { code: error.code, message: error.message });
+    return { error: 'profile_create_failed' };
+  }
 
   const { data } = await supabase
     .from('allowed_school_domains')
@@ -323,7 +326,7 @@ export async function PATCH(request: Request) {
       одном недостающем гранте. В логе видно сразу.
     */
     console.error('Профиль не сохранён', { patch: Object.keys(patch), message: error.message });
-    return NextResponse.json({ error: error.message }, { status: 403 });
+    return NextResponse.json({ error: 'profile_update_failed' }, { status: 403 });
   }
 
   /*
@@ -354,6 +357,16 @@ export async function POST(request: Request) {
   // самосоздания профиля центра тоже снята — это вторая линия.
   if (role === 'center' && isDisabledPath('/register/center')) {
     return NextResponse.json({ error: 'centers_disabled' }, { status: 403 });
+  }
+
+  /*
+    Учителем на пилоте сам себя не назначить: только заявкой из профиля и
+    решением админа (request_teacher_role / admin_set_role). Иначе любой,
+    кто зарегистрировал почту со «школьным» доменом, получал права учителя:
+    публиковать материалы всем ученикам и собирать класс по коду.
+  */
+  if (role === 'teacher') {
+    return NextResponse.json({ error: 'teacher_by_request_only' }, { status: 403 });
   }
 
   const name: string = user.user_metadata?.full_name || user.user_metadata?.name || user.email || 'Без имени';

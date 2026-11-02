@@ -251,6 +251,7 @@ export default function RegisterPage() {
 
   function translateSignUpError(message: string): string {
     if (/already registered|already exists/i.test(message)) return t.alreadyRegistered;
+    if (/should contain at least one character/i.test(message)) return PASSWORD_TEXT[lang].classes;
     if (/password.*at least|weak password/i.test(message)) return t.weakPassword;
     if (/invalid email/i.test(message)) return t.invalidEmail;
     if (/rate limit|too many/i.test(message)) return t.rateLimit;

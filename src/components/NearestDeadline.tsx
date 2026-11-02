@@ -17,6 +17,7 @@
  */
 
 import Link from 'next/link';
+import { useSavedEvents } from '@/lib/supabase/events';
 import { EVENT_TYPES, daysLeftUntil, formatEventDate, pickNearestDeadline } from '@/lib/events';
 import type { SchoolEvent } from '@/lib/events';
 import type { Dict, Language } from '@/lib/i18n';
@@ -100,7 +101,14 @@ export function NearestDeadline({
   className?: string;
 }) {
   const t = TEXT[language];
-  const picked = pickNearestDeadline(events, savedIds);
+  /*
+    «Ближайший дедлайн в ваших событиях» — только по тем, куда заявка ещё
+    не подана: поданную гнать «к регистрации» незачем, и она закрывала бы
+    собой следующий настоящий срок.
+  */
+  const { statuses } = useSavedEvents();
+  const notApplied = savedIds && statuses ? new Set([...savedIds].filter((id) => (statuses.get(id) ?? 'saved') === 'saved')) : savedIds;
+  const picked = pickNearestDeadline(events, notApplied);
   if (!picked) return null;
 
   const { event, fromSaved } = picked;

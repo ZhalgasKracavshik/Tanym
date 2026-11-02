@@ -10,17 +10,30 @@
  */
 
 import { daysBetween } from '../date';
+import { pluralRu } from '../plural';
+
+function capitalize(text: string): string {
+  return text.charAt(0).toLocaleUpperCase('ru-RU') + text.slice(1);
+}
 
 export type ReminderKind = 'd7' | 'd1';
 
-/** За сколько дней до дедлайна какое напоминание уходит. */
-export const REMINDER_DAYS: Record<ReminderKind, number> = { d7: 7, d1: 1 };
+/** Окно каждого напоминания: d7 — за 7…2 дня, d1 — за 1 день и в последний день. */
+export const REMINDER_WINDOWS: Record<ReminderKind, [number, number]> = { d7: [2, 7], d1: [0, 1] };
 
-/** Какое напоминание положено сегодня по этому дедлайну, или null. */
+/**
+ * Какое напоминание положено по этому дедлайну сегодня, или null.
+ *
+ * Окно, а не точный день: Vercel не догоняет пропущенный запуск крона, и с
+ * проверкой «ровно 7 дней» один сбой терял напоминание навсегда. Журнал
+ * deadline_reminders не даёт отправить одно и то же окно дважды.
+ */
 export function reminderKindFor(deadlineIso: string, todayIso: string): ReminderKind | null {
   const days = daysBetween(todayIso, deadlineIso);
-  if (days === REMINDER_DAYS.d7) return 'd7';
-  if (days === REMINDER_DAYS.d1) return 'd1';
+  for (const kind of ['d1', 'd7'] as const) {
+    const [from, to] = REMINDER_WINDOWS[kind];
+    if (days >= from && days <= to) return kind;
+  }
   return null;
 }
 
@@ -45,6 +58,14 @@ export interface ReminderItem {
   title: string;
   deadlineIso: string;
   kind: ReminderKind;
+  /** Сколько дней осталось на момент письма — из него текст «завтра / через 5 дней». */
+  daysLeft: number;
+}
+
+function whenText(daysLeft: number): string {
+  if (daysLeft <= 0) return 'сегодня последний день';
+  if (daysLeft === 1) return 'завтра';
+  return `через ${daysLeft} ${pluralRu(daysLeft, 'день', 'дня', 'дней')}`;
 }
 
 function formatDateRu(dateIso: string): string {
@@ -62,16 +83,17 @@ export function buildReminderEmail(
   items: ReminderItem[],
   siteUrl: string,
 ): { subject: string; html: string; text: string } {
-  const urgent = items.some((item) => item.kind === 'd1');
   const first = items[0];
   const subject =
     items.length === 1
-      ? `${urgent ? 'Завтра' : 'Через неделю'} закрывается регистрация: ${first.title}`
-      : `Скоро закрывается регистрация на ${items.length} ваших события`;
+      ? first.daysLeft <= 0
+        ? `Сегодня последний день регистрации: ${first.title}`
+        : `${capitalize(whenText(first.daysLeft))} закрывается регистрация: ${first.title}`
+      : `Скоро закрывается регистрация: ${items.length} ${pluralRu(items.length, 'ваше событие', 'ваших события', 'ваших событий')}`;
 
   const greeting = name ? `${name}, привет!` : 'Привет!';
   const lines = items.map((item) => {
-    const when = item.kind === 'd1' ? 'завтра' : 'через 7 дней';
+    const when = whenText(item.daysLeft);
     return {
       text: `• ${item.title} — регистрация до ${formatDateRu(item.deadlineIso)} (${when}): ${siteUrl}/events/${item.eventId}`,
       html: `<li style="margin:0 0 12px"><a href="${escapeHtml(`${siteUrl}/events/${item.eventId}`)}" style="color:#1d1b19;font-weight:600">${escapeHtml(item.title)}</a><br><span style="color:#6b655e">регистрация до ${escapeHtml(formatDateRu(item.deadlineIso))} — ${when}</span></li>`,

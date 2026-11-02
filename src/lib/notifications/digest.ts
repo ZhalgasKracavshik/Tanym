@@ -10,6 +10,20 @@
 
 import { daysBetween } from '../date';
 import { addDaysIso, escapeHtml } from './deadlineReminder';
+import { pluralRu } from '../plural';
+
+/** Понедельник недели (по Астане), к которой относится дата, — ключ журнала дайджеста. */
+export function weekStartIso(todayIso: string): string {
+  const weekday = new Date(`${todayIso}T12:00:00+05:00`).getUTCDay(); // 0 — воскресенье
+  return addDaysIso(todayIso, -((weekday + 6) % 7));
+}
+
+/** Дата публикации по Астане: событие, одобренное в 03:00 по Астане, — это уже «сегодня», а не вчера по UTC. */
+function almatyDay(timestamp: string): string {
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return timestamp.slice(0, 10);
+  return new Date(date.getTime() + 5 * 3600 * 1000).toISOString().slice(0, 10);
+}
 
 export interface DigestEvent {
   id: string;
@@ -44,7 +58,7 @@ export function pickDigest(
   const closingIds = new Set(closing.map((event) => event.id));
 
   const opened = open
-    .filter((event) => !closingIds.has(event.id) && event.publishedAt.slice(0, 10) >= weekAgo)
+    .filter((event) => !closingIds.has(event.id) && almatyDay(event.publishedAt) >= weekAgo)
     .sort((a, b) => a.registrationDeadline.localeCompare(b.registrationDeadline));
 
   return { opened, closing };
@@ -79,8 +93,8 @@ export function buildDigestEmail(
 ): { subject: string; html: string; text: string } {
   const { opened, closing } = digest;
   const subject = closing.length
-    ? `На этой неделе закрывается регистрация: ${closing.length} ${closing.length === 1 ? 'событие' : 'события'}`
-    : `В афише ${opened.length} новых ${opened.length === 1 ? 'событие' : 'события'}`;
+    ? `В ближайшие 2 недели закрывается регистрация: ${closing.length} ${pluralRu(closing.length, 'событие', 'события', 'событий')}`
+    : `В афише ${opened.length} ${pluralRu(opened.length, 'новое событие', 'новых события', 'новых событий')}`;
   const greeting = name ? `${name}, привет!` : 'Привет!';
   const link = (event: DigestEvent) => `${siteUrl}/events/${event.id}`;
 

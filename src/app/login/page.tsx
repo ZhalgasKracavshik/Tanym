@@ -33,6 +33,7 @@ const TEXT: Dict<{
   password: string;
   passwordRequired: string;
   invalidCredentials: string;
+  linkFailed: string;
   emailNotConfirmed: string;
   rateLimit: string;
   genericError: string;
@@ -52,6 +53,7 @@ const TEXT: Dict<{
     password: 'Пароль',
     passwordRequired: 'Введите пароль.',
     invalidCredentials: 'Неверная почта или пароль.',
+    linkFailed: 'Ссылка из письма устарела или уже открыта. Войдите паролем.',
     emailNotConfirmed: 'Почта не подтверждена — проверьте письмо.',
     rateLimit: 'Слишком много попыток. Подождите минуту.',
     genericError: 'Не удалось войти.',
@@ -71,6 +73,7 @@ const TEXT: Dict<{
     password: 'Құпия сөз',
     passwordRequired: 'Құпия сөзді енгізіңіз.',
     invalidCredentials: 'Пошта немесе құпия сөз қате.',
+    linkFailed: 'Хаттағы сілтеме ескірген немесе ашылып қойған. Құпия сөзбен кіріңіз.',
     emailNotConfirmed: 'Пошта расталмаған — хатты тексеріңіз.',
     rateLimit: 'Тым көп әрекет. Бір минуттан кейін қайталаңыз.',
     genericError: 'Кіру мүмкін болмады.',
@@ -90,6 +93,7 @@ const TEXT: Dict<{
     password: 'Password',
     passwordRequired: 'Enter your password.',
     invalidCredentials: 'Incorrect email or password.',
+    linkFailed: 'The email link has expired or was already used. Log in with your password.',
     emailNotConfirmed: 'Email not confirmed — check your inbox.',
     rateLimit: 'Too many attempts. Wait a minute.',
     genericError: 'Could not log in.',
@@ -128,6 +132,9 @@ function LoginForm() {
   const [password, setPassword] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'success'>('idle');
   const [formError, setFormError] = useState<string | null>(null);
+  // Пришли из /auth/callback с ошибкой — говорим об этом, а не показываем пустую форму.
+  // Прокси переносит исходный адрес в next — ошибка может прийти и внутри него.
+  const linkFailed = Boolean(searchParams.get('authError') || nextParam?.includes('authError='));
 
   /*
     Ошибки конкретных полей вместо одной общей строки над кнопкой.
@@ -247,6 +254,7 @@ function LoginForm() {
         </div>
 
         {formError && <FormMessage tone="error">{formError}</FormMessage>}
+        {!formError && linkFailed && <FormMessage tone="info">{t.linkFailed}</FormMessage>}
 
         <SubmitButton loading={status === 'loading'} success={status === 'success'}>
           {t.submit}

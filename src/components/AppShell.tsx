@@ -43,6 +43,8 @@ const SHELLESS_ROUTES = [
   '/register',
   '/forgot-password',
   '/reset-password',
+  // Второй фактор админа — экран входа, а не страница приложения.
+  '/mfa',
   '/for-schools',
   '/for-centers',
   '/privacy',
@@ -101,10 +103,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   */
   useEffect(() => {
     if (loading || !hydrated) return;
+    // Экраны без оболочки (сброс пароля, второй фактор, политика) не
+    // перехватываем: иначе ссылка из письма для сброса пароля сразу
+    // уводила в онбординг, и пароль так и не менялся.
+    if (isShellless) return;
     if (onboardingPending && pathname !== '/onboarding') {
       router.replace('/onboarding');
     }
-  }, [loading, hydrated, onboardingPending, pathname, router]);
+  }, [loading, hydrated, isShellless, onboardingPending, pathname, router]);
 
   if (isShellless) {
     return <main className="flex-1">{children}</main>;

@@ -7,6 +7,7 @@ import { ProgressSync } from '@/components/ProgressSync';
 import { LEARNING_ENABLED } from '@/lib/pilot';
 import { SchoolAuthProvider } from '@/lib/supabase/useSchoolAuth';
 import { getServerProfile } from '@/lib/supabase/serverProfile';
+import { SavedEventsProvider } from '@/lib/supabase/events';
 import { SITE_ALIASES, SITE_NAME, SITE_URL } from '@/lib/site';
 
 /**
@@ -121,7 +122,9 @@ export default async function RootLayout({ children }: LayoutProps<'/'>) {
             initialSchoolClass={schoolClass}
           >
             {LEARNING_ENABLED && <ProgressSync />}
-            <AppShell>{children}</AppShell>
+            <SavedEventsProvider>
+              <AppShell>{children}</AppShell>
+            </SavedEventsProvider>
           </SchoolAuthProvider>
         </StoreProvider>
       </body>
