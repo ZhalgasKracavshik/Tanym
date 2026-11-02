@@ -18,12 +18,10 @@
 import { NextResponse } from 'next/server';
 import type { EmailOtpType } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/server';
+import { safeNextPath } from '@/lib/security/redirect';
 
 /** Пускаем только внутренние пути: иначе ссылка из письма уводила бы на чужой сайт. */
-function safeNext(raw: string | null): string {
-  if (!raw || !raw.startsWith('/') || raw.startsWith('//')) return '/';
-  return raw;
-}
+const safeNext = (raw: string | null) => safeNextPath(raw, '/');
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);

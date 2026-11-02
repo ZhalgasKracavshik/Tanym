@@ -47,8 +47,10 @@ export function buildCsp(nonce: string): string {
     // Аудио постов достижений лежит в Supabase Storage.
     `media-src 'self' blob: ${supabaseUrl}`.trim(),
     `font-src 'self' data:`,
-    // REST и Realtime Supabase; в dev — вебсокет HMR.
-    `connect-src 'self' ${supabaseUrl} ${supabaseWs}${dev ? ' ws: wss:' : ''}`.replace(/\s+/g, ' ').trim(),
+    // REST и Realtime Supabase; проверка пароля по утечкам (lib/security/password.ts); в dev — вебсокет HMR.
+    `connect-src 'self' ${supabaseUrl} ${supabaseWs} https://api.pwnedpasswords.com${dev ? ' ws: wss:' : ''}`
+      .replace(/\s+/g, ' ')
+      .trim(),
     `frame-src 'none'`,
     `frame-ancestors 'none'`,
     `form-action 'self'`,

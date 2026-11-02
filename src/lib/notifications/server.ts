@@ -8,7 +8,7 @@
 import { timingSafeEqual } from 'node:crypto';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://tanym-alpha.vercel.app').replace(/\/+$/, '');
+export { SITE_URL } from '@/lib/site';
 
 /** Authorization: Bearer <CRON_SECRET>, сравнение без утечки по времени. */
 export function cronAuthorized(request: Request): boolean {
@@ -24,33 +24,55 @@ export function emailEnabled(): boolean {
   return Boolean(process.env.RESEND_API_KEY);
 }
 
-export async function sendEmail(
-  to: string,
-  message: { subject: string; html: string; text: string },
+export interface OutgoingEmail {
+  to: string;
+  subject: string;
+  html: string;
+  text: string;
+}
+
+/** Сколько писем Resend принимает в одном пакетном запросе. */
+export const EMAIL_BATCH_SIZE = 100;
+
+/**
+ * Пакетная отправка (перенесено из Ulagat: lib/notifications/shared.ts).
+ *
+ * По одному запросу на письмо крон упирается в лимит Resend (запросов в
+ * секунду) и в таймаут функции уже на нескольких сотнях учеников. Пакет —
+ * до 100 писем за запрос. onBatchSent вызывается сразу после каждого
+ * удачного пакета: журнал пишется по ходу, и если функция оборвётся на
+ * середине, повторный запуск не отправит письма тем, кто их уже получил.
+ */
+export async function sendEmailBatches<T extends OutgoingEmail>(
+  messages: T[],
   logPrefix: string,
-): Promise<boolean> {
+  onBatchSent: (batch: T[]) => Promise<void>,
+): Promise<number> {
   const key = process.env.RESEND_API_KEY;
-  if (!key) return false;
-  try {
-    const response = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        from: process.env.RESEND_FROM ?? 'Taným <onboarding@resend.dev>',
-        to: [to],
-        subject: message.subject,
-        html: message.html,
-        text: message.text,
-      }),
-    });
-    if (!response.ok) {
-      console.error(`${logPrefix} Resend отказал:`, response.status, await response.text().catch(() => ''));
+  if (!key) return 0;
+  const from = process.env.RESEND_FROM ?? 'Taným <onboarding@resend.dev>';
+  let sent = 0;
+  for (let start = 0; start < messages.length; start += EMAIL_BATCH_SIZE) {
+    const batch = messages.slice(start, start + EMAIL_BATCH_SIZE);
+    try {
+      const response = await fetch('https://api.resend.com/emails/batch', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(
+          batch.map((message) => ({ from, to: [message.to], subject: message.subject, html: message.html, text: message.text })),
+        ),
+      });
+      if (!response.ok) {
+        console.error(`${logPrefix} Resend отказал пакету:`, response.status, await response.text().catch(() => ''));
+        continue;
+      }
+      sent += batch.length;
+      await onBatchSent(batch);
+    } catch (error) {
+      console.error(`${logPrefix} Resend недоступен:`, error);
     }
-    return response.ok;
-  } catch (error) {
-    console.error(`${logPrefix} Resend недоступен:`, error);
-    return false;
   }
+  return sent;
 }
 
 /**

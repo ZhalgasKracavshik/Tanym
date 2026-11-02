@@ -34,6 +34,7 @@ order by version;
 | `20261013100000_pilot_event_sources_applications_reminders.sql` | У события поля «источник» (`source_url`) и «сверено» (`verified_at`, ставит только админ). У `event_saves` статус: сохранил → подал заявку → участвовал. Журнал напоминаний `deadline_reminders`. |
 | `20261013110000_pilot_weekly_digest.sql` | Журнал еженедельного дайджеста `weekly_digests`: одно письмо на ученика в неделю. |
 | `20261102100000_pilot_trigger_function_execute.sql` | Триггерная функция `guard_event_verified_at` убрана из `/rest/v1/rpc` (замечание линтера). |
+| `20261102110000_pilot_event_rejection_reason.sql` | Причина отказа (`rejection_reason`) у предложенного события: её пишет админ, видит автор. |
 
 **Состояние на 2026-11-02:** все миграции из таблицы применены к `tanym` через MCP `apply_migration` и проверены под ролями гостя, ученика и админа.
 Миграции `100400`–`20261013110000`, отправленные через SQL Editor, до этого в базе не оказались.

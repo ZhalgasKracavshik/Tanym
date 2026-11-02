@@ -3,8 +3,8 @@
 /**
  * Шапка лендинга.
  *
- * Вместо кнопки «Начать» отображает стильную аватарку пользователя,
- * ведущую прямо в профиль.
+ * Гостю — «Войти / Регистрация», вошедшему — кнопка профиля с меню
+ * (ProfileMenu).
  */
 
 import Link from 'next/link';
@@ -13,8 +13,7 @@ import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
 import { LANGUAGES } from '@/lib/i18n-shared';
 import type { Dict } from '@/lib/i18n';
 import { Logo } from './Logo';
-import { Avatar } from './Avatar';
-import { avatarPhotoUrl } from '@/lib/supabase/avatarPhoto';
+import { ProfileMenu } from './ProfileMenu';
 
 const TEXT: Dict<{
   profile: string;
@@ -30,13 +29,11 @@ const TEXT: Dict<{
 
 export function SiteHeader() {
   const { state, setLanguage } = useStore();
-  const { profile: schoolProfile, isSignedIn, loading } = useSchoolAuth();
+  const { isSignedIn, loading } = useSchoolAuth();
   // Гостю вместо аватара — вход: афиша открыта без регистрации, и шапка
   // должна вести либо в неё, либо к созданию аккаунта.
   const guest = !loading && !isSignedIn;
   const t = TEXT[state.language];
-  const profile = state.profile;
-  const displayName = schoolProfile?.name ?? profile?.name ?? '';
 
   return (
     <header className="sticky top-0 z-40 border-b border-ink-200 bg-white/90 backdrop-blur">
@@ -103,19 +100,7 @@ export function SiteHeader() {
               </Link>
             </>
           ) : (
-            <Link
-              href="/profile"
-              title={displayName ? `${t.profile}: ${displayName}` : t.profile}
-              className="group relative flex items-center justify-center rounded-full p-0.5 transition-transform duration-150 hover:scale-105 outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
-            >
-              <Avatar
-                name={displayName}
-                colorId={schoolProfile?.avatar_color}
-                photoUrl={state.profile?.avatarPhotoUrl || avatarPhotoUrl(schoolProfile?.avatar_photo_path)}
-                size={38}
-                className="ring-2 ring-transparent transition-all group-hover:ring-brand-400 shadow-sm"
-              />
-            </Link>
+            <ProfileMenu showName />
           )}
         </div>
       </div>

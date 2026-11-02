@@ -49,7 +49,7 @@ export function CreatePageShell({
     <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
       <Link
         href={backHref}
-        className="inline-flex items-center gap-2 rounded-lg text-sm font-semibold text-ink-500 outline-none transition-colors duration-150 hover:text-brand-600 focus-visible:ring-2 focus-visible:ring-brand-500"
+        className="tap inline-flex items-center gap-2 rounded-lg text-sm font-semibold text-ink-500 outline-none transition-colors duration-150 hover:text-brand-600 focus-visible:ring-2 focus-visible:ring-brand-500"
       >
         <Icon name="arrow-left" size={16} />
         {backLabel}

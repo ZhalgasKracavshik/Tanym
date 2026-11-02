@@ -222,7 +222,7 @@ export function MyPath() {
           <section className="mt-10">
             <div className="flex items-baseline justify-between gap-3">
               <h2 className="text-lg font-medium text-ink-900">{t.forYou(grade)}</h2>
-              <Link href="/events" className="text-sm font-semibold text-brand-600 hover:underline">
+              <Link href="/events" className="tap text-sm font-semibold text-brand-600 hover:underline">
                 {t.allEvents}
               </Link>
             </div>

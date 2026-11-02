@@ -38,7 +38,7 @@ const TEXT = {
   proof: 'Диплом',
   noProof: 'без подтверждения',
   willGive: (points: number) => `+${points} баллов`,
-  pendingEvents: 'События от учителей',
+  pendingEvents: 'Предложенные события',
   noPendingEvents: 'Новых событий на проверке нет.',
   eventHint:
     'Проверьте даты и ссылку на регистрацию: после одобрения событие увидят все, и оно может стать «ближайшим дедлайном» у учеников.',
@@ -51,7 +51,101 @@ const TEXT = {
     как её увидят все, а не по одной строке в этой очереди.
   */
   open: 'Открыть',
+  reasonLabel: 'Причина отказа — её увидит автор',
+  reasonPlaceholder: 'Например: нет ссылки на организатора, такое событие уже есть, сроки не совпадают с источником',
+  confirmReject: 'Отклонить',
+  cancel: 'Отмена',
+  reviewFailed: 'Не сохранилось. Проверьте связь и попробуйте ещё раз.',
 } as const;
+
+/**
+ * Строка события в очереди: одобрить сразу, отклонить — с причиной.
+ * Кнопки блокируются на время запроса: двойной клик раньше отправлял два
+ * обновления, а ошибка сохранения проходила молча.
+ */
+function EventReviewRow({
+  id,
+  title,
+  meta,
+  reviewerId,
+  onDone,
+}: {
+  id: string;
+  title: string;
+  meta: string;
+  reviewerId: string;
+  onDone: () => void;
+}) {
+  const [rejecting, setRejecting] = useState(false);
+  const [reason, setReason] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  async function review(decision: 'approved' | 'rejected') {
+    setBusy(true);
+    setFailed(false);
+    const { error } = await createClient()
+      .from('published_events')
+      .update({
+        status: decision,
+        reviewed_by: reviewerId,
+        reviewed_at: new Date().toISOString(),
+        rejection_reason: decision === 'rejected' ? reason.trim().slice(0, 500) || null : null,
+        // Одобряя, админ сверяет сроки с источником — это и есть проверка.
+        ...(decision === 'approved' ? { verified_at: almatyDateIso() } : {}),
+      })
+      .eq('id', id);
+    setBusy(false);
+    if (error) {
+      setFailed(true);
+      return;
+    }
+    onDone();
+  }
+
+  return (
+    <div>
+      <Row title={title} meta={meta}>
+        <Link href={`/events/${id}`} className="flex items-center gap-1 text-xs font-semibold text-ink-600 hover:underline">
+          {TEXT.open}
+          <Icon name="arrow-right" size={12} />
+        </Link>
+        <Button size="sm" disabled={busy} onClick={() => review('approved')}>
+          <Icon name="check" size={14} />
+          {ADMIN_TEXT.approve}
+        </Button>
+        <Button size="sm" variant="ghost" disabled={busy} onClick={() => setRejecting((value) => !value)}>
+          {ADMIN_TEXT.reject}
+        </Button>
+      </Row>
+      {rejecting && (
+        <div className="mb-3 space-y-2 rounded-xl border border-ink-100 bg-ink-50/60 p-3">
+          <label htmlFor={`reason-${id}`} className="text-xs font-semibold text-ink-600">
+            {TEXT.reasonLabel}
+          </label>
+          <textarea
+            id={`reason-${id}`}
+            value={reason}
+            onChange={(event) => setReason(event.target.value)}
+            maxLength={500}
+            rows={2}
+            placeholder={TEXT.reasonPlaceholder}
+            className="w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm focus:border-brand-400 focus:outline-none"
+          />
+          <div className="flex gap-2">
+            <Button size="sm" variant="secondary" disabled={busy} onClick={() => review('rejected')}>
+              {TEXT.confirmReject}
+            </Button>
+            <Button size="sm" variant="ghost" disabled={busy} onClick={() => setRejecting(false)}>
+              {TEXT.cancel}
+            </Button>
+          </div>
+        </div>
+      )}
+      {failed && <p className="mb-3 text-xs font-semibold text-danger-600">{TEXT.reviewFailed}</p>}
+    </div>
+  );
+}
 
 function ModerationPanel({ language, reviewerId }: { language: Language; reviewerId: string }) {
   const [refreshKey, setRefreshKey] = useState(0);
@@ -75,20 +169,6 @@ function ModerationPanel({ language, reviewerId }: { language: Language; reviewe
     refreshKey,
     ['status', 'pending'],
   );
-
-  async function reviewEvent(id: string, decision: 'approved' | 'rejected', reviewerId: string) {
-    await createClient()
-      .from('published_events')
-      .update({
-        status: decision,
-        reviewed_by: reviewerId,
-        reviewed_at: new Date().toISOString(),
-        // Одобряя, админ сверяет сроки с источником — это и есть проверка.
-        ...(decision === 'approved' ? { verified_at: almatyDateIso() } : {}),
-      })
-      .eq('id', id);
-    bump();
-  }
 
   async function approveListing(id: string) {
     await createClient().from('published_listings').update({ status: 'approved' }).eq('id', id);
@@ -176,27 +256,14 @@ function ModerationPanel({ language, reviewerId }: { language: Language; reviewe
           <p className="text-sm text-ink-500">{TEXT.noPendingEvents}</p>
         ) : (
           pendingEvents.map((row) => (
-            <Row
+            <EventReviewRow
               key={row.id}
+              id={String(row.id)}
               title={String(row.title)}
               meta={`${String(row.organizer ?? '')} · до ${formatEventDate(String(row.registration_deadline), language)}`}
-            >
-              <Link
-                href={`/events/${row.id}`}
-                className="flex items-center gap-1 text-xs font-semibold text-ink-600 hover:underline"
-              >
-                {TEXT.open}
-                <Icon name="arrow-right" size={12} />
-              </Link>
-
-              <Button size="sm" onClick={() => reviewEvent(row.id, 'approved', reviewerId)}>
-                <Icon name="check" size={14} />
-                {ADMIN_TEXT.approve}
-              </Button>
-              <Button size="sm" variant="ghost" onClick={() => reviewEvent(row.id, 'rejected', reviewerId)}>
-                {ADMIN_TEXT.reject}
-              </Button>
-            </Row>
+              reviewerId={reviewerId}
+              onDone={bump}
+            />
           ))
         )}
       </Section>

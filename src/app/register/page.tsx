@@ -26,6 +26,7 @@ import {
 import type { IconName } from '@/components/Icon';
 import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
 import { checkPersonName } from '@/lib/personName';
+import { checkNewPassword, PASSWORD_TEXT } from '@/lib/security/password';
 import { useLang, type Dict } from '@/lib/i18n';
 import { domainRejectionMessage, fetchAllowedDomainRows } from '@/lib/supabase/allowedDomains';
 
@@ -95,11 +96,11 @@ const TEXT: Dict<{
     teacherBanner: 'После регистрации вы получите код класса — раздайте его ученикам.',
     email: 'Почта',
     password: 'Пароль',
-    passwordHint: 'Не меньше 6 символов.',
+    passwordHint: PASSWORD_TEXT.ru.hint,
     emailRequired: 'Введите почту.',
     passwordRequired: 'Введите пароль.',
     alreadyRegistered: 'Такая почта уже зарегистрирована — попробуйте войти.',
-    weakPassword: 'Пароль слишком короткий: нужно не меньше 6 символов.',
+    weakPassword: PASSWORD_TEXT.ru.short,
     invalidEmail: 'Проверьте адрес почты.',
     rateLimit: 'Слишком много попыток. Подождите минуту.',
     domainBlocked: 'С этой почтой зарегистрироваться нельзя — домен не разрешён администратором.',
@@ -139,11 +140,11 @@ const TEXT: Dict<{
     teacherBanner: 'Тіркелгеннен кейін сынып кодын аласыз — оны оқушыларға таратыңыз.',
     email: 'Электрондық пошта',
     password: 'Құпия сөз',
-    passwordHint: '6 таңбадан кем емес.',
+    passwordHint: PASSWORD_TEXT.kk.hint,
     emailRequired: 'Поштаңызды енгізіңіз.',
     passwordRequired: 'Құпия сөзді енгізіңіз.',
     alreadyRegistered: 'Бұл пошта тіркелген — кіріп көріңіз.',
-    weakPassword: 'Құпия сөз тым қысқа: 6 таңбадан кем болмауы керек.',
+    weakPassword: PASSWORD_TEXT.kk.short,
     invalidEmail: 'Пошта мекенжайын тексеріңіз.',
     rateLimit: 'Тым көп әрекет. Бір минуттан кейін қайталаңыз.',
     domainBlocked: 'Бұл поштамен тіркелу мүмкін емес — доменге әкімші рұқсат бермеген.',
@@ -183,11 +184,11 @@ const TEXT: Dict<{
     teacherBanner: "After signing up you'll get a class code — hand it out to your students.",
     email: 'Email',
     password: 'Password',
-    passwordHint: 'At least 6 characters.',
+    passwordHint: PASSWORD_TEXT.en.hint,
     emailRequired: 'Enter your email.',
     passwordRequired: 'Enter your password.',
     alreadyRegistered: 'This email is already registered — try logging in.',
-    weakPassword: 'Password is too short: at least 6 characters.',
+    weakPassword: PASSWORD_TEXT.en.short,
     invalidEmail: 'Check your email address.',
     rateLimit: 'Too many attempts. Wait a minute.',
     domainBlocked: "You can't sign up with this email — the domain isn't allowed.",
@@ -303,6 +304,15 @@ export default function RegisterPage() {
       hasError = true;
     }
     if (hasError || !checkedName.ok) return;
+
+    // Слабый или утёкший пароль отбиваем до создания учётной записи.
+    setStatus('loading');
+    const passwordIssue = await checkNewPassword(password, lang, email.trim());
+    if (passwordIssue) {
+      setStatus('idle');
+      setPasswordError(passwordIssue);
+      return;
+    }
     /*
       Код класса больше не обязателен здесь: его спросят в онбординге, где
       от него можно отказаться кнопкой «Позже». Требовать код прямо на

@@ -14,6 +14,7 @@ import { Suspense, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { CenterProfile } from '@/components/CenterProfile';
 import { useStore } from '@/components/StoreProvider';
+import { checkNewPassword, MIN_PASSWORD_LENGTH } from '@/lib/security/password';
 import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
 import { useOwnStreakPoints, useSchoolLeaderboard } from '@/lib/supabase/leaderboard';
 import { rankEntries } from '@/lib/leaderboard';
@@ -597,11 +598,13 @@ function ProfileContent() {
 
   async function changePassword() {
     setPasswordError(null);
-    if (password.length < 6) {
-      setPasswordError('Пароль должен быть не короче 6 символов.');
+    setPasswordStatus('loading');
+    const passwordIssue = await checkNewPassword(password, state.language, email ?? '');
+    if (passwordIssue) {
+      setPasswordStatus('idle');
+      setPasswordError(passwordIssue);
       return;
     }
-    setPasswordStatus('loading');
     const result = await updatePassword(password);
     if (!result.ok) {
       setPasswordStatus('idle');
@@ -703,7 +706,8 @@ function ProfileContent() {
                       setEditingName(true);
                     }}
                     title="Изменить имя"
-                    className="rounded p-1 text-ink-400 transition-colors hover:bg-white hover:text-ink-700"
+                    aria-label="Изменить имя"
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-ink-400 transition-colors hover:bg-white hover:text-ink-700"
                   >
                     <Icon name="edit" size={16} />
                   </button>
@@ -1361,7 +1365,7 @@ function ProfileContent() {
                   <PasswordField
                     label="Новый пароль"
                     autoComplete="new-password"
-                    placeholder="Не менее 6 символов"
+                    placeholder={`Не менее ${MIN_PASSWORD_LENGTH} символов`}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                   />

@@ -24,6 +24,7 @@ import type { IconName } from './Icon';
 import { Icon } from './Icon';
 import { Logo } from './Logo';
 import { Avatar } from './Avatar';
+import { ProfileMenu } from './ProfileMenu';
 import { useSidebarCollapsed } from '@/lib/localSetting';
 import { MobileTabBar } from './MobileTabBar';
 import { useSlidingPill } from './useSlidingPill';
@@ -414,20 +415,7 @@ export function SiteSidebar() {
           <Logo size={26} className="min-w-0 text-ink-900" />
         </Link>
 
-        {displayName && (
-          <Link
-            href="/profile"
-            aria-label={t.settings}
-            className="shrink-0 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
-          >
-            <Avatar
-          name={displayName}
-          colorId={schoolProfile?.avatar_color}
-          photoUrl={state.profile?.avatarPhotoUrl || avatarPhotoUrl(schoolProfile?.avatar_photo_path)}
-          size={32}
-        />
-          </Link>
-        )}
+        {displayName && <ProfileMenu size={32} />}
       </div>
 
       {/* Нижняя панель под палец — заменила выезжающее меню как основной путь */}

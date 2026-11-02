@@ -331,9 +331,12 @@ export default function EventsPage() {
           <EmptyState title={filter === 'mine' ? t.emptyMine : gradeOnly ? t.emptyGrade : t.empty} description="" />
         </div>
       ) : (
-        <div className="mt-4 grid auto-rows-fr gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-4 grid gap-4 sm:auto-rows-fr sm:grid-cols-2 lg:grid-cols-3">
           {/*
-            auto-rows-fr держит все карточки одной высоты.
+            auto-rows-fr держит все карточки одной высоты — но только от двух
+            колонок. В одну колонку (телефон) каждая строка — одна карточка, и
+            «одна высота на всех» растягивала короткие карточки до высоты
+            карточки с фото: под описанием зияла пустота в сотню пикселей.
 
             Без него строки сетки считают высоту независимо друг от друга: в
             полной строке карточка тянется до самой высокой соседки, а в

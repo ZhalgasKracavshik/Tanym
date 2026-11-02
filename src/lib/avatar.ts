@@ -17,14 +17,19 @@
  * чтобы белый инициал читался на любом.
  */
 export const AVATAR_COLORS: { id: string; value: string; title: string }[] = [
-  { id: 'brand', value: 'linear-gradient(135deg, #e57545, #b34a1f)', title: 'Терракота' },
-  { id: 'amber', value: 'linear-gradient(135deg, #ffa62b, #dd6302)', title: 'Янтарь' },
-  { id: 'forest', value: 'linear-gradient(135deg, #2f9e78, #1f6f5c)', title: 'Хвоя' },
-  { id: 'ocean', value: 'linear-gradient(135deg, #3aa5c9, #1c6f8c)', title: 'Море' },
-  { id: 'violet', value: 'linear-gradient(135deg, #8f6bd0, #5b3f96)', title: 'Ирис' },
-  { id: 'rose', value: 'linear-gradient(135deg, #e8657f, #b3324c)', title: 'Шиповник' },
-  { id: 'slate', value: 'linear-gradient(135deg, #4d6b85, #24425c)', title: 'Графит' },
-  { id: 'gold', value: 'linear-gradient(135deg, #d4a83a, #9a7314)', title: 'Золото' },
+  /*
+    Плоские цвета, а не градиенты: градиент-«леденец» на аватаре — первый
+    признак шаблонного интерфейса. Плоский тон с инициалами читается как
+    у живых продуктов (Codeforces, Linear, Telegram).
+  */
+  { id: 'brand', value: '#c4542a', title: 'Терракота' },
+  { id: 'amber', value: '#c77a12', title: 'Янтарь' },
+  { id: 'forest', value: '#2f7d62', title: 'Хвоя' },
+  { id: 'ocean', value: '#24779a', title: 'Море' },
+  { id: 'violet', value: '#6b4fa8', title: 'Ирис' },
+  { id: 'rose', value: '#b8405a', title: 'Шиповник' },
+  { id: 'slate', value: '#3d5870', title: 'Графит' },
+  { id: 'gold', value: '#8c6a17', title: 'Золото' },
 ];
 
 /**
@@ -45,3 +50,10 @@ export function avatarBackground(colorId: string | null, seed: string): string {
   return AVATAR_COLORS[hash % AVATAR_COLORS.length].value;
 }
 
+
+/** Инициалы: первая буква имени и фамилии («Айгерим Тестова» → «АТ»). */
+export function avatarInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  const letters = parts.slice(0, 2).map((part) => Array.from(part)[0] ?? '');
+  return letters.join('').toLocaleUpperCase('ru-RU') || '?';
+}

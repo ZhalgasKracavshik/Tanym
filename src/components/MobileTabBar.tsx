@@ -22,6 +22,8 @@ import { Icon } from './Icon';
 import { useSlidingPill } from './useSlidingPill';
 import { isDisabledPath } from '@/lib/pilot';
 import type { IconName } from './Icon';
+import { Avatar } from './Avatar';
+import { avatarPhotoUrl } from '@/lib/supabase/avatarPhoto';
 
 const TEXT: Dict<{
   archive: string;
@@ -148,7 +150,21 @@ export function MobileTabBar({ onMore }: { onMore: () => void }) {
                     active ? 'text-white' : 'text-ink-400'
                   }`}
                 >
-                  <Icon name={tab.icon} size={19} />
+                  {/*
+                    Вкладка профиля — свой аватар, а не значок человечка:
+                    так делают Instagram и Telegram, и вкладку узнают сразу.
+                  */}
+                  {tab.href === '/profile' ? (
+                    <Avatar
+                      name={profile?.name ?? state.profile?.name ?? ''}
+                      colorId={profile?.avatar_color}
+                      photoUrl={state.profile?.avatarPhotoUrl || avatarPhotoUrl(profile?.avatar_photo_path)}
+                      size={22}
+                      className={active ? 'ring-2 ring-white' : ''}
+                    />
+                  ) : (
+                    <Icon name={tab.icon} size={19} />
+                  )}
                 </span>
                 <span
                   className={`text-[11px] font-semibold leading-none ${

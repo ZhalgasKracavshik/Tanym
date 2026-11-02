@@ -74,7 +74,7 @@ function LanguageCorner() {
           onClick={() => setLanguage(item.id)}
           title={item.title}
           aria-pressed={state.language === item.id}
-          className={`rounded-md px-2.5 py-1.5 text-xs font-medium outline-none transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
+          className={`rounded-md px-2.5 py-1.5 text-xs font-medium [@media(pointer:coarse)]:py-2.5 outline-none transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500 ${
             state.language === item.id ? 'bg-brand-500 text-white shadow-sm' : 'text-ink-400 hover:text-ink-700'
           }`}
         >

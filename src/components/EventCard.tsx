@@ -38,6 +38,8 @@ const SLIDE = {
 };
 
 export interface EventCardText {
+  /** «Регистрация до» — подпись к главному факту карточки. */
+  deadline: string;
   daysLeft: (n: number) => string;
   lastDay: string;
   online: string;
@@ -105,9 +107,9 @@ export function EventCard({
         status === 'past' ? 'opacity-60' : ''
       }`}
     >
-      {/* --- Шапка --- */}
-      <div className={`relative h-48 shrink-0 overflow-hidden ${hasImages ? 'bg-ink-900' : bannerClass}`}>
-        {hasImages ? (
+      {/* --- Шапка: только если организатор прислал изображения --- */}
+      {hasImages ? (
+        <div className="relative h-40 shrink-0 overflow-hidden bg-ink-900">
           <AnimatePresence initial={false} custom={direction}>
             <motion.img
               key={index}
@@ -126,120 +128,117 @@ export function EventCard({
               className="absolute inset-0 h-full w-full object-cover"
             />
           </AnimatePresence>
-        ) : (
-          /*
-            Без фотографий — не иконка на цветной плашке, а название вида
-            события крупно. Иконка в пустом прямоугольнике сообщает «здесь
-            должна была быть картинка»; слово ничего не обещает и читается
-            как оформление.
-          */
-          <div className="flex h-full items-end p-5">
-            <span className="text-2xl font-medium leading-tight text-white/90">{typeTitle}</span>
-          </div>
-        )}
 
-        {/* Затемнение снизу — иначе белые бейджи теряются на светлом снимке */}
-        {hasImages && (
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-0 bg-gradient-to-t from-ink-900/45 via-transparent to-ink-900/25"
-          />
-        )}
+          {/* Стрелки появляются при наведении и только когда листать есть что */}
+          {images.length > 1 && (
+            <>
+              <CarouselButton side="left" label={t.prevImage} onClick={() => move(-1)} />
+              <CarouselButton side="right" label={t.nextImage} onClick={() => move(1)} />
 
-        {/*
-          Все плашки — вид события, формат и статус — лежат в одном
-          переносящемся ряду, а не двумя группами по углам.
-
-          Почему не две группы с justify-between. Так было, и статус всё
-          равно наезжал на вид события. Сжать левую группу через min-w-0
-          недостаточно: плашка внутри неё упирается в собственную
-          min-content ширину (самое длинное слово плюс поля) и дальше не
-          сжимается, а просто вылезает за границу группы — под бейдж, у
-          которого shrink-0. Замер на карточке 224px: «Курсы и вебинары»
-          против «Скоро закрытие» давали перекрытие в 19px, против «Запись
-          закрыта» — 16px, в английском «Sign-up open» — 2px. Не помещается
-          не текст, а сумма: карточка в сетке нигде не шире ~330px, и
-          130 + 8 + 118 в неё не влезает ни при каком сокращении подписей.
-
-          Один flex-wrap решает это тем, что лишнему просто некуда наехать:
-          не поместившийся бейдж переносится на вторую строку. ml-auto
-          держит его прижатым вправо и на своей строке, поэтому в обычном
-          случае (короткий вид события) ряд выглядит ровно как раньше —
-          вид слева, статус справа, одна строка. whitespace-nowrap на
-          плашках нужен затем, чтобы вместо переноса бейджа они не начали
-          ломаться пополам внутри себя.
-        */}
-        <div className="absolute inset-x-3 top-3 flex flex-wrap items-start gap-2">
-          <span className="flex items-center gap-1.5 whitespace-nowrap rounded-[var(--radius-pill)] bg-white/85 px-2.5 py-1 text-xs font-semibold text-ink-800 backdrop-blur-sm">
-            {typeIcon && <Icon name={typeIcon} size={13} />}
-            {typeTitle}
-          </span>
-
-          {event.online && (
-            <span className="whitespace-nowrap rounded-[var(--radius-pill)] bg-white/85 px-2.5 py-1 text-xs font-semibold text-ink-800 backdrop-blur-sm">
-              {t.online}
-            </span>
+              <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1.5">
+                {images.map((image, dot) => (
+                  <button
+                    key={image}
+                    onClick={() => {
+                      setDirection(dot > index ? 1 : -1);
+                      setIndex(dot);
+                    }}
+                    aria-label={`${dot + 1}`}
+                    aria-current={dot === index}
+                    className={`h-1.5 rounded-full transition-all duration-300 ${
+                      dot === index ? 'w-4 bg-white' : 'w-1.5 bg-white/55 hover:bg-white/80'
+                    }`}
+                  />
+                ))}
+              </div>
+            </>
           )}
-
-          <Badge tone={statusTone} className="ml-auto shrink-0 whitespace-nowrap">
-            {statusLabel}
-          </Badge>
         </div>
-
-        {/* Стрелки появляются при наведении и только когда листать есть что */}
-        {images.length > 1 && (
-          <>
-            <CarouselButton side="left" label={t.prevImage} onClick={() => move(-1)} />
-            <CarouselButton side="right" label={t.nextImage} onClick={() => move(1)} />
-
-            <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1.5">
-              {images.map((image, dot) => (
-                <button
-                  key={image}
-                  onClick={() => {
-                    setDirection(dot > index ? 1 : -1);
-                    setIndex(dot);
-                  }}
-                  aria-label={`${dot + 1}`}
-                  aria-current={dot === index}
-                  className={`h-1.5 rounded-full transition-all duration-300 ${
-                    dot === index ? 'w-4 bg-white' : 'w-1.5 bg-white/55 hover:bg-white/80'
-                  }`}
-                />
-              ))}
-            </div>
-          </>
-        )}
-      </div>
+      ) : (
+        /*
+          Без изображений — тонкая полоса цвета вида события, а не плашка
+          в 192px с его названием: на телефоне та занимала полэкрана и
+          отодвигала главное — срок — за сгиб. Цвет всё равно различает
+          олимпиаду и курс при беглом просмотре ленты.
+        */
+        <div aria-hidden className={`h-1.5 shrink-0 ${bannerClass}`} />
+      )}
 
       {/* --- Содержание --- */}
       <div className="flex flex-1 flex-col p-5">
-        <h2 className="text-lg font-medium leading-snug break-words text-ink-900">{event.title}</h2>
+        {/* Вид, формат и статус — одной переносящейся строкой (см. историю в git: две группы по углам наезжали друг на друга). */}
+        <div className="mb-3 flex flex-wrap items-center gap-x-2 gap-y-1.5">
+          <span className="flex items-center gap-1.5 whitespace-nowrap text-xs font-bold uppercase tracking-[0.06em] text-ink-500">
+            {typeIcon && <Icon name={typeIcon} size={13} />}
+            {typeTitle}
+          </span>
+          {event.online && (
+            <span className="whitespace-nowrap text-xs font-semibold text-ink-400">· {t.online}</span>
+          )}
+          {/* Пока запись идёт, статус уже сказан строкой срока ниже — бейдж
+              нужен только там, где записаться уже нельзя. */}
+          {!registrationRuns && (
+            <Badge tone={statusTone} className="ml-auto shrink-0 whitespace-nowrap">
+              {statusLabel}
+            </Badge>
+          )}
+        </div>
 
-        <p className="mt-1.5 text-sm text-ink-400">
-          {deadlineLabel} · {event.organizer}
-        </p>
+        <h2 className="line-clamp-3 break-words text-lg font-semibold leading-snug tracking-[-0.01em] text-ink-900">
+          {event.title}
+        </h2>
+        {event.organizer && <p className="mt-1 truncate text-sm text-ink-500">{event.organizer}</p>}
+
+        {/*
+          Срок — главный факт карточки, как на olimpiada.ru: «до какого
+          числа» читается раньше описания, а цвет сразу говорит, горит ли.
+          Красный — 3 дня и меньше, янтарный — до двух недель.
+        */}
+        <div className="mt-4 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+          <p
+            className={`text-[15px] font-semibold tabular-nums ${
+              !registrationRuns
+                ? 'text-ink-400'
+                : daysLeft <= 3
+                  ? 'text-danger-600'
+                  : daysLeft <= 14
+                    ? 'text-accent-700'
+                    : 'text-ink-800'
+            }`}
+          >
+            {t.deadline} {deadlineLabel}
+          </p>
+          {registrationRuns && (
+            <span
+              className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-semibold ${
+                daysLeft <= 3 ? 'bg-danger-50 text-danger-700' : 'bg-ink-100 text-ink-600'
+              }`}
+            >
+              {daysLeft === 0 ? t.lastDay : t.daysLeft(daysLeft)}
+            </span>
+          )}
+        </div>
 
         {/*
           mb-4 у описания, а не mt у подвала: подвал прижат книзу через
           mt-auto, и у самой высокой карточки в ряду это «авто» равно нулю —
           линия подвала прилипла бы к последней строке текста.
         */}
-        <p className="mt-3 mb-4 line-clamp-3 break-words text-sm leading-relaxed text-ink-600">{event.description}</p>
+        <p className="mt-3 mb-4 line-clamp-2 break-words text-sm leading-relaxed text-ink-600">{event.description}</p>
 
-        {/* --- Низ: цена, срок и переход на страницу события --- */}
-        <div className="mt-auto flex flex-wrap items-center justify-between gap-3 border-t border-ink-200 pt-4">
-          <div>
-            <p className="font-medium text-ink-900">{event.free ? t.free : t.paid}</p>
-            {registrationRuns && (
-              <p
-                className={`text-xs font-semibold ${
-                  status === 'closing-soon' ? 'text-danger-600' : 'text-ink-400'
-                }`}
-              >
-                {daysLeft === 0 ? t.lastDay : t.daysLeft(daysLeft)}
-              </p>
+        {/* --- Низ: факты и переход на страницу события --- */}
+        <div className="mt-auto flex flex-wrap items-center justify-between gap-3 border-t border-ink-100 pt-4">
+          <div className="flex flex-wrap items-center gap-1.5 text-xs font-semibold text-ink-600">
+            {gradesLabel(event.grades) && (
+              <span className="rounded-md border border-ink-200 px-1.5 py-0.5">{gradesLabel(event.grades)}</span>
             )}
+            <span
+              className={`rounded-md border px-1.5 py-0.5 ${
+                event.free ? 'border-success-200 bg-success-50 text-success-700' : 'border-ink-200'
+              }`}
+            >
+              {event.free ? t.free : t.paid}
+            </span>
           </div>
 
           <ButtonLink href={`/events/${event.id}`} size="sm" className="group/cta">
@@ -254,6 +253,15 @@ export function EventCard({
       </div>
     </motion.article>
   );
+}
+
+/** «5–9 кл», «11 кл» или пусто, если классы не указаны (значит — для всех). */
+function gradesLabel(grades: number[]): string {
+  const list = [...new Set(grades)].sort((a, b) => a - b);
+  if (list.length === 0) return '';
+  const contiguous = list.every((grade, i) => i === 0 || grade === list[i - 1] + 1);
+  if (list.length === 1) return `${list[0]} кл`;
+  return contiguous ? `${list[0]}–${list[list.length - 1]} кл` : `${list.join(', ')} кл`;
 }
 
 function CarouselButton({

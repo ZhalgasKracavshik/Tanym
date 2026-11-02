@@ -25,9 +25,17 @@ import {
   reminderKindFor,
   type ReminderItem,
 } from '@/lib/notifications/deadlineReminder';
-import { SITE_URL, confirmedEmails, cronAuthorized, emailEnabled, sendEmail } from '@/lib/notifications/server';
+import {
+  SITE_URL,
+  confirmedEmails,
+  cronAuthorized,
+  emailEnabled,
+  sendEmailBatches,
+  type OutgoingEmail,
+} from '@/lib/notifications/server';
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
 
 export async function GET(request: Request) {
   if (!process.env.CRON_SECRET) {
@@ -96,30 +104,26 @@ export async function GET(request: Request) {
   const emailById = await confirmedEmails(admin, pending.keys(), '[deadline-reminders]');
 
   const dryRun = !emailEnabled();
-  let sentCount = 0;
-  const log: { user_id: string; event_id: string; kind: string }[] = [];
+  const outgoing: (OutgoingEmail & { userId: string; items: ReminderItem[] })[] = [];
 
   for (const [userId, items] of pending) {
     const profile = profileById.get(userId);
     const email = emailById.get(userId);
     if (!profile || profile.notify_learning === false || !email) continue;
-
     const firstName = String(profile.name ?? '').split(' ')[0];
-    const message = buildReminderEmail(firstName, items, SITE_URL);
-    if (dryRun) {
-      sentCount += 1;
-      continue;
-    }
-    if (await sendEmail(email, message, '[deadline-reminders]')) {
-      sentCount += 1;
-      for (const item of items) log.push({ user_id: userId, event_id: item.eventId, kind: item.kind });
-    }
+    outgoing.push({ ...buildReminderEmail(firstName, items, SITE_URL), to: email, userId, items });
   }
 
-  if (log.length > 0) {
-    const { error } = await admin.from('deadline_reminders').upsert(log, { ignoreDuplicates: true });
-    if (error) console.error('[deadline-reminders] журнал:', error);
-  }
+  // Журнал пишется после каждого пакета: оборванный запуск не повторит отправленное.
+  const sentCount = dryRun
+    ? outgoing.length
+    : await sendEmailBatches(outgoing, '[deadline-reminders]', async (batch) => {
+        const log = batch.flatMap((item) =>
+          item.items.map((reminder) => ({ user_id: item.userId, event_id: reminder.eventId, kind: reminder.kind })),
+        );
+        const { error } = await admin.from('deadline_reminders').upsert(log, { ignoreDuplicates: true });
+        if (error) console.error('[deadline-reminders] журнал:', error);
+      });
 
   console.log(`[deadline-reminders] ${today}: ${dryRun ? 'dry-run, ' : ''}${sentCount} писем`);
   return NextResponse.json({ date: today, dryRun, sent: sentCount, recipients: pending.size });

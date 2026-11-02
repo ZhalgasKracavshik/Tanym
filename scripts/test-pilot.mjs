@@ -14,6 +14,8 @@ const { buildCsp, generateNonce } = await load('src/lib/security/csp.ts');
 const { pickNearestDeadline, deadlineIcs } = await load('src/lib/events.ts');
 const { reminderKindFor, addDaysIso, buildReminderEmail } = await load('src/lib/notifications/deadlineReminder.ts');
 const { pickDigest, buildDigestEmail, buildTelegramDigest } = await load('src/lib/notifications/digest.ts');
+const { safeNextPath } = await load('src/lib/security/redirect.ts');
+const { passwordProblem, pwnedCountFromRange, MIN_PASSWORD_LENGTH } = await load('src/lib/security/password.ts');
 
 const problems = [];
 const expect = (condition, message) => {
@@ -147,6 +149,23 @@ const dMail = buildDigestEmail('Айгерим', dAll, dToday, 'https://tanym.kz
 expect(dMail.text.includes('https://tanym.kz/events/soon') && dMail.subject.includes('закрывается'), 'письмо дайджеста со ссылками и темой');
 const dTg = buildTelegramDigest({ opened: [{ ...dEvents[1], title: 'A <b>&' }], closing: [] }, dToday, 'https://tanym.kz');
 expect(dTg.includes('A &lt;b&gt;&amp;') && !dTg.includes('A <b>&'), 'Telegram: название экранировано');
+
+/* Пароль: длина, простые шаблоны, совпадение с почтой; разбор ответа HIBP. */
+expect(passwordProblem('a'.repeat(MIN_PASSWORD_LENGTH - 1)) === 'short', 'пароль: короткий отбивается');
+for (const weak of ['11111111', '12345678', 'qwertyuiop', 'abcdefgh']) {
+  expect(passwordProblem(weak) === 'simple', `пароль: «${weak}» считается простым`);
+}
+expect(passwordProblem('aigerim2010!', 'aigerim@mail.kz') === 'simple', 'пароль: логин почты внутри пароля отбивается');
+expect(passwordProblem('Kitap-Oqu-2026') === null, 'пароль: нормальный пароль проходит');
+expect(pwnedCountFromRange('0018A45C4D1DEF81644B54AB7F969B88D65:1\r\n1E4C9B93F3F0682250B6CF8331B7EE68FD8:3861493', '1e4c9b93f3f0682250b6cf8331b7ee68fd8') === 3861493, 'HIBP: найденный хвост хеша');
+expect(pwnedCountFromRange('0018A45C4D1DEF81644B54AB7F969B88D65:1', 'FFFF') === 0, 'HIBP: отсутствующий хвост — 0');
+expect(buildCsp('n').includes('https://api.pwnedpasswords.com'), 'CSP пускает проверку пароля по утечкам');
+
+/* Возврат после входа: только внутренние пути. */
+expect(safeNextPath('/events/abc?x=1') === '/events/abc?x=1', 'redirect: внутренний путь проходит');
+for (const bad of ['//evil.com', '/\\evil.com', '/\t/evil.com', 'https://evil.com', 'javascript:alert(1)', '']) {
+  expect(safeNextPath(bad, '/dashboard') === '/dashboard', `redirect: «${JSON.stringify(bad)}» отбивается`);
+}
 
 if (problems.length > 0) {
   console.error('✗ Проверка пилота не прошла:');

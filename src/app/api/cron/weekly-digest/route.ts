@@ -21,10 +21,13 @@ import {
   cronAuthorized,
   emailEnabled,
   postToTelegram,
-  sendEmail,
+  sendEmailBatches,
+  type OutgoingEmail,
 } from '@/lib/notifications/server';
 
 export const dynamic = 'force-dynamic';
+/** Пакеты по 100 писем; минута с запасом покрывает тысячи учеников. */
+export const maxDuration = 60;
 
 const LOG = '[weekly-digest]';
 
@@ -60,13 +63,6 @@ export async function GET(request: Request) {
     grades: (row.grades as number[] | null) ?? [],
   }));
 
-  // Канал — общая подборка без фильтра по классу.
-  const common = pickDigest(events, today);
-  const telegram =
-    common.opened.length + common.closing.length > 0
-      ? await postToTelegram(buildTelegramDigest(common, today, SITE_URL), LOG)
-      : 'skipped';
-
   // Письма: ученики, не выключившие учебные письма, ещё не получившие дайджест этой недели.
   const { data: students } = await admin
     .from('profiles')
@@ -75,34 +71,37 @@ export async function GET(request: Request) {
   const { data: already } = await admin.from('weekly_digests').select('user_id').eq('week_start', today);
   const skip = new Set((already ?? []).map((row) => row.user_id as string));
 
+  // Канал — общая подборка без фильтра по классу. Только при первом запуске
+  // недели: если журнал уже не пуст, крон перезапущен и пост уже ушёл.
+  const common = pickDigest(events, today);
+  const telegram =
+    common.opened.length + common.closing.length > 0 && skip.size === 0
+      ? await postToTelegram(buildTelegramDigest(common, today, SITE_URL), LOG)
+      : 'skipped';
+
   const candidates = (students ?? []).filter((row) => row.notify_learning !== false && !skip.has(row.id));
   const emails = await confirmedEmails(admin, candidates.map((row) => row.id as string), LOG);
 
   const dryRun = !emailEnabled();
-  let sent = 0;
-  const log: { user_id: string; week_start: string }[] = [];
+  const outgoing: (OutgoingEmail & { userId: string })[] = [];
 
   for (const student of candidates) {
     const email = emails.get(student.id);
     if (!email) continue;
     const digest = pickDigest(events, today, (student.grade as number | null) ?? null);
     if (digest.opened.length + digest.closing.length === 0) continue;
-
     const message = buildDigestEmail(String(student.name ?? '').split(' ')[0], digest, today, SITE_URL);
-    if (dryRun) {
-      sent += 1;
-      continue;
-    }
-    if (await sendEmail(email, message, LOG)) {
-      sent += 1;
-      log.push({ user_id: student.id, week_start: today });
-    }
+    outgoing.push({ ...message, to: email, userId: student.id as string });
   }
 
-  if (log.length > 0) {
-    const { error: logError } = await admin.from('weekly_digests').upsert(log, { ignoreDuplicates: true });
-    if (logError) console.error(`${LOG} журнал:`, logError);
-  }
+  const sent = dryRun
+    ? outgoing.length
+    : await sendEmailBatches(outgoing, LOG, async (batch) => {
+        const { error: logError } = await admin
+          .from('weekly_digests')
+          .upsert(batch.map((item) => ({ user_id: item.userId, week_start: today })), { ignoreDuplicates: true });
+        if (logError) console.error(`${LOG} журнал:`, logError);
+      });
 
   console.log(`${LOG} ${today}: ${dryRun ? 'dry-run, ' : ''}${sent} писем, Telegram: ${telegram}`);
   return NextResponse.json({

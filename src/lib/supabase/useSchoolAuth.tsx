@@ -254,7 +254,13 @@ export function SchoolAuthProvider({
         password,
         // Имя кладём в метаданные пользователя: /api/profile берёт его оттуда
         // при создании профиля, ровно как для входа через Google.
-        options: { data: { full_name: name } },
+        // Ссылка из письма подтверждения ведёт через /auth/callback сразу в
+        // онбординг. Адрес должен быть в Supabase → Auth → URL Configuration →
+        // Redirect URLs, иначе Supabase подставит Site URL.
+        options: {
+          data: { full_name: name },
+          emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent('/onboarding')}`,
+        },
       });
       if (error) return { ok: false, error: error.message };
 

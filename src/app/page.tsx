@@ -194,7 +194,7 @@ export default function HomePage() {
             <div className="rounded-[var(--radius-card)] border border-ink-200 bg-ink-50/60 p-4 sm:p-5">
               <div className="flex items-baseline justify-between gap-3 px-1">
                 <p className="text-sm font-semibold text-ink-900">{t.liveTitle}</p>
-                <Link href="/events" className="text-sm font-semibold text-brand-600 hover:underline">
+                <Link href="/events" className="tap text-sm font-semibold text-brand-600 hover:underline">
                   {t.allEvents}
                 </Link>
               </div>

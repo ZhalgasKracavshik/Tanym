@@ -19,6 +19,7 @@ import {
   ProviderButtons,
   SubmitButton,
 } from '@/components/auth-ui';
+import { safeNextPath } from '@/lib/security/redirect';
 import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
 import { useLang, type Dict } from '@/lib/i18n';
 
@@ -121,9 +122,7 @@ function LoginForm() {
   const t = TEXT[lang];
 
   const nextParam = searchParams.get('next');
-  const nextPath = nextParam && nextParam.startsWith('/') && !nextParam.startsWith('//')
-    ? nextParam
-    : '/dashboard';
+  const nextPath = safeNextPath(nextParam, '/dashboard');
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

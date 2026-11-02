@@ -25,6 +25,7 @@ import { EVENT_TYPES, daysLeftUntil, deadlineIcs, eventStatus, formatEventDate }
 import type { EventStatus, EventType, SchoolEvent } from '@/lib/events';
 import type { Dict } from '@/lib/i18n';
 import type { Language } from '@/lib/types';
+import { SITE_URL } from '@/lib/site';
 import { createClient } from '@/lib/supabase/client';
 import { normalizeSocialUrl, shortenUrl } from '@/lib/social';
 import { almatyDateIso } from '@/lib/date';
@@ -110,6 +111,7 @@ const TEXT: Dict<{
   /** Заявка учителя, которую ещё не проверил админ. Видят только автор и админ. */
   pendingNote: string;
   rejectedNote: string;
+  rejectionReason: string;
   prevImage: string;
   nextImage: string;
   imageOf: (shown: number, total: number) => string;
@@ -160,6 +162,7 @@ const TEXT: Dict<{
     statusPast: 'Уже прошло',
     pendingNote: 'На проверке: событие увидят все после одобрения администратором.',
     rejectedNote: 'Администратор отклонил это событие. Его видите только вы.',
+    rejectionReason: 'Причина',
     prevImage: 'Предыдущее фото',
     nextImage: 'Следующее фото',
     imageOf: (shown, total) => `${shown} из ${total}`,
@@ -210,6 +213,7 @@ const TEXT: Dict<{
     statusPast: 'Өтіп кетті',
     pendingNote: 'Тексерілуде: әкімші мақұлдағаннан кейін іс-шараны бәрі көреді.',
     rejectedNote: 'Әкімші бұл іс-шараны қабылдамады. Оны тек сіз көресіз.',
+    rejectionReason: 'Себебі',
     prevImage: 'Алдыңғы сурет',
     nextImage: 'Келесі сурет',
     imageOf: (shown, total) => `${total} суреттің ${shown}-і`,
@@ -260,6 +264,7 @@ const TEXT: Dict<{
     statusPast: 'Already held',
     pendingNote: 'Under review: everyone will see this event once an admin approves it.',
     rejectedNote: 'An admin rejected this event. Only you can see it.',
+    rejectionReason: 'Reason',
     prevImage: 'Previous image',
     nextImage: 'Next image',
     imageOf: (shown, total) => `${shown} of ${total}`,
@@ -316,6 +321,8 @@ interface EventRow {
   /** Появились миграцией pilot_event_sources_applications_reminders. */
   source_url?: string | null;
   verified_at?: string | null;
+  /** Появилась миграцией pilot_event_rejection_reason: видит автор отклонённого события. */
+  rejection_reason?: string | null;
 }
 
 /** Пути обложек по порядку. Легаси-колонка — запасной источник, как в афише. */
@@ -384,7 +391,7 @@ export default function EventPage({ params }: PageProps<'/events/[id]'>) {
     <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
       <Link
         href="/events"
-        className="inline-flex items-center gap-2 rounded-lg text-sm font-semibold text-ink-500 outline-none transition-colors duration-150 hover:text-brand-600 focus-visible:ring-2 focus-visible:ring-brand-500"
+        className="tap inline-flex items-center gap-2 rounded-lg text-sm font-semibold text-ink-500 outline-none transition-colors duration-150 hover:text-brand-600 focus-visible:ring-2 focus-visible:ring-brand-500"
       >
         <Icon name="arrow-left" size={16} />
         {t.back}
@@ -447,13 +454,11 @@ export default function EventPage({ params }: PageProps<'/events/[id]'>) {
 
 type PageText = (typeof TEXT)['ru'];
 
-/**
- * Адрес сайта для ссылки «Отправить в WhatsApp». Из окружения, а не из
- * window.location: href считается и на сервере, и разный адрес в двух
- * рендерах дал бы расхождение при гидратации.
- */
-const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://tanym-alpha.vercel.app').replace(/\/+$/, '');
-
+/*
+  Адрес сайта для «Отправить в WhatsApp» — SITE_URL из lib/site, а не
+  window.location: href считается и на сервере, и разный адрес в двух
+  рендерах дал бы расхождение при гидратации.
+*/
 function EventBody({
   row,
   t,
@@ -584,6 +589,11 @@ function EventBody({
           }`}
         >
           {row.status === 'pending' ? t.pendingNote : t.rejectedNote}
+          {row.status === 'rejected' && row.rejection_reason && (
+            <span className="mt-1 block font-normal">
+              {t.rejectionReason}: {row.rejection_reason}
+            </span>
+          )}
         </p>
       )}
 
@@ -820,7 +830,7 @@ function EventBody({
               href={safeSourceUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="font-semibold text-brand-600 hover:underline"
+              className="tap font-semibold text-brand-600 hover:underline"
             >
               {t.source}: {shortenUrl(safeSourceUrl)}
             </a>

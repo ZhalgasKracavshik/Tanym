@@ -83,7 +83,11 @@ export async function proxy(request: NextRequest) {
     return NextResponse.rewrite(new URL('/_pilot-disabled', request.url), { status: 404 });
   }
 
-  if (pathname.startsWith('/api/') && WRITE_METHODS.has(request.method)) {
+  /*
+    Отчёты CSP шлёт сам браузер, а не человек: считать их в лимит записи
+    значит отнимать у ученика попытки сохранить событие из-за чужой ошибки.
+  */
+  if (pathname.startsWith('/api/') && pathname !== '/api/csp-report' && WRITE_METHODS.has(request.method)) {
     const verdict = await checkWriteRateLimit(request);
     if (!verdict.allowed) {
       return NextResponse.json(
