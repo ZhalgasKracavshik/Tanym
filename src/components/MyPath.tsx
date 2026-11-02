@@ -117,7 +117,7 @@ const TEXT: Dict<{
     past: 'Past',
     registerBy: (date) => `register by ${date}`,
     startsOn: (date) => `takes place ${date}`,
-    daysLeft: (n) => (n === 0 ? 'last day today' : `${n} days left`),
+    daysLeft: (n) => (n === 0 ? 'last day today' : `${n} ${n === 1 ? 'day' : 'days'} left`),
     lastDay: 'last day today',
     applied: 'applied',
     participated: 'took part',

@@ -24,6 +24,7 @@ import { usePublishedEvents, useSavedEvents } from '@/lib/supabase/events';
 import { avatarPhotoUrl } from '@/lib/supabase/avatarPhoto';
 import { daysLeftUntil } from '@/lib/events';
 import { LANGUAGES } from '@/lib/i18n-shared';
+import { pluralRu } from '@/lib/plural';
 import type { Dict } from '@/lib/i18n';
 import { Avatar } from './Avatar';
 import { Icon, type IconName } from './Icon';
@@ -50,7 +51,10 @@ const TEXT: Dict<{
     applied: (n) => `${n} подана`,
     participated: (n) => `${n} участвовал`,
     nothingSaved: 'Пока ничего не сохранено',
-    urgent: (n) => (n === 1 ? 'Регистрация закрывается через 3 дня или раньше' : `${n} регистрации закрываются в ближайшие 3 дня`),
+    urgent: (n) =>
+      n === 1
+        ? 'Регистрация закрывается через 3 дня или раньше'
+        : `${n} ${pluralRu(n, 'регистрация закрывается', 'регистрации закрываются', 'регистраций закрываются')} в ближайшие 3 дня`,
     profile: 'Профиль',
     myPath: 'Мой путь и мои события',
     propose: 'Предложить событие',

@@ -22,7 +22,7 @@
  */
 
 import { useMemo, useState } from 'react';
-import { EVENT_TYPES } from '@/lib/events';
+import { EVENT_TYPES, parseGrades } from '@/lib/events';
 import type { EventType } from '@/lib/events';
 import type { Language } from '@/lib/types';
 import { createClient } from '@/lib/supabase/client';
@@ -52,7 +52,8 @@ const TEXT = {
       'Если оставить пустым, на странице события останется только личная отметка «иду», без перехода куда-либо.',
     registrationUrlError: 'Проверьте ссылку для записи — она должна быть настоящим адресом.',
     sourceUrl: 'Источник — где опубликовано событие',
-    sourceUrlHint: 'Ссылка на сайт или страницу организатора: по ней сверяют сроки, и ученик может открыть первоисточник.',
+    sourceUrlHint:
+      'Ссылка на сайт или страницу организатора: по ней сверяют сроки, и ученик может открыть первоисточник.',
     sourceUrlError: 'Проверьте ссылку на источник — она должна быть настоящим адресом.',
     covers: 'Уже загруженные изображения',
     coversHint: 'Первое изображение — обложка в афише.',
@@ -107,6 +108,7 @@ export function EventEditForm({
   const t = TEXT.ru;
   const { profile } = useSchoolAuth();
   const editorId = profile?.id ?? '';
+  const isAdmin = profile?.role === 'admin';
 
   const [type, setType] = useState<EventType>(initial.type);
   const [title, setTitle] = useState(initial.title);
@@ -133,9 +135,7 @@ export function EventEditForm({
 
   const keptUrls = useMemo(() => {
     const supabase = createClient();
-    return keptPaths.map(
-      (path) => supabase.storage.from('card-covers').getPublicUrl(path).data.publicUrl,
-    );
+    return keptPaths.map((path) => supabase.storage.from('card-covers').getPublicUrl(path).data.publicUrl);
   }, [keptPaths]);
 
   function moveKept(from: number, to: number) {
@@ -187,10 +187,7 @@ export function EventEditForm({
     setStatus('sending');
 
     const supabase = createClient();
-    const gradeList = grades
-      .split(',')
-      .map((item) => Number(item.trim()))
-      .filter((item) => Number.isFinite(item) && item > 0);
+    const gradeList = parseGrades(grades);
 
     const uploaded = await uploadNew(supabase);
     if (uploaded === undefined) {
@@ -230,6 +227,19 @@ export function EventEditForm({
         */
         cover_path: null,
         // admin_id здесь нет и не будет: автор публикации не редактируемое поле.
+        /*
+          Правка автора (не админа) всегда возвращает событие в очередь:
+          так отклонённое можно исправить и отправить снова, а отметки
+          прошлой проверки не остаются висеть на новой версии.
+        */
+        ...(isAdmin
+          ? {}
+          : {
+              status: 'pending',
+              reviewed_by: null,
+              reviewed_at: null,
+              rejection_reason: null,
+            }),
       })
       .eq('id', eventId)
       .select('id');
@@ -268,17 +278,28 @@ export function EventEditForm({
         </div>
       </div>
 
-      <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t.title} className={inputCls} />
+      <input
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        placeholder={t.title}
+        aria-label={t.title}
+        maxLength={200}
+        className={inputCls}
+      />
       <input
         value={organizer}
         onChange={(e) => setOrganizer(e.target.value)}
         placeholder={t.organizer}
+        aria-label={t.organizer}
+        maxLength={200}
         className={inputCls}
       />
       <textarea
         value={description}
         onChange={(e) => setDescription(e.target.value)}
         placeholder={t.description}
+        aria-label={t.description}
+        maxLength={5000}
         rows={4}
         className={inputCls}
       />
@@ -304,9 +325,30 @@ export function EventEditForm({
         </div>
       </div>
 
-      <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder={t.location} className={inputCls} />
-      <input value={grades} onChange={(e) => setGrades(e.target.value)} placeholder={t.grades} className={inputCls} />
-      <input value={prize} onChange={(e) => setPrize(e.target.value)} placeholder={t.prize} className={inputCls} />
+      <input
+        value={location}
+        onChange={(e) => setLocation(e.target.value)}
+        placeholder={t.location}
+        aria-label={t.location}
+        maxLength={200}
+        className={inputCls}
+      />
+      <input
+        value={grades}
+        onChange={(e) => setGrades(e.target.value)}
+        placeholder={t.grades}
+        aria-label={t.grades}
+        maxLength={40}
+        className={inputCls}
+      />
+      <input
+        value={prize}
+        onChange={(e) => setPrize(e.target.value)}
+        placeholder={t.prize}
+        aria-label={t.prize}
+        maxLength={300}
+        className={inputCls}
+      />
 
       <div className="flex gap-6">
         <label className="flex items-center gap-2 text-sm text-ink-700">

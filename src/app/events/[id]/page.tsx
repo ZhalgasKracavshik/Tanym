@@ -161,7 +161,7 @@ const TEXT: Dict<{
     statusClosed: 'Регистрация закрыта',
     statusPast: 'Уже прошло',
     pendingNote: 'На проверке: событие увидят все после одобрения администратором.',
-    rejectedNote: 'Администратор отклонил это событие. Его видите только вы.',
+    rejectedNote: 'Администратор отклонил это событие. Его видите только вы — исправьте и отправьте снова кнопкой «Редактировать».',
     rejectionReason: 'Причина',
     prevImage: 'Предыдущее фото',
     nextImage: 'Следующее фото',
@@ -431,13 +431,15 @@ export default function EventPage({ params }: PageProps<'/events/[id]'>) {
           guest={!authLoading && !isSignedIn}
           onToggleRegistration={() => toggleSaved(row.id)}
           /*
-            Правка доступна администратору и автору, пока событие на проверке, —
+            Правка доступна администратору и автору, пока событие на проверке или
+            отклонено (исправленное уходит на проверку снова), —
             ровно тем, кого пропускает политика UPDATE в базе. Показать кнопку шире
             политики значило бы обещать действие, которое закончится отказом.
           */
           canEdit={
             profile !== null &&
-            (profile.role === 'admin' || (profile.id === row.admin_id && row.status === 'pending'))
+            (profile.role === 'admin' ||
+              (profile.id === row.admin_id && (row.status === 'pending' || row.status === 'rejected')))
           }
           editing={editing}
           onEdit={() => setEditing(true)}
@@ -730,7 +732,7 @@ function EventBody({
           ) : (
             registrationRuns &&
             guest ? (
-              <ButtonLink href="/register" variant="secondary" size="sm">
+              <ButtonLink href={`/register?next=${encodeURIComponent(`/events/${event.id}`)}`} variant="secondary" size="sm">
                 <Icon name="star" size={14} />
                 {t.guestSave}
               </ButtonLink>

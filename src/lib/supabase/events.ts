@@ -13,6 +13,8 @@ import { createClient } from './client';
 import { useSchoolAuth } from './useSchoolAuth';
 import { useStore } from '@/components/StoreProvider';
 import type { EventType, SchoolEvent } from '@/lib/events';
+import { almatyDateIso } from '@/lib/date';
+import { addDaysIso } from '@/lib/notifications/deadlineReminder';
 
 interface PublishedEventRow {
   id: string;
@@ -75,6 +77,11 @@ export function usePublishedEvents(refreshKey = 0) {
       .from('published_events')
       .select('*')
       .eq('status', 'approved')
+      /*
+        Прошедшие старше полугода не грузим: PostgREST отдаёт максимум 1000
+        строк, и при сортировке по сроку первыми отрезались бы как раз новые.
+      */
+      .gte('starts_at', addDaysIso(almatyDateIso(), -180))
       .order('registration_deadline', { ascending: true })
       .then(({ data }) => {
         if (!cancelled) setEvents((data ?? []).map(rowToEvent));

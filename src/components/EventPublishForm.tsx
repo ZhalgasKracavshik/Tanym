@@ -5,7 +5,7 @@
  */
 
 import { useState } from 'react';
-import { EVENT_TYPES } from '@/lib/events';
+import { EVENT_TYPES, parseGrades } from '@/lib/events';
 import type { EventType } from '@/lib/events';
 import type { Language } from '@/lib/types';
 import { createClient } from '@/lib/supabase/client';
@@ -35,7 +35,8 @@ const TEXT = {
       'Если оставить пустым, на странице события будет только кнопка «Сохранить в мои события», без перехода к организатору.',
     registrationUrlError: 'Проверьте ссылку для записи — она должна быть настоящим адресом.',
     sourceUrl: 'Источник — где опубликовано событие',
-    sourceUrlHint: 'Ссылка на сайт или страницу организатора: по ней сверяют сроки, и ученик может открыть первоисточник.',
+    sourceUrlHint:
+      'Ссылка на сайт или страницу организатора: по ней сверяют сроки, и ученик может открыть первоисточник.',
     sourceUrlError: 'Проверьте ссылку на источник — она должна быть настоящим адресом.',
     publish: 'Опубликовать',
     propose: 'Отправить на проверку',
@@ -46,6 +47,7 @@ const TEXT = {
     titleTooShort: 'Название — от 3 до 200 символов.',
     datesOrder: 'Регистрация должна закрываться не позже даты проведения.',
     reviewHint: 'Событие появится в афише после проверки администратором.',
+    tooMany: 'Сегодня вы уже предложили 10 событий — это предел на сутки. Остальные можно отправить завтра.',
   },
 } as const;
 
@@ -81,9 +83,8 @@ export function EventPublishForm({
   const [sourceUrl, setSourceUrl] = useState('');
   const [covers, setCovers] = useState<File[]>([]);
   const [status, setStatus] = useState<
-    'idle' | 'sending' | 'done' | 'error' | 'bad-url' | 'bad-source' | 'title-length' | 'dates-order'
+    'idle' | 'sending' | 'done' | 'error' | 'bad-url' | 'bad-source' | 'title-length' | 'dates-order' | 'too-many'
   >('idle');
-
 
   /**
    * Кладёт изображения в бакет и возвращает их пути по порядку.
@@ -145,10 +146,7 @@ export function EventPublishForm({
 
     setStatus('sending');
     const supabase = createClient();
-    const gradeList = grades
-      .split(',')
-      .map((item) => Number(item.trim()))
-      .filter((item) => Number.isFinite(item) && item > 0);
+    const gradeList = parseGrades(grades);
 
     const coverPaths = await uploadCovers(supabase);
     if (coverPaths === undefined) {
@@ -156,29 +154,34 @@ export function EventPublishForm({
       return;
     }
 
-    const { data: inserted, error } = await supabase.from('published_events').insert({
-      cover_paths: coverPaths,
-      admin_id: adminId,
-      status: needsReview ? 'pending' : 'approved',
-      type,
-      title: title.trim(),
-      organizer,
-      description,
-      starts_at: startsAt,
-      registration_deadline: deadline,
-      location,
-      online,
-      grades: gradeList,
-      prize: prize || null,
-      free,
-      registration_url: safeRegistrationUrl,
-      source_url: safeSourceUrl,
-      // Админ публикует то, что сверил сам, — дата проверки ставится сразу.
-      ...(needsReview ? {} : { verified_at: almatyDateIso() }),
-    }).select('id').single();
+    const { data: inserted, error } = await supabase
+      .from('published_events')
+      .insert({
+        cover_paths: coverPaths,
+        admin_id: adminId,
+        status: needsReview ? 'pending' : 'approved',
+        type,
+        title: title.trim(),
+        organizer,
+        description,
+        starts_at: startsAt,
+        registration_deadline: deadline,
+        location,
+        online,
+        grades: gradeList,
+        prize: prize || null,
+        free,
+        registration_url: safeRegistrationUrl,
+        source_url: safeSourceUrl,
+        // Админ публикует то, что сверил сам, — дата проверки ставится сразу.
+        ...(needsReview ? {} : { verified_at: almatyDateIso() }),
+      })
+      .select('id')
+      .single();
 
     if (error || !inserted) {
-      setStatus('error');
+      // Лимит предложений в сутки (pilot_event_review_integrity) — отдельным текстом.
+      setStatus(error && /too_many_proposals/.test(error.message) ? 'too-many' : 'error');
       return;
     }
     setStatus('done');
@@ -202,7 +205,9 @@ export function EventPublishForm({
               key={item.id}
               onClick={() => setType(item.id)}
               className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition-all duration-150 ${
-                type === item.id ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-ink-200 text-ink-600 hover:border-brand-300'
+                type === item.id
+                  ? 'border-brand-500 bg-brand-50 text-brand-700'
+                  : 'border-ink-200 text-ink-600 hover:border-brand-300'
               }`}
             >
               <Icon name={item.icon} size={16} />
@@ -212,24 +217,77 @@ export function EventPublishForm({
         </div>
       </div>
 
-      <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t.title} className={inputCls} />
-      <input value={organizer} onChange={(e) => setOrganizer(e.target.value)} placeholder={t.organizer} className={inputCls} />
-      <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder={t.description} rows={2} className={inputCls} />
+      <input
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        placeholder={t.title}
+        aria-label={t.title}
+        maxLength={200}
+        className={inputCls}
+      />
+      <input
+        value={organizer}
+        onChange={(e) => setOrganizer(e.target.value)}
+        placeholder={t.organizer}
+        aria-label={t.organizer}
+        maxLength={200}
+        className={inputCls}
+      />
+      <textarea
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
+        placeholder={t.description}
+        aria-label={t.description}
+        maxLength={5000}
+        rows={2}
+        className={inputCls}
+      />
 
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="text-xs font-semibold text-ink-500">{t.startsAt}</label>
-          <input type="date" value={startsAt} onChange={(e) => setStartsAt(e.target.value)} className={`${inputCls} mt-1`} />
+          <input
+            type="date"
+            value={startsAt}
+            onChange={(e) => setStartsAt(e.target.value)}
+            className={`${inputCls} mt-1`}
+          />
         </div>
         <div>
           <label className="text-xs font-semibold text-ink-500">{t.deadline}</label>
-          <input type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} className={`${inputCls} mt-1`} />
+          <input
+            type="date"
+            value={deadline}
+            onChange={(e) => setDeadline(e.target.value)}
+            className={`${inputCls} mt-1`}
+          />
         </div>
       </div>
 
-      <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder={t.location} className={inputCls} />
-      <input value={grades} onChange={(e) => setGrades(e.target.value)} placeholder={t.grades} className={inputCls} />
-      <input value={prize} onChange={(e) => setPrize(e.target.value)} placeholder={t.prize} className={inputCls} />
+      <input
+        value={location}
+        onChange={(e) => setLocation(e.target.value)}
+        placeholder={t.location}
+        aria-label={t.location}
+        maxLength={200}
+        className={inputCls}
+      />
+      <input
+        value={grades}
+        onChange={(e) => setGrades(e.target.value)}
+        placeholder={t.grades}
+        aria-label={t.grades}
+        maxLength={40}
+        className={inputCls}
+      />
+      <input
+        value={prize}
+        onChange={(e) => setPrize(e.target.value)}
+        placeholder={t.prize}
+        aria-label={t.prize}
+        maxLength={300}
+        className={inputCls}
+      />
 
       <div className="flex gap-6">
         <label className="flex items-center gap-2 text-sm text-ink-700">
@@ -278,6 +336,7 @@ export function EventPublishForm({
       {status === 'bad-source' && <p className="text-sm font-semibold text-danger-600">{t.sourceUrlError}</p>}
       {status === 'title-length' && <p className="text-sm font-semibold text-danger-600">{t.titleTooShort}</p>}
       {status === 'dates-order' && <p className="text-sm font-semibold text-danger-600">{t.datesOrder}</p>}
+      {status === 'too-many' && <p className="text-sm font-semibold text-danger-600">{t.tooMany}</p>}
 
       <ImageGalleryField files={covers} onChange={setCovers} />
 

@@ -21,6 +21,7 @@
  * читаются как знакомство, а длинная анкета на входе — как препятствие.
  */
 
+import { safeNextPath } from '@/lib/security/redirect';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
@@ -360,7 +361,8 @@ export default function OnboardingPage() {
     setDone(true);
     fireCelebration();
     setTimeout(() => {
-      router.replace(isTeacher && LEARNING_ENABLED ? '/teacher' : '/dashboard');
+      const returnTo = safeNextPath(new URLSearchParams(window.location.search).get('next'), '');
+      router.replace(returnTo || (isTeacher && LEARNING_ENABLED ? '/teacher' : '/dashboard'));
       router.refresh();
     }, 1100);
   }

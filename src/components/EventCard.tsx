@@ -85,7 +85,7 @@ export function EventCard({
       initial={reduce ? false : { opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-      className={`group relative flex gap-3.5 rounded-[var(--radius-card)] border border-ink-200 bg-white p-3 transition-[border-color,box-shadow] duration-200 hover:border-ink-300 hover:shadow-[var(--shadow-float)] sm:flex-col sm:gap-0 sm:overflow-hidden sm:p-0 ${
+      className={`group relative flex min-w-0 gap-3.5 rounded-[var(--radius-card)] border border-ink-200 bg-white p-3 transition-[border-color,box-shadow] duration-200 hover:border-ink-300 hover:shadow-[var(--shadow-float)] sm:flex-col sm:gap-0 sm:overflow-hidden sm:p-0 ${
         status === 'past' ? 'opacity-60' : ''
       }`}
     >

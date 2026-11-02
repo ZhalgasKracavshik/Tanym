@@ -136,3 +136,25 @@ export function deadlineIcs(event: Pick<SchoolEvent, 'id' | 'title' | 'registrat
     'END:VCALENDAR',
   ].join('\r\n');
 }
+
+/**
+ * Классы из поля формы: «9,10,11», «9-11», «9–11», «5 6 7». Только 1–11.
+ *
+ * Раньше «9-11» превращалось в пустой список, а пустой список значит «для
+ * всех» — событие для старшеклассников уходило пятиклассникам в афишу и
+ * дайджест.
+ */
+export function parseGrades(input: string): number[] {
+  const result = new Set<number>();
+  for (const part of input.split(/[,;\s]+/).filter(Boolean)) {
+    const range = part.match(/^(\d{1,2})\s*[-–—]\s*(\d{1,2})$/);
+    if (range) {
+      const [from, to] = [Number(range[1]), Number(range[2])].sort((a, b) => a - b);
+      for (let grade = from; grade <= to; grade += 1) if (grade >= 1 && grade <= 11) result.add(grade);
+      continue;
+    }
+    const grade = Number(part);
+    if (Number.isInteger(grade) && grade >= 1 && grade <= 11) result.add(grade);
+  }
+  return [...result].sort((a, b) => a - b);
+}

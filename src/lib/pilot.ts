@@ -70,5 +70,17 @@ export function isAiLive(): boolean {
 }
 
 export function isDisabledPath(pathname: string): boolean {
-  return isDisabledPathStatic(pathname);
+  /*
+    Сравниваем с раскодированным путём в нижнем регистре: «/api/ai/%63hat»
+    и «/API/topics» — это тот же закрытый раздел, и проверка не должна
+    пропускать их только потому, что буквы записаны иначе.
+  */
+  let normalized = pathname;
+  try {
+    normalized = decodeURIComponent(pathname);
+  } catch {
+    // Битая кодировка — оставляем как есть; роутер такой путь всё равно не найдёт.
+  }
+  normalized = normalized.toLowerCase().replace(/\/{2,}/g, '/');
+  return isDisabledPathStatic(normalized) || isDisabledPathStatic(pathname);
 }

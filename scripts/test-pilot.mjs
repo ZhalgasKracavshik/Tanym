@@ -11,7 +11,7 @@ const load = (path) => import(pathToFileURL(join(root, path)).href);
 
 const { isDisabledPath, isAiLive } = await load('src/lib/pilot.ts');
 const { buildCsp, generateNonce } = await load('src/lib/security/csp.ts');
-const { pickNearestDeadline, deadlineIcs } = await load('src/lib/events.ts');
+const { pickNearestDeadline, deadlineIcs, parseGrades } = await load('src/lib/events.ts');
 const { reminderKindFor, addDaysIso, buildReminderEmail } = await load('src/lib/notifications/deadlineReminder.ts');
 const { pickDigest, buildDigestEmail, buildTelegramDigest, weekStartIso } = await load('src/lib/notifications/digest.ts');
 const { safeNextPath } = await load('src/lib/security/redirect.ts');
@@ -158,6 +158,14 @@ const dTg = buildTelegramDigest({ opened: [{ ...dEvents[1], title: 'A <b>&' }], 
 expect(dTg.includes('A &lt;b&gt;&amp;') && !dTg.includes('A <b>&'), 'Telegram: название экранировано');
 
 expect(weekStartIso('2026-11-02') === '2026-11-02' && weekStartIso('2026-11-04') === '2026-11-02' && weekStartIso('2026-11-08') === '2026-11-02', 'дайджест: ключ недели — её понедельник');
+
+for (const sneaky of ['/api/ai/%63hat', '/API/topics', '/Achievements', '/achievements//x', '/api/%73ync']) {
+  expect(isDisabledPath(sneaky), `закрытый раздел не обходится записью «${sneaky}»`);
+}
+expect(!isDisabledPath('/events/%D1%82%D0%B5%D1%81%D1%82'), 'кодированный путь открытого раздела не закрывается');
+
+expect(parseGrades('9-11').join() === '9,10,11' && parseGrades('9–11').join() === '9,10,11', 'классы: диапазон «9-11» и «9–11»');
+expect(parseGrades('5, 6 7;8').join() === '5,6,7,8' && parseGrades('0, 12, abc').length === 0, 'классы: списки и мусор');
 
 /* Пароль: длина, простые шаблоны, совпадение с почтой; разбор ответа HIBP. */
 expect(passwordProblem('a'.repeat(MIN_PASSWORD_LENGTH - 1)) === 'short', 'пароль: короткий отбивается');

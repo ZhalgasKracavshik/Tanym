@@ -56,6 +56,8 @@ const TEXT = {
   confirmReject: 'Отклонить',
   cancel: 'Отмена',
   reviewFailed: 'Не сохранилось. Проверьте связь и попробуйте ещё раз.',
+  reviewChanged: 'Автор изменил событие после того, как оно попало в очередь. Откройте его и проверьте заново.',
+  reload: 'Обновить очередь',
 } as const;
 
 /**
@@ -67,24 +69,27 @@ function EventReviewRow({
   id,
   title,
   meta,
+  seenVersion,
   reviewerId,
   onDone,
 }: {
   id: string;
   title: string;
   meta: string;
+  /** updated_at, с которым событие пришло в очередь: одобряем ровно эту версию. */
+  seenVersion: string;
   reviewerId: string;
   onDone: () => void;
 }) {
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
-  const [failed, setFailed] = useState(false);
+  const [failed, setFailed] = useState<false | 'error' | 'changed'>(false);
 
   async function review(decision: 'approved' | 'rejected') {
     setBusy(true);
     setFailed(false);
-    const { error } = await createClient()
+    const { data, error } = await createClient()
       .from('published_events')
       .update({
         status: decision,
@@ -94,10 +99,21 @@ function EventReviewRow({
         // Одобряя, админ сверяет сроки с источником — это и есть проверка.
         ...(decision === 'approved' ? { verified_at: almatyDateIso() } : {}),
       })
-      .eq('id', id);
+      .eq('id', id)
+      /*
+        Только та версия, которую админ видел: автор может править событие,
+        пока оно на проверке, и без этого условия одобрялась бы уже
+        подменённая ссылка на регистрацию (см. pilot_event_review_integrity).
+      */
+      .eq('updated_at', seenVersion)
+      .select('id');
     setBusy(false);
     if (error) {
-      setFailed(true);
+      setFailed('error');
+      return;
+    }
+    if (!data || data.length === 0) {
+      setFailed('changed');
       return;
     }
     onDone();
@@ -142,7 +158,16 @@ function EventReviewRow({
           </div>
         </div>
       )}
-      {failed && <p className="mb-3 text-xs font-semibold text-danger-600">{TEXT.reviewFailed}</p>}
+      {failed && (
+        <p className="mb-3 text-xs font-semibold text-danger-600">
+          {failed === 'changed' ? TEXT.reviewChanged : TEXT.reviewFailed}
+          {failed === 'changed' && (
+            <button type="button" onClick={onDone} className="ml-2 underline">
+              {TEXT.reload}
+            </button>
+          )}
+        </p>
+      )}
     </div>
   );
 }
@@ -159,7 +184,7 @@ function ModerationPanel({ language, reviewerId }: { language: Language; reviewe
   );
   const pendingEvents = useRows(
     'published_events',
-    'id, title, organizer, registration_deadline',
+    'id, title, organizer, registration_deadline, updated_at',
     refreshKey,
     ['status', 'pending'],
   );
@@ -261,6 +286,7 @@ function ModerationPanel({ language, reviewerId }: { language: Language; reviewe
               id={String(row.id)}
               title={String(row.title)}
               meta={`${String(row.organizer ?? '')} · до ${formatEventDate(String(row.registration_deadline), language)}`}
+              seenVersion={String(row.updated_at ?? '')}
               reviewerId={reviewerId}
               onDone={bump}
             />

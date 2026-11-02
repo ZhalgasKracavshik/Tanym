@@ -27,6 +27,7 @@ import type { IconName } from '@/components/Icon';
 import { useSchoolAuth } from '@/lib/supabase/useSchoolAuth';
 import { checkPersonName } from '@/lib/personName';
 import { checkNewPassword, PASSWORD_TEXT } from '@/lib/security/password';
+import { safeNextPath } from '@/lib/security/redirect';
 import { useLang, type Dict } from '@/lib/i18n';
 import { domainRejectionMessage, fetchAllowedDomainRows } from '@/lib/supabase/allowedDomains';
 
@@ -349,7 +350,9 @@ export default function RegisterPage() {
       объяснить причину, а не чтобы защитить.
     */
 
-    const signUp = await signUpWithPassword(email.trim(), password, checkedName.value);
+    // Гость пришёл сохранить событие — после онбординга вернём его туда же.
+    const returnTo = safeNextPath(new URLSearchParams(window.location.search).get('next'), '');
+    const signUp = await signUpWithPassword(email.trim(), password, checkedName.value, returnTo || undefined);
 
     if (!signUp.ok) {
       setStatus('idle');
@@ -412,7 +415,7 @@ export default function RegisterPage() {
       создан». Раньше редирект шёл прямо в кабинет, и первым, что видел
       новый ученик, была именно эта заглушка. Учителю те же поля не нужны.
     */
-    router.replace('/onboarding');
+    router.replace(returnTo ? `/onboarding?next=${encodeURIComponent(returnTo)}` : '/onboarding');
     router.refresh();
   }
 

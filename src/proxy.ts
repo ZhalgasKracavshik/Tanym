@@ -197,6 +197,12 @@ export async function proxy(request: NextRequest) {
 */
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico|wav|mp3|ogg|m4a|woff|woff2|ttf|otf|webmanifest|txt|xml)$).*)',
+    /*
+      Мимо прокси — только настоящие файлы из public: в корне (og.png,
+      robots.txt, sitemap.xml…) и в /sounds. Раньше исключение срабатывало
+      на любой глубине, и «/archive/x.png» открывался гостю без входа и без
+      CSP. Страницы приложения теперь всегда проходят проверку.
+    */
+    '/((?!_next/static|_next/image|favicon.ico|sounds/|[^/]+\\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico|wav|mp3|ogg|m4a|woff|woff2|ttf|otf|webmanifest|txt|xml)$).*)',
   ],
 };

@@ -104,6 +104,8 @@ interface SchoolAuthValue {
     email: string,
     password: string,
     name: string,
+    /** Куда вернуть после онбординга (например, к событию, которое хотели сохранить). */
+    nextPath?: string,
   ) => Promise<{ ok: boolean; error?: string; needsConfirmation?: boolean }>;
   sendPasswordReset: (email: string) => Promise<{ ok: boolean; error?: string }>;
   updatePassword: (password: string) => Promise<{ ok: boolean; error?: string }>;
@@ -247,7 +249,7 @@ export function SchoolAuthProvider({
       return { ok: true };
     }
 
-    async function signUpWithPassword(emailValue: string, password: string, name: string) {
+    async function signUpWithPassword(emailValue: string, password: string, name: string, nextPath?: string) {
       const supabase = createClient();
       const { data, error } = await supabase.auth.signUp({
         email: emailValue,
@@ -259,7 +261,9 @@ export function SchoolAuthProvider({
         // Redirect URLs, иначе Supabase подставит Site URL.
         options: {
           data: { full_name: name },
-          emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent('/onboarding')}`,
+          emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(
+            nextPath ? `/onboarding?next=${encodeURIComponent(nextPath)}` : '/onboarding',
+          )}`,
         },
       });
       if (error) return { ok: false, error: error.message };
@@ -311,11 +315,17 @@ export function SchoolAuthProvider({
     }
 
     async function chooseRole(role: 'student' | 'teacher', classCode?: string) {
-      const res = await fetch('/api/profile', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role, classCode }),
-      });
+      // Обрыв сети — тоже ответ: без него экран создания профиля крутился бы бесконечно.
+      let res: Response;
+      try {
+        res = await fetch('/api/profile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ role, classCode }),
+        });
+      } catch {
+        return { ok: false, error: 'network_error', domains: undefined };
+      }
       const data = await res.json().catch(() => null);
       if (res.ok) await refresh();
       return {

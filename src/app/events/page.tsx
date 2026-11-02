@@ -66,6 +66,7 @@ const TEXT: Dict<{
   empty: string;
   emptyMine: string;
   emptyGrade: string;
+  emptyUpcoming: string;
   showPast: (n: number) => string;
   hidePast: string;
   statusOpen: string;
@@ -106,6 +107,7 @@ const TEXT: Dict<{
     empty: 'В этой категории пока нет событий.',
     emptyMine: 'Здесь будут события, которые вы сохраните. Откройте событие и нажмите «Сохранить в мои события».',
     emptyGrade: 'Для вашего класса в этой категории пока ничего нет.',
+    emptyUpcoming: 'Открытых событий здесь сейчас нет — новые появятся скоро. Прошедшие можно посмотреть ниже.',
     showPast: (n) => `Показать прошедшие (${n})`,
     hidePast: 'Скрыть прошедшие',
     statusOpen: 'Идёт запись',
@@ -138,6 +140,7 @@ const TEXT: Dict<{
     empty: 'Бұл санатта әзірге іс-шара жоқ.',
     emptyMine: 'Мұнда сіз сақтаған іс-шаралар болады. Іс-шараны ашып, «Менің іс-шараларыма сақтау» батырмасын басыңыз.',
     emptyGrade: 'Бұл санатта сіздің сыныпқа әзірге ештеңе жоқ.',
+    emptyUpcoming: 'Қазір ашық іс-шаралар жоқ — жаңалары жақында. Өткендерін төменнен қарауға болады.',
     showPast: (n) => `Өткендерін көрсету (${n})`,
     hidePast: 'Өткендерін жасыру',
     statusOpen: 'Тіркеу ашық',
@@ -170,6 +173,7 @@ const TEXT: Dict<{
     empty: 'No events in this category yet.',
     emptyMine: 'Events you save will appear here. Open an event and tap “Save to my events”.',
     emptyGrade: 'Nothing for your grade in this category yet.',
+    emptyUpcoming: 'No open events here right now — new ones are coming. Past events are below.',
     showPast: (n) => `Show past events (${n})`,
     hidePast: 'Hide past events',
     statusOpen: 'Sign-up open',
@@ -342,12 +346,16 @@ export default function EventsPage() {
         )}
       </div>
 
-      {sorted.length === 0 && pastCount === 0 ? (
+      {/* Пустой список — всегда со словами, даже если прошедшие спрятаны под кнопкой ниже. */}
+      {sorted.length === 0 ? (
         <div className="mt-4">
-          <EmptyState title={filter === 'mine' ? t.emptyMine : gradeOnly ? t.emptyGrade : t.empty} description="" />
+          <EmptyState
+            title={filter === 'mine' ? t.emptyMine : gradeOnly ? t.emptyGrade : pastCount > 0 ? t.emptyUpcoming : t.empty}
+            description=""
+          />
         </div>
       ) : (
-        <div className="mt-4 grid gap-4 sm:auto-rows-fr sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-4 grid grid-cols-1 gap-4 sm:auto-rows-fr sm:grid-cols-2 lg:grid-cols-3">
           {/*
             auto-rows-fr держит все карточки одной высоты — но только от двух
             колонок. В одну колонку (телефон) каждая строка — одна карточка, и
